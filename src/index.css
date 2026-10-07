@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --brand: #1E6F66;
+  --accent: #D99A2B;
+}
+
+@theme inline {
+  --color-sidebar: #10302E;
+  --color-brand: var(--brand);
+  --color-accent: var(--accent);
+  --color-surface: #FFFFFF;
+  --color-canvas: #EEF3F2;
+  --color-ink: #11302C;
+  --color-good: #1B7F4B;
+  --color-warn: #A35F00;
+  --color-bad: #B3382C;
+}
