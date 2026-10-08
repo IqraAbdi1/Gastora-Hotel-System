@@ -5,6 +5,7 @@ import LoginPage from './features/auth/LoginPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import TodayPage from './features/frontdesk/TodayPage'
 import ReservationsPage from './features/frontdesk/ReservationsPage'
+import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -17,13 +18,20 @@ export const router = createBrowserRouter([
 
       { path: 'desk', element: <TodayPage /> },
       { path: 'desk/reservations', element: <ReservationsPage /> },
-      { path: 'desk/rooms', element: <PagePlaceholder title="Rooms board" /> },
-      { path: 'desk/folios', element: <PagePlaceholder title="Folios" /> },
+      {
+        path: 'desk/rooms',
+        element: <PagePlaceholder title="Rooms board" />,
+      },
+      {
+        path: 'desk/folios',
+        element: <PagePlaceholder title="Folios" />,
+      },
 
       {
         path: 'housekeeping',
-        element: <PagePlaceholder title="Housekeeping: My rooms" />,
+        element: <HousekeepingPage />,
       },
+
       {
         path: 'pos',
         element: <PagePlaceholder title="POS: Tables and new order" />,
