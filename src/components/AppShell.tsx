@@ -7,6 +7,12 @@ import type { DraftAction } from '../types'
 
 const sections = [
   {
+    title: 'Overview',
+    links: [
+      { to: '/dashboard', label: 'Dashboard', end: true },
+    ],
+  },
+  {
     title: 'Front desk',
     links: [
       { to: '/desk', label: 'Today', end: true },
@@ -51,28 +57,49 @@ export default function AppShell() {
             collapsed ? 'md:w-16 md:px-2' : 'md:w-60'
           }`}
         >
-          <div className={`mb-6 flex items-center ${collapsed ? 'justify-center' : 'justify-between px-2'}`}>
+          <div
+            className={`mb-6 flex items-center ${
+              collapsed
+                ? 'justify-center'
+                : 'justify-between px-2'
+            }`}
+          >
             {!collapsed && (
               <div>
                 <p className="text-xl font-bold">Gastora</p>
                 <p className="text-xs text-white/60">Sample Hotel</p>
               </div>
             )}
+
             <button
               type="button"
               onClick={() => setCollapsed(!collapsed)}
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={
+                collapsed
+                  ? 'Expand sidebar'
+                  : 'Collapse sidebar'
+              }
               className="rounded-lg px-2 py-1 text-lg text-white/70 hover:bg-white/10 hover:text-white"
             >
               {collapsed ? '»' : '«'}
             </button>
           </div>
-          <nav className={collapsed ? 'hidden space-y-5 md:block' : 'space-y-5'}>
+
+          <nav
+            className={
+              collapsed
+                ? 'hidden space-y-5 md:block'
+                : 'space-y-5'
+            }
+          >
             {sections.map((s) => (
               <div key={s.title}>
                 {!collapsed && (
-                  <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-white/50">{s.title}</p>
+                  <p className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-white/50">
+                    {s.title}
+                  </p>
                 )}
+
                 <div className="space-y-0.5">
                   {s.links.map((l) => (
                     <NavLink
@@ -81,8 +108,12 @@ export default function AppShell() {
                       end={l.end}
                       title={l.label}
                       className={({ isActive }) =>
-                        `block rounded-lg px-3 py-2 text-sm font-medium ${collapsed ? 'text-center' : ''} ${
-                          isActive ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                        `block rounded-lg px-3 py-2 text-sm font-medium ${
+                          collapsed ? 'text-center' : ''
+                        } ${
+                          isActive
+                            ? 'bg-white/15 text-white'
+                            : 'text-white/70 hover:bg-white/10 hover:text-white'
                         }`
                       }
                     >
@@ -99,12 +130,19 @@ export default function AppShell() {
           <header className="flex items-center gap-4 border-b border-ink/10 bg-surface px-6 py-3">
             <CommandBar />
           </header>
+
           <main className="flex-1 p-6">
             <Outlet />
           </main>
         </div>
 
-        {draft && <DraftPanel key={draft.title} draft={draft} onClose={() => setDraft(null)} />}
+        {draft && (
+          <DraftPanel
+            key={draft.title}
+            draft={draft}
+            onClose={() => setDraft(null)}
+          />
+        )}
       </div>
     </DraftContext.Provider>
   )
