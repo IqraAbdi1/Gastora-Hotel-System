@@ -10,6 +10,10 @@ import type { DraftAction } from '../types'
 
 const sections = [
   {
+    title: 'Overview',
+    links: [{ to: '/dashboard', label: 'Dashboard', end: true }],
+  },
+  {
     title: 'Front desk',
     links: [
       { to: '/desk', label: 'Today', end: true },
