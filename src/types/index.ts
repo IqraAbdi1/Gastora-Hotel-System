@@ -8,6 +8,16 @@ export type Room = {
 
 export type ReservationStatus = 'booked' | 'in-house' | 'checked-out'
 
+export type GuaranteeType = 'deposit' | 'card' | 'company' | 'none'
+
+export type Guest = {
+  id: string
+  name: string
+  phone: string
+  email?: string
+  nationality?: string
+}
+
 export type Reservation = {
   id: string
   guest: string
@@ -19,7 +29,27 @@ export type Reservation = {
   total: number
   paid: number
   details?: GuestDetails
+  guestId?: string
+  plan?: string
+  guarantee?: GuaranteeType
+    source?: 'walk-in' | 'front desk' | 'phone' | 'email' | 'online' | 'ota'
+  adults?: number
+  children?: number
+  overrideReason?: string
+  changes?: Amendment[]
 }
+export type Amendment = {
+  at: string
+  fromArrival: string
+  fromDeparture: string
+  toArrival: string
+  toDeparture: string
+  reason: string
+  fee: number
+  waived: boolean
+}
+
+export type NewReservation = Omit<Reservation, 'id' | 'status' | 'details'>
 
 export type GoAction = { kind: 'go'; label: string; to: string }
 
@@ -45,4 +75,21 @@ export type GuestDetails = {
   nationality: string
   phone: string
   specialRequests: string
+  idExpiry?: string
+  idPhoto?: string
+  dateOfBirth?: string
+  gender?: string
+  address?: string
+  email?: string
+  purpose?: string
+  comingFrom?: string
+  nextDestination?: string
+  adults?: number
+  children?: number
+  vehiclePlate?: string
+  emergencyName?: string
+  emergencyPhone?: string
+  marketingConsent?: boolean
+  termsAccepted?: boolean
+  signature?: string
 }
