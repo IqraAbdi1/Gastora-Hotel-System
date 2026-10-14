@@ -195,7 +195,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left">
+            <table className="w-full   text-left">
               <thead>
                 <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                   <th className="pb-3 font-medium">Guest</th>

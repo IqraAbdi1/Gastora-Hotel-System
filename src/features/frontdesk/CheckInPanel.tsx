@@ -5,15 +5,16 @@ import type { IdType, Reservation } from '../../types'
 import IdPhotoInput from '../../components/IdPhotoInput'
 import SignaturePad from '../../components/SignaturePad'
 import RoomPicker from './RoomPicker'
+import AskHousekeeping from './AskHousekeeping'
 
-type Props = { reservation: Reservation; onClose: () => void }
+type Props = { reservation: Reservation; room?: string; onClose: () => void }
 
 const idTypes: IdType[] = ['NIN', 'Passport', 'Driving permit']
 const purposes = ['Leisure', 'Business', 'Conference', 'Transit', 'Other']
 const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-sm outline-none focus:border-brand'
 const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
-export default function CheckInPanel({ reservation: r, onClose }: Props) {
+export default function CheckInPanel({ reservation: r, room: preferred, onClose }: Props) {
   const { rooms, reservations, checkIn } = useHotel()
 
   // Rooms she can use: right type, clean, and free for the whole stay (BR-FO-01, BR-FO-02)
@@ -35,7 +36,7 @@ export default function CheckInPanel({ reservation: r, onClose }: Props) {
   const [step, setStep] = useState<1 | 2>(1)
   // Keep the room already assigned to the booking if it is ready, otherwise suggest the lowest number
   const [room, setRoom] = useState(() => {
-    const assigned = readyRooms.find((x) => x.number === r.room)
+    const assigned = readyRooms.find((x) => x.number === (preferred ?? r.room))
     if (assigned) return assigned.number
     const sorted = [...readyRooms].sort((a, b) => Number(a.number) - Number(b.number))
     return sorted[0]?.number ?? ''
@@ -127,6 +128,7 @@ export default function CheckInPanel({ reservation: r, onClose }: Props) {
                 <div>
                   <p className={`${heading} mb-1`}>Room</p>
                   <RoomPicker options={readyRooms} value={room} onChange={setRoom} notReady={notReady} type={r.roomType} />
+                                    {readyRooms.length === 0 && <AskHousekeeping roomType={r.roomType} />}
                 </div>
 
                 <p className={heading}>Identity</p>

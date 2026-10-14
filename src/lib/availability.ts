@@ -1,5 +1,10 @@
 import type { Reservation, Room } from '../types'
 
+// Only booked and in-house stays hold a room. Cancelled, no-show and checked-out stays do not.
+export function holdsRoom(r: Reservation) {
+  return r.status === 'booked' || r.status === 'in-house'
+}
+
 // A stay uses the nights from arrival up to, but not including, departure.
 // So a guest leaving on the 7th and another arriving on the 7th do not clash (BR-FO-01).
 export function stayOverlaps(aFrom: string, aTo: string, bFrom: string, bTo: string) {
@@ -16,7 +21,7 @@ export function clashingStay(
   return reservations.find(
     (r) =>
       r.room === roomNumber &&
-      r.status !== 'checked-out' &&
+      holdsRoom(r) &&
       r.id !== ignoreId &&
       stayOverlaps(from, to, r.arrival, r.departure),
   )

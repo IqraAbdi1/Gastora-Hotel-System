@@ -2,6 +2,7 @@ import { TODAY } from '../data/sample'
 import { clashingStay } from './availability'
 import { freeByType, nightsOf } from './booking'
 import type { Reservation, Room } from '../types'
+import { extrasOf } from './folio'
 
 // Sample policy, not from the SRS. The hotel will set these in its own settings later.
 export const FEE_WINDOW_DAYS = 2 // changes closer than this to arrival cost one night
@@ -30,7 +31,7 @@ export function checkAmend(
 ): AmendCheck {
   const inHouse = r.status === 'in-house'
   const oldNights = Math.max(1, nightsOf(r.arrival, r.departure))
-  const perNight = Math.round(r.total / oldNights) // keeps the original rate
+  const perNight = Math.round((r.total - extrasOf(r)) / oldNights) // room charges only, extras are not repriced
   const nights = nightsOf(arrival, departure)
   const base: AmendCheck = {
     error: null,
@@ -45,10 +46,10 @@ export function checkAmend(
     blockedByRoom: false,
   }
 
-  if (r.status === 'checked-out') return { ...base, error: 'This stay is already checked out.' }
+  if (r.status !== 'booked' && r.status !== 'in-house') return { ...base, error: 'Only booked or in-house stays can change.' }
   if (nights < 1) return { ...base, error: 'Departure must be after arrival.' }
   if (!inHouse && arrival < TODAY) return { ...base, error: 'Arrival cannot be in the past.' }
-  if (inHouse && departure <= TODAY) return { ...base, error: 'Departure must be after today.' }
+  if (inHouse && departure < TODAY) return { ...base, error: 'Departure cannot be in the past.' }
   if (arrival === r.arrival && departure === r.departure) return { ...base, error: 'Change a date to continue.' }
 
   const shortened = departure < r.departure

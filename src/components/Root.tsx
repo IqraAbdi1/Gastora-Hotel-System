@@ -1,0 +1,21 @@
+import { Outlet } from 'react-router-dom'
+import AuthProvider from '../features/auth/AuthProvider'
+import HousekeepingProvider from '../features/housekeeping/HousekeepingProvider'
+import FeaturesProvider from '../features/platform/FeaturesProvider'
+import RequestsProvider from '../features/procurement/RequestsProvider'
+
+// These live above both the sign-in page and the app, so signing out and in as someone else keeps
+// the hotel's tasks, defects, requests and your platform settings.
+export default function Root() {
+  return (
+    <FeaturesProvider>
+      <AuthProvider>
+        <HousekeepingProvider>
+          <RequestsProvider>
+            <Outlet />
+          </RequestsProvider>
+        </HousekeepingProvider>
+      </AuthProvider>
+    </FeaturesProvider>
+  )
+}

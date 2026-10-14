@@ -1,14 +1,22 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { USERS, roleById } from '../../lib/roles'
+import type { User } from '../../lib/roles'
+import { useAuth } from './authContext'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { login, loginAs } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+
+  function enter(user: User) {
+    navigate(roleById(user.role).landing, { replace: true })
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -19,8 +27,22 @@ export default function LoginPage() {
       return
     }
 
-    navigate('/dashboard')
+    const user = login(email)
+    if (!user) {
+      setError('No account found for that email. Use one of the demo accounts below.')
+      return
+    }
+    enter(user)
   }
+
+  function pick(id: string) {
+    const user = loginAs(id)
+    if (user) enter(user)
+  }
+
+  const demo = USERS.filter((u) => u.demo)
+  const hotel = demo.filter((u) => u.role !== 'platform')
+  const platform = demo.filter((u) => u.role === 'platform')
 
   return (
     <main className="min-h-screen bg-canvas">
@@ -154,6 +176,37 @@ export default function LoginPage() {
                 </button>
               </div>
             </form>
+
+            <div className="mt-6 rounded-2xl border border-ink/10 bg-surface p-5">
+              <p className="text-sm font-semibold text-ink">Demo accounts</p>
+              <p className="mt-1 text-xs text-ink/60">
+                Prototype only. Click one to sign in, no password needed. Or type its email with any password.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {hotel.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => pick(u.id)}
+                    className="rounded-lg border border-ink/15 px-3 py-2 text-left hover:border-brand hover:bg-canvas"
+                  >
+                    <span className="block text-sm font-semibold text-ink">{roleById(u.role).label}</span>
+                    <span className="block text-xs text-ink/60">{u.name}</span>
+                  </button>
+                ))}
+              </div>
+              {platform.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => pick(u.id)}
+                  className="mt-3 w-full rounded-lg border border-dashed border-ink/25 px-3 py-2 text-left hover:border-brand hover:bg-canvas"
+                >
+                  <span className="block text-sm font-semibold text-ink">Gastora team: {roleById(u.role).label}</span>
+                  <span className="block text-xs text-ink/60">Manages hotels and their plans</span>
+                </button>
+              ))}
+            </div>
 
             <p className="mt-6 text-center text-xs text-ink/50">
               Access is controlled by your assigned Gastora role and

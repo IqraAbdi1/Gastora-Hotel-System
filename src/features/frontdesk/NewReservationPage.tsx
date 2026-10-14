@@ -48,6 +48,7 @@ export function NewReservationForm({
   const [depositText, setDepositText] = useState('')
   const [override, setOverride] = useState(false)
   const [reason, setReason] = useState('')
+  const [via, setVia] = useState<'front desk' | 'phone' | 'email'>('front desk')
   const [created, setCreated] = useState<Reservation | null>(null)
   const [checkInFor, setCheckInFor] = useState<Reservation | null>(null)
 
@@ -113,7 +114,7 @@ export function NewReservationForm({
       paid: deposit,
       plan: planId,
       guarantee,
-      source: walkin ? 'walk-in' : 'front desk',
+      source: walkin ? 'walk-in' : via,
       adults,
       children,
       ...(soldOut ? { overrideReason: reason.trim() } : {}),
@@ -300,6 +301,20 @@ export function NewReservationForm({
 
           <section className={card}>
             <p className={heading}>Guest</p>
+                        {!walkin && (
+              <label className="block text-sm font-medium">
+                Booked via
+                <select
+                  value={via}
+                  onChange={(e) => setVia(e.target.value as 'front desk' | 'phone' | 'email')}
+                  className={`${field} mt-1`}
+                >
+                  <option value="front desk">Front desk (guest came in)</option>
+                  <option value="phone">Phone call</option>
+                  <option value="email">Email</option>
+                </select>
+              </label>
+            )}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <label className="block text-sm font-medium">
                 Full name

@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --brand: #1E6F66;
+  --brand: #1F5C45;
   --accent: #D99A2B;
 }
 
 @theme inline {
-  --color-sidebar: #10302E;
+  --color-sidebar: #1F5C45;
+
   --color-brand: var(--brand);
   --color-accent: var(--accent);
   --color-surface: #FFFFFF;
