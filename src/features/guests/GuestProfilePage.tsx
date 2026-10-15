@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import StatusPill from '../../components/StatusPill'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import GuestEditPanel from './GuestEditPanel'
 
 export default function GuestProfilePage() {
   const { guestId } = useParams()
   const { guests, reservations } = useHotel()
+  const [editing, setEditing] = useState(false)
 
   const guest = guests.find((g) => g.id === guestId)
 
@@ -41,11 +44,20 @@ export default function GuestProfilePage() {
         Back to guests
       </Link>
 
-      <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold">{guest.name}</h1>
-        {guest.vip && (
-          <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-warn">VIP</span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">{guest.name}</h1>
+          {guest.vip && (
+            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-warn">VIP</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold"
+        >
+          Edit profile
+        </button>
       </div>
 
       <section className="space-y-3 rounded-xl border border-ink/10 bg-surface p-4">
@@ -100,6 +112,8 @@ export default function GuestProfilePage() {
           </div>
         )}
       </section>
+
+      {editing && <GuestEditPanel guest={guest} onClose={() => setEditing(false)} />}
     </div>
   )
 }

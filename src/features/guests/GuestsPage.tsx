@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useHotel } from '../../lib/hotelContext'
+import GuestEditPanel from './GuestEditPanel'
 
 export default function GuestsPage() {
   const { guests } = useHotel()
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const q = search.trim().toLowerCase()
   const shown = guests.filter(
@@ -13,9 +16,18 @@ export default function GuestsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Guests</h1>
-        <p className="text-sm text-ink/60">{guests.length} guests in total</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Guests</h1>
+          <p className="text-sm text-ink/60">{guests.length} guests in total</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
+        >
+          New guest
+        </button>
       </div>
 
       <input
@@ -52,6 +64,10 @@ export default function GuestsPage() {
         </table>
         {shown.length === 0 && <p className="p-4 text-sm text-ink/60">No guests match.</p>}
       </div>
+
+      {creating && (
+        <GuestEditPanel onClose={() => setCreating(false)} onSaved={(g) => navigate(`/guests/${g.id}`)} />
+      )}
     </div>
   )
 }
