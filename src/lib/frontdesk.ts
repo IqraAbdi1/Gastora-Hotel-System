@@ -157,7 +157,7 @@ export function reservationsNeedingAttention(reservations: Reservation[], rooms:
         reservation: r,
         severity: 'warn',
         title: `No ready ${r.roomType} room`,
-        detail: 'Every ready room of this type is already spoken for. Ask housekeeping.',
+        detail: 'Every ready room of this type is already spoken for. Rush one with housekeeping.',
       })
   }
 

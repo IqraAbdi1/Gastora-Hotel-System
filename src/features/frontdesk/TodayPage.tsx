@@ -267,7 +267,7 @@ export default function TodayPage() {
       })}
       <ShortageBanner />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="Arrivals"
           icon="arrival"
@@ -286,14 +286,6 @@ export default function TodayPage() {
           icon="guests" value={day.inHouse.length} hint="Guests staying" to="/desk/reservations?view=in-house" />
         <StatCard label="Occupancy"
           icon="occupancy" value={`${occupancy}%`} hint={`${day.occupied} of ${day.sellable} rooms`} to="/desk/rooms" />
-        <StatCard
-          label="Rooms to clean"
-          icon="clean"
-          value={day.roomsToClean}
-          hint="Open housekeeping"
-          to="/housekeeping"
-          tone={day.roomsToClean > 0 ? 'warn' : 'default'}
-        />
         <StatCard
           label="Balances due"
           icon="money"

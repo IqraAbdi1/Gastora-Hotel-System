@@ -1,12 +1,17 @@
-import { EmptyState, Icon, Modal } from '../../components/ui'
+import { useState } from 'react'
+import { Button, EmptyState, Icon, Modal } from '../../components/ui'
 import type { Attention } from '../../lib/frontdesk'
+import AskHousekeeping from './AskHousekeeping'
 
 const groups = [
   { severity: 'bad' as const, label: 'Urgent', dot: 'bg-bad', text: 'text-bad' },
   { severity: 'warn' as const, label: 'To check', dot: 'bg-warn', text: 'text-warn' },
 ]
 
+const keyOf = (a: Attention) => `${a.kind}-${a.reservation.id}`
+
 // Everything on today's "Needs attention" list, grouped by how urgent it is.
+// Room problems can be sorted out here: rush a room and message housekeeping without leaving the desk.
 export default function AttentionPanel({
   items,
   onOpen,
@@ -16,13 +21,14 @@ export default function AttentionPanel({
   onOpen: (reservationId: string) => void
   onClose: () => void
 }) {
+  // The first room problem starts open, since asking housekeeping is the usual next step.
+  const [askOpen, setAskOpen] = useState<string | null>(() => {
+    const first = items.find((a) => a.kind === 'no-ready-room')
+    return first ? keyOf(first) : null
+  })
+
   return (
-    <Modal
-      side
-      title="Needs attention"
-      description="Reservations to sort out today. Select one to open it."
-      onClose={onClose}
-    >
+    <Modal side title="Needs attention" description="Reservations to sort out today." onClose={onClose}>
       {items.length === 0 ? (
         <div className="flex flex-col items-center">
           <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-good/10 text-good">
@@ -42,21 +48,36 @@ export default function AttentionPanel({
                   {g.label} · {list.length}
                 </h3>
                 <ul className="space-y-2">
-                  {list.map((a) => (
-                    <li key={`${a.kind}-${a.reservation.id}`}>
-                      <button
-                        type="button"
-                        onClick={() => onOpen(a.reservation.id)}
-                        className="w-full rounded-lg border border-ink/10 bg-surface px-3 py-2.5 text-left transition hover:border-brand/40 hover:bg-canvas/60"
-                      >
-                        <span className="block text-sm font-semibold text-ink">{a.title}</span>
-                        <span className="block text-xs font-medium text-ink/70">
-                          {a.reservation.guest} · {a.reservation.id} · {a.reservation.roomType}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-ink/60">{a.detail}</span>
-                      </button>
-                    </li>
-                  ))}
+                  {list.map((a) => {
+                    const key = keyOf(a)
+                    const r = a.reservation
+                    const roomProblem = a.kind === 'no-ready-room'
+                    const asking = askOpen === key
+                    return (
+                      <li key={key} className="rounded-lg border border-ink/10 bg-surface px-3 py-2.5">
+                        <p className="text-sm font-semibold text-ink">{a.title}</p>
+                        <p className="text-xs font-medium text-ink/70">
+                          {r.guest} · {r.id} · {r.roomType}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink/60">{a.detail}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {roomProblem && (
+                            <Button size="sm" variant={asking ? 'ghost' : 'primary'} onClick={() => setAskOpen(asking ? null : key)}>
+                              {asking ? 'Hide' : 'Ask housekeeping'}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={() => onOpen(r.id)}>
+                            Open reservation
+                          </Button>
+                        </div>
+                        {roomProblem && asking && (
+                          <div className="mt-3">
+                            <AskHousekeeping roomType={r.roomType} room={r.room ?? undefined} />
+                          </div>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </section>
             )

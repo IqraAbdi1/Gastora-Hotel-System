@@ -54,7 +54,8 @@ export function frontDeskNotifications(
         severity: 'warn',
         title: `${a.title} for ${r.guest}`,
         body: `${r.id} arrives today. ${a.detail}`,
-        link: '/housekeeping',
+        // Opens Today, where Needs attention can rush a room and message housekeeping.
+        link: '/desk',
         entity: ref(r),
       })
     } else if (a.kind === 'overdue-departure') {

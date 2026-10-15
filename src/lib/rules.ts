@@ -3,7 +3,8 @@ import { TODAY } from '../data/sample'
 import { dayMonth, ugx } from './format'
 
 const goArrivals: GoAction = { kind: 'go', label: 'Open arrivals', to: '/desk/reservations?view=arrivals' }
-const goHousekeeping: GoAction = { kind: 'go', label: 'Open housekeeping', to: '/housekeeping' }
+// The front desk cannot open housekeeping's pages, so room questions go to the desk's own rooms board.
+const goHousekeeping: GoAction = { kind: 'go', label: 'Open rooms board', to: '/desk/rooms' }
 const goFolios: GoAction = { kind: 'go', label: 'Open folios', to: '/desk/folios' }
 const goDepartures: GoAction = { kind: 'go', label: 'Open departures', to: '/desk/folios?view=leaving' }
 const firstName = (guest: string) => guest.split(' ')[0]
