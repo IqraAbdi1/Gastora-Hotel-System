@@ -15,6 +15,7 @@ import { useHousekeeping } from '../housekeeping/hkContext'
 import ShortageBanner from '../housekeeping/ShortageBanner'
 import CheckInPanel from './CheckInPanel'
 import ReservationPanel from './ReservationPanel'
+import TasksCard from './TasksCard'
 
 // How many rows each list shows before linking to the full list.
 const SHOW = 8
@@ -276,6 +277,8 @@ export default function TodayPage() {
         </div>
 
         <div className="min-w-0 space-y-6">
+          <TasksCard />
+
           <Card title="Needs attention" count={attention.length} description="Reservations to sort out today." padded={false}>
             {attention.length === 0 ? (
               <EmptyState title="Nothing needs attention" hint="No missed arrivals, overdue stays or unguaranteed arrivals." />

@@ -7,6 +7,7 @@ import NavBadge from './NavBadge'
 import NavIcon from './NavIcon'
 import { useAuth } from '../features/auth/authContext'
 import { useFeatures } from '../features/platform/featuresContext'
+import NotificationBell from '../features/frontdesk/NotificationBell'
 import HousekeepingBar from '../features/housekeeping/HousekeepingBar'
 import { DraftContext } from '../lib/draftContext'
 import { BookingContext } from '../lib/bookingContext'
@@ -309,7 +310,8 @@ function Shell() {
             ) : !showDeskBar ? null : (
               <header className="flex flex-wrap items-center gap-3 border-b border-ink/10 bg-surface px-4 py-3 md:px-6">
                 <CommandBar />
-                <div className="ml-auto flex gap-2">
+                <div className="ml-auto flex items-center gap-2">
+                  <NotificationBell />
                   <button
                     type="button"
                     onClick={() => setBooking({})}
