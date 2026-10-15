@@ -14,7 +14,10 @@ const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-s
 const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
 export default function CheckInPanel({ reservation: r, onClose }: Props) {
-  const { rooms, reservations, checkIn } = useHotel()
+  const { rooms, reservations, guests, checkIn } = useHotel() // CHANGED: added guests
+
+  // A returning guest's saved profile fills in the form, so the desk does not retype it. // CHANGED
+  const profile = r.guestId ? guests.find((g) => g.id === r.guestId) : guests.find((g) => g.name === r.guest) // CHANGED
 
   // Rooms she can use: right type, clean, and free for the whole stay (BR-FO-01, BR-FO-02)
   const readyRooms = useMemo(
@@ -40,15 +43,15 @@ export default function CheckInPanel({ reservation: r, onClose }: Props) {
     const sorted = [...readyRooms].sort((a, b) => Number(a.number) - Number(b.number))
     return sorted[0]?.number ?? ''
   })
-  const [idType, setIdType] = useState<IdType>('NIN')
-  const [idNumber, setIdNumber] = useState('')
+  const [idType, setIdType] = useState<IdType>(profile?.idType ?? 'NIN') // CHANGED
+  const [idNumber, setIdNumber] = useState(profile?.idNumber ?? '') // CHANGED
   const [idExpiry, setIdExpiry] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
-  const [gender, setGender] = useState('')
-  const [nationality, setNationality] = useState('Ugandan')
-  const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState(profile?.dateOfBirth ?? '') // CHANGED
+  const [gender, setGender] = useState(profile?.gender ?? '') // CHANGED
+  const [nationality, setNationality] = useState(profile?.nationality ?? 'Ugandan') // CHANGED
+  const [address, setAddress] = useState(profile?.address ?? '') // CHANGED
+  const [phone, setPhone] = useState(profile?.phone ?? '') // CHANGED
+  const [email, setEmail] = useState(profile?.email ?? '') // CHANGED
   const [purpose, setPurpose] = useState('Leisure')
   const [comingFrom, setComingFrom] = useState('')
   const [nextDestination, setNextDestination] = useState('')
@@ -61,7 +64,7 @@ export default function CheckInPanel({ reservation: r, onClose }: Props) {
   const [idPhoto, setIdPhoto] = useState<string | undefined>()
   const [signature, setSignature] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(profile?.marketingConsent ?? false) // CHANGED
   const [doneRoom, setDoneRoom] = useState<string | null>(null)
 
   const step1Valid = room !== '' && idNumber.trim() !== '' && phone.trim() !== ''
