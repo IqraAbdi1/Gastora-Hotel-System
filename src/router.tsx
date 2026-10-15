@@ -9,6 +9,7 @@ import RoomsPage from './features/frontdesk/RoomsPage'
 import NewReservationPage from './features/frontdesk/NewReservationPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 import GuestsPage from './features/guests/GuestsPage'
+import GuestProfilePage from './features/guests/GuestProfilePage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'desk/rooms', element: <RoomsPage /> },
       { path: 'desk/new-reservation', element: <NewReservationPage /> },
       { path: 'guests', element: <GuestsPage /> },
+      { path: 'guests/:guestId', element: <GuestProfilePage /> },
       { path: 'desk/folios', element: <PagePlaceholder title="Folios" /> },
 
       { path: 'housekeeping', element: <HousekeepingPage /> },

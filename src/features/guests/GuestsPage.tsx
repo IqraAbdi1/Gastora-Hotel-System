@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useHotel } from '../../lib/hotelContext'
 
 export default function GuestsPage() {
@@ -37,7 +38,11 @@ export default function GuestsPage() {
           <tbody className="divide-y divide-ink/10">
             {shown.map((g) => (
               <tr key={g.id}>
-                <td className="px-4 py-3 font-semibold">{g.name}</td>
+                <td className="px-4 py-3">
+                  <Link to={`/guests/${g.id}`} className="font-semibold text-brand">
+                    {g.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3">{g.phone}</td>
                 <td className="px-4 py-3">{g.email ?? '-'}</td>
                 <td className="px-4 py-3">{g.nationality ?? '-'}</td>
