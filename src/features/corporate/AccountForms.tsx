@@ -106,8 +106,9 @@ export function ApprovalBox({ a, role, userId }: { a: CorporateAccount; role: Ro
 export function CreditForm({ a, onDone }: { a: CorporateAccount; onDone: () => void }) {
   const { setCredit, policy } = useCorporate()
   const { run, busy, error } = useAction()
-  const [terms, setTerms] = useState<PaymentTerms>(a.paymentTerms)
-  const [limit, setLimit] = useState(String(a.creditLimit))
+  // A pending credit request starts with the amount and terms the company asked for.
+  const [terms, setTerms] = useState<PaymentTerms>(a.requestedCreditLimit ? (a.requestedPaymentTerms ?? 'net-30') : a.paymentTerms)
+  const [limit, setLimit] = useState(String(a.requestedCreditLimit ?? a.creditLimit))
   const [reason, setReason] = useState('')
 
   function submit(e: FormEvent) {

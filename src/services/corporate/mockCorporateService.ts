@@ -58,6 +58,7 @@ export function createMockCorporateService(): CorporateService {
         paymentTerms: 'prepaid',
         creditLimit: 0,
         requestedCreditLimit: input.requestedCreditLimit || undefined,
+        requestedPaymentTerms: input.requestedCreditLimit ? input.paymentTerms : undefined,
         outstandingBalance: 0,
         contacts: input.contacts.map((c, i) => ({ ...c, id: `CC-${Date.now()}-${i}` })),
         requiredSteps: [...ACCOUNT_APPROVAL],

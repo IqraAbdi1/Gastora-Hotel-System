@@ -95,6 +95,8 @@ export interface CorporateAccount {
   creditLimit: number
   /** What the requester asked for. Only an approver can turn it into an actual limit. */
   requestedCreditLimit?: number
+  /** The invoice terms the company asked for with its credit request. */
+  requestedPaymentTerms?: PaymentTerms
   /** Unpaid invoices. In the real system this comes from accounts receivable; here it is a sample figure. */
   outstandingBalance: number
   billing: BillingInstructions
