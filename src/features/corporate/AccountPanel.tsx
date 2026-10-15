@@ -120,8 +120,8 @@ export default function AccountPanel({ a, onClose }: { a: CorporateAccount; onCl
               title="Credit"
               action={
                 live && roleId && canSetCredit(roleId, policy) && editing !== 'credit' ? (
-                  <Button size="sm" variant={a.requestedCreditLimit ? 'primary' : 'ghost'} onClick={() => setEditing('credit')}>
-                    {a.requestedCreditLimit ? `Approve credit request: ${ugx(a.requestedCreditLimit)}` : 'Change credit'}
+                  <Button size="sm" variant="ghost" onClick={() => setEditing('credit')}>
+                    {a.requestedCreditLimit ? 'Edit credit request' : 'Change credit'}
                   </Button>
                 ) : undefined
               }

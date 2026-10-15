@@ -141,7 +141,9 @@ export function CreditForm({ a, onDone }: { a: CorporateAccount; onDone: () => v
         <FormError error={error} />
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={busy || !reason.trim()}>
-            Save credit
+            {a.requestedCreditLimit && !busy
+              ? `Approve credit request: ${ugx(offersCredit(terms) ? parseAmount(limit) : 0)}`
+              : 'Save credit'}
           </Button>
           <Button size="sm" variant="ghost" onClick={onDone}>
             Cancel
