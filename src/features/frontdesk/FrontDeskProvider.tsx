@@ -8,6 +8,7 @@ import { notificationService, taskService } from '../../services'
 import type { AppNotification } from '../../services/notifications/notificationTypes'
 import type { FrontDeskTask, NewTaskInput } from '../../services/tasks/taskTypes'
 import { useAuth } from '../auth/authContext'
+import { useCorporate } from '../corporate/corporateContext'
 import { FrontDeskContext } from './frontDeskContext'
 
 // Front desk tasks and notifications. Lives above the app (in Root) so they survive moving
@@ -15,6 +16,7 @@ import { FrontDeskContext } from './frontDeskContext'
 export default function FrontDeskProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { reservations, rooms } = useHotel()
+  const { accounts } = useCorporate()
   const now = useNow()
   const [tasks, setTasks] = useState<FrontDeskTask[]>([])
   const [tasksLoading, setTasksLoading] = useState(true)
@@ -63,10 +65,10 @@ export default function FrontDeskProvider({ children }: { children: ReactNode })
   // Prototype stand-in for the backend: raise notifications for what is happening now.
   // Re-running is harmless because the service ignores events it has already seen.
   useEffect(() => {
-    for (const n of frontDeskNotifications(reservations, rooms, tasks, TODAY, now)) {
+    for (const n of frontDeskNotifications(reservations, rooms, tasks, TODAY, now, accounts)) {
       void notificationService.publish(n)
     }
-  }, [reservations, rooms, tasks, now])
+  }, [reservations, rooms, tasks, now, accounts])
 
   const actor = useMemo(() => (user ? { id: user.id, name: user.name } : null), [user])
 

@@ -28,6 +28,7 @@ export const modules: NavModule[] = [
     { to: '/desk/reservations', label: 'Reservations' },
     { to: '/desk/rooms', label: 'Rooms' },
     { to: '/desk/folios', label: 'Folios' },
+    { to: '/desk/companies', label: 'Companies', badge: 'companies' },
   ]),
   module('housekeeping', 'Housekeeping', 'housekeeping', [
     { to: '/housekeeping', label: 'Rooms', end: true, badge: 'toClean' },

@@ -88,6 +88,8 @@ export type Reservation = {
   checkedOutAt?: string
   unpaidAtCheckout?: number
   checkoutNote?: string
+  /** Set when the stay is booked for a company. */
+  corporate?: CorporateBooking
 }
 export type Amendment = {
   at: string
@@ -143,4 +145,62 @@ export type GuestDetails = {
   marketingConsent?: boolean
   termsAccepted?: boolean
   signature?: string
+}
+
+// ---- Company bookings ----
+// A company booking has four separate checks. Passing one never passes another: a guest who says
+// they work for a company does not, by that alone, get to charge the stay to the company.
+
+/** Who pays. "company-room" = the company pays the room and meal plan, the guest pays extras. */
+export type BillTo = 'company-all' | 'company-room' | 'guest'
+
+export type BookerCheckMethod = 'authorised-list' | 'callback' | 'written-authorisation'
+export type BillingCheckMethod = 'email' | 'signed-form' | 'purchase-order' | 'phone-callback'
+
+export type CorporateLogEntry = { at: string; by: string; action: string }
+
+export type CorporateBooking = {
+  accountId: string
+  accountName: string
+  /** 2. Is the person who made the booking allowed to book for the company? */
+  booker: {
+    contactId?: string
+    name: string
+    phone?: string
+    status: 'verified' | 'pending' | 'failed'
+    method?: BookerCheckMethod
+    reference?: string
+    by?: string
+    at?: string
+  }
+  billTo: BillTo
+  /** 4. Has this booking been approved for company billing? */
+  billing: {
+    status: 'not-required' | 'pending' | 'approved' | 'declined'
+    /** The company contact who approved the charges, and their reference (PO, email, form). */
+    approverContactId?: string
+    approverName?: string
+    method?: BillingCheckMethod
+    reference?: string
+    /** Hotel sign-off, needed when the booking takes the company over its credit limit. */
+    overCreditApprovedBy?: string
+    overCreditReason?: string
+    by?: string
+    at?: string
+    note?: string
+  }
+  /** Company price applied from the agreement. Rules that need approval are not charged until approved. */
+  pricing?: {
+    ruleIds: string[]
+    labels: string[]
+    nights: number
+    perNightOriginal: number
+    perNightFinal: number
+    originalTotal: number
+    finalTotal: number
+    status: 'applied' | 'pending' | 'approved' | 'declined'
+    decidedBy?: string
+    at?: string
+  }
+  log: CorporateLogEntry[]
 }

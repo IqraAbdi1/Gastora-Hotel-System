@@ -9,7 +9,13 @@ import { freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal, suggest
 import { guarantees, ratePlans, roomRate } from '../../data/rates'
 import type { GuaranteeType, Guest, Reservation, Room } from '../../types'
 import type { BookingPreset } from '../../lib/bookingContext'
+import { companyBookingRecord, planCompanyBooking } from '../../lib/corporateBooking'
+import type { CompanyInput } from '../../lib/corporateBooking'
+import { BILL_TO_LABEL } from '../../lib/corporate'
+import { useAuth } from '../auth/authContext'
+import { useCorporate } from '../corporate/corporateContext'
 import CheckInPanel from './CheckInPanel'
+import CompanyBookingSection from './CompanyBookingSection'
 
 const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-sm outline-none focus:border-brand'
 const card = 'space-y-3 rounded-xl bg-surface p-4'
@@ -26,6 +32,8 @@ export function NewReservationForm({
   preset?: BookingPreset
 }) {
   const { rooms, reservations, guests, addReservation, addGuest } = useHotel()
+  const { byId, policy } = useCorporate()
+  const { user } = useAuth()
 
   // Opened from a calendar cell or a top-bar button.
   const presetRoom = rooms.find((r) => r.number === preset?.room)
@@ -51,6 +59,7 @@ export function NewReservationForm({
   const [via, setVia] = useState<'front desk' | 'phone' | 'email'>('front desk')
   const [created, setCreated] = useState<Reservation | null>(null)
   const [checkInFor, setCheckInFor] = useState<Reservation | null>(null)
+  const [company, setCompany] = useState<CompanyInput | null>(null)
 
   const from = walkin ? TODAY : arrival
   const nights = nightsOf(from, departure)
@@ -68,7 +77,17 @@ export function NewReservationForm({
   )
   const roomValue = roomChoices.some((r) => r.number === room) ? room : ''
 
-  const total = datesOk ? stayTotal(type, planId, nights) : 0
+  // Company side: the account, the booker, who pays and any agreed price.
+  const companyAccount = company?.accountId ? byId(company.accountId) : undefined
+  const companyPlan = useMemo(
+    () =>
+      company && companyAccount && datesOk
+        ? planCompanyBooking(company, companyAccount, policy, reservations, { roomType: type, planId, arrival: from, departure, nights })
+        : null,
+    [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights],
+  )
+
+  const total = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights)) : 0
   const suggested = suggestedDeposit(total)
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
@@ -82,17 +101,30 @@ export function NewReservationForm({
   const nameOk = name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 9
   const depositOk = deposit <= total && (guarantee !== 'deposit' || deposit > 0)
   const overrideOk = !soldOut || (override && reason.trim().length >= 5)
-  const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1
+  const companyOk = !company || (!!companyPlan && companyPlan.errors.length === 0)
+  const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1 && companyOk
 
   const problems: string[] = []
   if (!datesOk) problems.push('Pick valid dates (today or later, at least one night).')
   if (!nameOk) problems.push('Enter the guest name and a phone number.')
   if (!depositOk) problems.push(guarantee === 'deposit' ? 'Enter a deposit above 0 and not above the total.' : 'The deposit cannot be above the total.')
   if (!overrideOk) problems.push('This room type is sold out. A manager override and a reason are needed.')
+  if (company && !companyAccount) problems.push('Choose the company, or untick "Book for a company".')
+  if (companyPlan) problems.push(...companyPlan.errors)
 
   function toggleWalkin(on: boolean) {
     setWalkin(on)
     if (on && departure <= TODAY) setDeparture(addDays(TODAY, 1))
+  }
+
+  // A company booking is not guaranteed by the company until billing is approved, so start with no guarantee.
+  function changeCompany(next: CompanyInput | null) {
+    if (next && !company) {
+      setGuarantee('none')
+      setDepositText('')
+    }
+    if (!next && company) setGuarantee('deposit')
+    setCompany(next)
   }
 
   function useGuest(g: Guest) {
@@ -103,6 +135,7 @@ export function NewReservationForm({
 
   function submit() {
     const profile = selectedGuest ?? addGuest({ name: name.trim(), phone: phone.trim() })
+    const record = company && companyPlan ? companyBookingRecord(companyPlan, company, user?.name ?? 'Front desk') : null
     const made = addReservation({
       guest: profile.name,
       guestId: profile.id,
@@ -110,10 +143,11 @@ export function NewReservationForm({
       room: roomValue || null,
       arrival: from,
       departure,
-      total,
+      total: record ? record.total : total,
       paid: deposit,
       plan: planId,
-      guarantee,
+      guarantee: record?.guarantee ?? guarantee,
+      ...(record ? { corporate: record.corporate } : {}),
       source: walkin ? 'walk-in' : via,
       adults,
       children,
@@ -140,6 +174,22 @@ export function NewReservationForm({
           <p className="text-sm">
             Total {ugx(created.total)} · Deposit {ugx(created.paid)} · Balance {ugx(created.total - created.paid)}
           </p>
+          {created.corporate && (
+            <div className="space-y-1 rounded-lg bg-canvas p-3 text-sm">
+              <p className="font-semibold">
+                {created.corporate.accountName} · {BILL_TO_LABEL[created.corporate.billTo]}
+              </p>
+              <p className="text-ink/70">
+                Booker {created.corporate.booker.status === 'verified' ? 'verified' : 'still to verify'} · billing{' '}
+                {created.corporate.billing.status === 'approved'
+                  ? 'approved'
+                  : created.corporate.billing.status === 'not-required'
+                    ? 'not needed'
+                    : 'waiting for company approval'}
+                {created.corporate.pricing?.status === 'pending' && ' · company price waiting for a manager'}
+              </p>
+            </div>
+          )}
           {created.overrideReason && (
             <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">Overbooking override logged: {created.overrideReason}</p>
           )}
@@ -299,6 +349,8 @@ export function NewReservationForm({
             )}
           </section>
 
+          <CompanyBookingSection value={company} onChange={changeCompany} plan={companyPlan} />
+
           <section className={card}>
             <p className={heading}>Guest</p>
                         {!walkin && (
@@ -391,13 +443,20 @@ export function NewReservationForm({
             <label className="block text-sm font-medium">
               Guarantee
               <select value={guarantee} onChange={(e) => setGuarantee(e.target.value as GuaranteeType)} className={`${field} mt-1`}>
-                {guarantees.map((g) => (
-                  <option key={g.key} value={g.key}>
-                    {g.label}
-                  </option>
-                ))}
+                {guarantees
+                  .filter((g) => g.key !== 'company')
+                  .map((g) => (
+                    <option key={g.key} value={g.key}>
+                      {g.label}
+                    </option>
+                  ))}
               </select>
               <span className="mt-1 block text-xs font-normal text-ink/60">{guarantees.find((g) => g.key === guarantee)?.rule}</span>
+              <span className="mt-1 block text-xs font-normal text-ink/60">
+                {company
+                  ? 'The company guarantee is added by itself once billing to the company is approved.'
+                  : 'A company guarantee needs a company booking, above.'}
+              </span>
             </label>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <label className="block text-sm font-medium">
@@ -441,6 +500,16 @@ export function NewReservationForm({
             </p>
           </div>
           <div className="space-y-1 border-t border-ink/10 pt-3 text-sm">
+            {companyPlan && companyPlan.selected.length > 0 && (
+              <>
+                <p className="flex justify-between text-ink/60"><span>Normal price</span><span>{ugx(companyPlan.quote.originalTotal)}</span></p>
+                {companyPlan.quote.needsApproval ? (
+                  <p className="text-xs text-warn">Company price {ugx(companyPlan.quote.finalTotal)} applies once a manager approves it.</p>
+                ) : (
+                  <p className="flex justify-between text-good"><span>Company discount</span><span>− {ugx(companyPlan.quote.discountTotal)}</span></p>
+                )}
+              </>
+            )}
             <p className="flex justify-between"><span>Total</span><span className="font-semibold">{ugx(total)}</span></p>
             <p className="flex justify-between"><span>Deposit</span><span>{ugx(deposit)}</span></p>
             <p className="flex justify-between"><span>Balance</span><span className="font-semibold">{ugx(Math.max(0, total - deposit))}</span></p>

@@ -9,6 +9,7 @@ import type { CancelMode } from '../../lib/cancel'
 import type { Reservation } from '../../types'
 import AmendPanel from './AmendPanel'
 import CancelPanel from './CancelPanel'
+import CompanyChecks from './CompanyChecks'
 
 type Props = { reservation: Reservation; onClose: () => void; onCheckIn?: () => void }
 
@@ -89,6 +90,13 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
             <dd className={`font-bold ${balance > 0 ? 'text-bad' : 'text-good'}`}>{ugx(balance)}</dd>
           </div>
         </dl>
+
+        {r.corporate && (
+          <div>
+            <p className={`${heading} mb-2`}>Company booking</p>
+            <CompanyChecks r={r} />
+          </div>
+        )}
 
         {c && (
           <div>

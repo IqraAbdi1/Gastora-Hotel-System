@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import AuthProvider from '../features/auth/AuthProvider'
+import CorporateProvider from '../features/corporate/CorporateProvider'
 import FrontDeskProvider from '../features/frontdesk/FrontDeskProvider'
 import HousekeepingProvider from '../features/housekeeping/HousekeepingProvider'
 import FeaturesProvider from '../features/platform/FeaturesProvider'
@@ -13,9 +14,11 @@ export default function Root() {
       <AuthProvider>
         <HousekeepingProvider>
           <RequestsProvider>
-            <FrontDeskProvider>
-              <Outlet />
-            </FrontDeskProvider>
+            <CorporateProvider>
+              <FrontDeskProvider>
+                <Outlet />
+              </FrontDeskProvider>
+            </CorporateProvider>
           </RequestsProvider>
         </HousekeepingProvider>
       </AuthProvider>

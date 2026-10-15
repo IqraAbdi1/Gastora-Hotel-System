@@ -1,7 +1,9 @@
+import type { CorporateAccount } from '../services/corporate/corporateTypes'
 import type { NotificationInput } from '../services/notifications/notificationTypes'
 import type { FrontDeskTask } from '../services/tasks/taskTypes'
 import type { Reservation, Room } from '../types'
 import { addDays } from './availability'
+import { missingSteps, STEP_LABEL } from './corporate'
 import { dateTime, dayMonth, ugx } from './format'
 import { reservationsNeedingAttention } from './frontdesk'
 import { taskState } from './tasks'
@@ -17,6 +19,7 @@ export function frontDeskNotifications(
   tasks: FrontDeskTask[],
   today: string,
   now: number,
+  accounts: CorporateAccount[] = [],
 ): NotificationInput[] {
   const out: NotificationInput[] = []
   const base = { audience: 'frontdesk' as const }
@@ -108,6 +111,63 @@ export function frontDeskNotifications(
         severity: 'info',
         title: `${r.guest}: stay dates changed`,
         body: `${r.id} moved from ${dayMonth(ch.fromArrival)}–${dayMonth(ch.fromDeparture)} to ${dayMonth(ch.toArrival)}–${dayMonth(ch.toDeparture)}.${ch.reason ? ` Reason: ${ch.reason}.` : ''}`,
+        link: '/desk/reservations',
+        entity: ref(r),
+      })
+    }
+  }
+
+  // Company accounts waiting to be opened.
+  for (const a of accounts) {
+    if (a.status !== 'pending') continue
+    out.push({
+      ...base,
+      key: `account-pending:${a.id}`,
+      type: 'corporate-approval',
+      severity: 'info',
+      title: `${a.name} is waiting for approval`,
+      body: `New company account requested by ${a.createdBy.name}. Needs ${missingSteps(a).map((s) => STEP_LABEL[s].toLowerCase()).join(' and ')} approval.`,
+      link: '/desk/companies',
+      entity: { kind: 'company', id: a.id },
+    })
+  }
+
+  // Company bookings with a check still open.
+  for (const r of reservations) {
+    const c = r.corporate
+    if (!c || (r.status !== 'booked' && r.status !== 'in-house')) continue
+    if (c.booker.status === 'pending') {
+      out.push({
+        ...base,
+        key: `booker-pending:${r.id}`,
+        type: 'reservation-verification',
+        severity: 'warn',
+        title: `Verify who booked ${r.guest}'s stay`,
+        body: `${r.id} for ${c.accountName} was booked by ${c.booker.name}, who is not on the company's list.`,
+        link: '/desk/reservations',
+        entity: ref(r),
+      })
+    }
+    if (c.billing.status === 'pending') {
+      out.push({
+        ...base,
+        key: `billing-pending:${r.id}`,
+        type: 'corporate-approval',
+        severity: 'warn',
+        title: `${c.accountName}: approve billing for ${r.guest}`,
+        body: `${r.id}, arriving ${dayMonth(r.arrival)}. A company approver must confirm the charges before they go to the company.`,
+        link: '/desk/reservations',
+        entity: ref(r),
+      })
+    }
+    if (c.pricing?.status === 'pending') {
+      out.push({
+        ...base,
+        key: `price-pending:${r.id}`,
+        type: 'corporate-approval',
+        severity: 'info',
+        title: `Company price needs a manager: ${r.guest}`,
+        body: `${r.id}, ${c.pricing.labels.join(' + ')}. The normal price is charged until it is approved.`,
         link: '/desk/reservations',
         entity: ref(r),
       })

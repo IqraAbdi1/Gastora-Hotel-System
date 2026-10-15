@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import type {
   Amendment,
   Cancellation,
+  CorporateBooking,
   FolioCharge,
   FolioPayment,
   Guest,
@@ -28,6 +29,11 @@ export type HotelValue = {
   addPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
   checkOut: (reservationId: string, note?: string) => void
   setHousekeeping: (roomNumber: string, request: HkRequest, reason?: string) => void
+  setCorporate: (
+    reservationId: string,
+    corporate: CorporateBooking,
+    patch?: Partial<Pick<Reservation, 'total' | 'guarantee'>>,
+  ) => void
 
 }
 

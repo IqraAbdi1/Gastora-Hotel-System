@@ -28,6 +28,14 @@ export type Action =
   | 'countStock'
   /** A department head sends unused stock back to the store. */
   | 'returnStock'
+  /** Ask for a new company account. It starts pending, with no credit. */
+  | 'requestCorporate'
+  /** Edit company contacts and billing instructions. Not credit, not prices. */
+  | 'manageCorporate'
+  /** Manager sign-off: open accounts, change agreements and prices, approve price exceptions. */
+  | 'approveCorporateManager'
+  /** Finance sign-off: open accounts where finance must agree, set credit limits. */
+  | 'approveCorporateFinance'
 
 export interface Role {
   id: RoleId
@@ -63,7 +71,18 @@ export const ROLES: Role[] = [
     blurb: 'Everything, including approvals.',
     landing: '/dashboard',
     allow: [...ALL_HOTEL, '/admin', '/guest'],
-    actions: ['changeSettings', 'raiseRequest', 'approveRequest', 'approveOverBudget', 'manageStock', 'countStock'],
+    actions: [
+      'changeSettings',
+      'raiseRequest',
+      'approveRequest',
+      'approveOverBudget',
+      'manageStock',
+      'countStock',
+      'requestCorporate',
+      'manageCorporate',
+      'approveCorporateManager',
+      'approveCorporateFinance',
+    ],
     canViewAs: true,
   },
   {
@@ -72,7 +91,7 @@ export const ROLES: Role[] = [
     blurb: 'Runs the system: settings, staff and roles.',
     landing: '/admin',
     allow: [...ALL_HOTEL, '/admin', '/guest'],
-    actions: ['changeSettings', 'raiseRequest', 'manageStock'],
+    actions: ['changeSettings', 'raiseRequest', 'manageStock', 'requestCorporate', 'manageCorporate'],
     canViewAs: true,
   },
   {
@@ -81,15 +100,25 @@ export const ROLES: Role[] = [
     blurb: 'Runs operations and approves requisitions.',
     landing: '/manager',
     allow: ALL_HOTEL,
-    actions: ['raiseRequest', 'endorseRequest', 'approveRequest', 'markBought', 'manageStock', 'countStock'],
+    actions: [
+      'raiseRequest',
+      'endorseRequest',
+      'approveRequest',
+      'markBought',
+      'manageStock',
+      'countStock',
+      'requestCorporate',
+      'manageCorporate',
+      'approveCorporateManager',
+    ],
   },
   {
     id: 'finance',
     label: 'Finance',
     blurb: 'Money, budgets and over-budget approvals.',
     landing: '/finance',
-    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit'],
-    actions: ['raiseRequest', 'approveOverBudget'],
+    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit', '/desk/companies'],
+    actions: ['raiseRequest', 'approveOverBudget', 'requestCorporate', 'manageCorporate', 'approveCorporateFinance'],
   },
   {
     id: 'frontdesk',
@@ -97,15 +126,15 @@ export const ROLES: Role[] = [
     blurb: 'Arrivals, departures, rooms and folios.',
     landing: '/desk',
     allow: ['/desk'],
-    actions: [],
+    actions: ['requestCorporate'],
   },
   {
     id: 'reservations',
     label: 'Reservations agent',
     blurb: 'Bookings and availability only.',
     landing: '/desk/reservations',
-    allow: ['/desk/reservations', '/desk/rooms', '/desk/new-reservation'],
-    actions: [],
+    allow: ['/desk/reservations', '/desk/rooms', '/desk/new-reservation', '/desk/companies'],
+    actions: ['requestCorporate'],
   },
   {
     id: 'hkhead',
@@ -160,8 +189,8 @@ export const ROLES: Role[] = [
     label: 'Sales / events',
     blurb: 'Banqueting. Module not built yet.',
     landing: '/dashboard',
-    allow: ['/dashboard'],
-    actions: [],
+    allow: ['/dashboard', '/desk/companies'],
+    actions: ['requestCorporate', 'manageCorporate'],
   },
   {
     id: 'platform',
@@ -174,6 +203,9 @@ export const ROLES: Role[] = [
 ]
 
 export const roleById = (id: RoleId): Role => ROLES.find((r) => r.id === id) as Role
+
+/** For services that are handed a role id rather than the signed-in user. */
+export const roleCan = (id: RoleId, action: Action) => roleById(id).actions.includes(action)
 
 export function pathAllowed(role: Role, pathname: string): boolean {
   return role.allow.some((a) => pathname === a || pathname.startsWith(`${a}/`))

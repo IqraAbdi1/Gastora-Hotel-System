@@ -10,6 +10,7 @@ import type { AmendPatch, CancelPatch } from '../lib/hotelContext'
 import type {
   Amendment,
   Cancellation,
+  CorporateBooking,
   FolioCharge,
   FolioPayment,
   Guest,
@@ -163,6 +164,12 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Company booking checks change here. `patch` carries what follows from them, such as the total
+  // when a company price is approved or the guarantee when billing is approved.
+  function setCorporate(reservationId: string, corporate: CorporateBooking, patch: Partial<Pick<Reservation, 'total' | 'guarantee'>> = {}) {
+    setReservations((list) => list.map((r) => (r.id === reservationId ? { ...r, ...patch, corporate } : r)))
+  }
+
   // One place decides how a housekeeping request maps onto the room, so every screen agrees.
   // Occupied rooms are never cleaned or taken out of sale from here; they can only be flagged as a discrepancy.
   function setHousekeeping(roomNumber: string, request: HkRequest, reason?: string) {
@@ -205,6 +212,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         addPayment,
         checkOut,
         setHousekeeping,
+        setCorporate,
       }}
     >
       {children}

@@ -9,6 +9,7 @@ export function Modal({
   description,
   onClose,
   side = false,
+  wide = false,
   footer,
   children,
 }: {
@@ -16,6 +17,8 @@ export function Modal({
   description?: ReactNode
   onClose: () => void
   side?: boolean
+  /** More room, for record details with several sections. */
+  wide?: boolean
   footer?: ReactNode
   children: ReactNode
 }) {
@@ -39,7 +42,9 @@ export function Modal({
     >
       <div
         className={`flex flex-col bg-surface shadow-xl ${
-          side ? 'h-full w-full max-w-md' : 'max-h-[calc(100vh-2rem)] w-full max-w-lg rounded-xl'
+          side
+            ? `h-full w-full ${wide ? 'max-w-2xl' : 'max-w-md'}`
+            : `max-h-[calc(100vh-2rem)] w-full rounded-xl ${wide ? 'max-w-2xl' : 'max-w-lg'}`
         }`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4">

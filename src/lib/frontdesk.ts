@@ -1,4 +1,5 @@
 import { addDays } from './availability'
+import { companyChecksPending } from './corporate'
 import type { Reservation, Room } from '../types'
 
 // What the front desk needs to know about one day, worked out from reservations and rooms.
@@ -71,7 +72,7 @@ export function isReady(room: Room) {
   return room.status === 'clean' && !room.hk
 }
 
-export type AttentionKind = 'missed-arrival' | 'overdue-departure' | 'no-guarantee' | 'no-ready-room'
+export type AttentionKind = 'missed-arrival' | 'overdue-departure' | 'no-guarantee' | 'no-ready-room' | 'company-check'
 
 export type Attention = {
   kind: AttentionKind
@@ -108,9 +109,28 @@ export function reservationsNeedingAttention(reservations: Reservation[], rooms:
         detail: `Room ${r.room ?? '?'}. Extend the stay or check the guest out.`,
       })
     }
+    // Company bookings arriving in the next two days with a company check still open.
+    // They are listed here instead of under "no deposit": the company side has to be sorted first.
+    const companyOpen = r.status === 'booked' && companyChecksPending(r)
+    if (companyOpen && r.arrival >= today && r.arrival <= addDays(today, 2)) {
+      const c = r.corporate!
+      const left = [
+        c.booker.status === 'pending' && 'verify the booker',
+        c.billing.status === 'pending' && 'get company approval for billing',
+        c.pricing?.status === 'pending' && 'manager to approve the company price',
+      ].filter(Boolean)
+      out.push({
+        kind: 'company-check',
+        reservation: r,
+        severity: 'warn',
+        title: `${c.accountName}: company booking not cleared`,
+        detail: `${r.arrival === today ? 'Arrives today' : 'Arrives soon'}. Still to do: ${left.join(', ')}.`,
+      })
+    }
     // Arriving today with nothing paid and no card or company guarantee.
     // Assumption: a recorded card or company guarantee is enough; the hotel may require more.
     if (
+      !companyOpen &&
       r.status === 'booked' &&
       r.arrival === today &&
       r.paid === 0 &&
