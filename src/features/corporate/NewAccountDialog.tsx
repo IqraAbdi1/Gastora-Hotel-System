@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Field, Input, Modal, Select } from '../../components/ui'
-import { STEP_LABEL, TERMS_LABEL, offersCredit } from '../../lib/corporate'
+import { TERMS_LABEL, offersCredit } from '../../lib/corporate'
 import type { BillingInstructions, PaymentTerms } from '../../services/corporate/corporateTypes'
 import { BillingFields, ContactFields, FormError } from './AccountForms'
 import { useCorporate } from './corporateContext'
@@ -10,7 +10,7 @@ import { useAction } from './useAction'
 
 // Ask for a new company account. It starts "Awaiting approval" with no credit, whoever asks.
 export default function NewAccountDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
-  const { requestAccount, policy } = useCorporate()
+  const { requestAccount } = useCorporate()
   const { run, busy, error } = useAction()
   const [name, setName] = useState('')
   const [tin, setTin] = useState('')
@@ -44,7 +44,6 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
           billing,
           contacts: hasApprover ? [booker, approver] : [booker],
         },
-        policy,
       )
       onCreated(created.id)
     })
@@ -54,7 +53,7 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
     <Modal
       wide
       title="New company account"
-      description={`Starts as "Awaiting approval" with no credit. ${policy.accountApproval.map((s) => STEP_LABEL[s]).join(' and ')} must approve it before bookings can be billed to it.`}
+      description="A manager approves it before any stay can be billed to the company. It starts with no credit."
       onClose={onClose}
       footer={
         <>

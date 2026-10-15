@@ -13,7 +13,7 @@ import {
   StatCard,
 } from '../../components/ui'
 import type { Column } from '../../components/ui'
-import { creditPosition, missingSteps, STATUS_LABEL, STEP_LABEL, TERMS_LABEL } from '../../lib/corporate'
+import { creditPosition, missingSteps, SIZE_LABEL, STATUS_LABEL, STEP_LABEL, TERMS_LABEL } from '../../lib/corporate'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import type { AccountStatus, CorporateAccount } from '../../services/corporate/corporateTypes'
@@ -22,9 +22,6 @@ import AccountPanel from './AccountPanel'
 import { useCorporate } from './corporateContext'
 import { creditText, statusTone } from './corporateUi'
 import NewAccountDialog from './NewAccountDialog'
-import PolicyDialog from './PolicyDialog'
-
-const POLICY_SIZE = { small: 'Small hotel rules', medium: 'Medium hotel rules', large: 'Large hotel rules' }
 
 // Company accounts: who they are, whether they can be billed, their credit and their agreed prices.
 export default function CompaniesPage() {
@@ -35,7 +32,6 @@ export default function CompaniesPage() {
   const [status, setStatus] = useState<AccountStatus | 'all'>('all')
   const [openId, setOpenId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
-  const [showPolicy, setShowPolicy] = useState(false)
 
   const counts = useMemo(() => {
     const c = { active: 0, pending: 0, blocked: 0 }
@@ -129,13 +125,10 @@ export default function CompaniesPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Companies"
-        description="Company accounts, who may book and approve charges, credit and agreed prices."
+        description={`Company accounts, credit and agreed prices. Rules for this hotel: ${SIZE_LABEL[policy.size]}, set by Gastora.`}
         meta={<DataSourceBadge />}
         actions={
           <>
-            <Button variant="ghost" onClick={() => setShowPolicy(true)}>
-              {POLICY_SIZE[policy.size]}
-            </Button>
             {can('requestCorporate') && <Button onClick={() => setAdding(true)}>New company</Button>}
           </>
         }
@@ -193,7 +186,6 @@ export default function CompaniesPage() {
           }}
         />
       )}
-      {showPolicy && <PolicyDialog canEdit={can('changeSettings')} onClose={() => setShowPolicy(false)} />}
     </div>
   )
 }

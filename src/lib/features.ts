@@ -134,12 +134,17 @@ export function planHas(plan: PlanId, key: FeatureKey): boolean {
   return p ? p.features.includes(key) : false
 }
 
+/** Hotel size for company accounts. Set by the platform admin. */
+export type CompanySize = 'small' | 'medium' | 'large'
+
 export interface Tenant {
   id: string
   name: string
   rooms: number
   plan: PlanId
   status: TenantStatus
+  /** The company rules for this hotel, chosen from its size. The hotel cannot change it. */
+  companySize: CompanySize
   /** Platform admin overrides on top of the plan. */
   overrides: Partial<Record<FeatureKey, boolean>>
 }
@@ -183,7 +188,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [
-  { id: 't1', name: 'Lakeview Grand Hotel', rooms: 120, plan: 'large', status: 'active', overrides: {} },
-  { id: 't2', name: 'Mbale Town Inn', rooms: 18, plan: 'starter', status: 'active', overrides: {} },
-  { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {} },
+  { id: 't1', name: 'Lakeview Grand Hotel', rooms: 120, plan: 'large', status: 'active', overrides: {}, companySize: 'large' },
+  { id: 't2', name: 'Mbale Town Inn', rooms: 18, plan: 'starter', status: 'active', overrides: {}, companySize: 'small' },
+  { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {}, companySize: 'medium' },
 ]

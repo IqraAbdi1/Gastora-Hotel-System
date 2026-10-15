@@ -11,6 +11,7 @@ import type {
   HotelOptions,
   InspectionMode,
   PlanId,
+  CompanySize,
   Tenant,
   TenantStatus,
 } from '../../lib/features'
@@ -28,6 +29,11 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
 
   const setPlan = useCallback(
     (id: string, plan: PlanId) => patchTenant(id, (t) => ({ ...t, plan, overrides: {} })),
+    [patchTenant],
+  )
+
+  const setCompanySize = useCallback(
+    (id: string, size: CompanySize) => patchTenant(id, (t) => ({ ...t, companySize: size })),
     [patchTenant],
   )
 
@@ -78,8 +84,9 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       setOverride,
       clearOverrides,
       setOptions,
+      setCompanySize,
     }
-  }, [tenants, currentId, optionsById, setPlan, setStatus, setOverride, clearOverrides, setOptions])
+  }, [tenants, currentId, optionsById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize])
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>
 }

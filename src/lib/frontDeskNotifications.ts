@@ -136,26 +136,15 @@ export function frontDeskNotifications(
   for (const r of reservations) {
     const c = r.corporate
     if (!c || (r.status !== 'booked' && r.status !== 'in-house')) continue
-    if (c.booker.status === 'pending') {
-      out.push({
-        ...base,
-        key: `booker-pending:${r.id}`,
-        type: 'reservation-verification',
-        severity: 'warn',
-        title: `Verify who booked ${r.guest}'s stay`,
-        body: `${r.id} for ${c.accountName} was booked by ${c.booker.name}, who is not on the company's list.`,
-        link: '/desk/reservations',
-        entity: ref(r),
-      })
-    }
-    if (c.billing.status === 'pending') {
+    // Company confirmation happens at check-in. Remind the desk ahead of arrival, not for every booking.
+    if (c.billing.status === 'pending' && r.arrival <= addDays(today, 2)) {
       out.push({
         ...base,
         key: `billing-pending:${r.id}`,
         type: 'corporate-approval',
         severity: 'warn',
-        title: `${c.accountName}: approve billing for ${r.guest}`,
-        body: `${r.id}, arriving ${dayMonth(r.arrival)}. A company approver must confirm the charges before they go to the company.`,
+        title: `${c.accountName}: confirm company billing for ${r.guest}`,
+        body: `${r.id}, arriving ${dayMonth(r.arrival)}. At check-in: confirm the guest's link to the company, the LPO and the approver.`,
         link: '/desk/reservations',
         entity: ref(r),
       })

@@ -182,6 +182,8 @@ export type CorporateBooking = {
     approverName?: string
     method?: BillingCheckMethod
     reference?: string
+    /** The LPO number the guest or booker gave at booking. Not verified until check-in. */
+    claimedLpo?: string
     /** The company's purchase order (LPO), when the company needs one. Recorded when the hotel receives it. */
     lpo?: { number: string; amount: number; receivedOn: string; recordedBy: string; recordedAt: string }
     /** Hotel sign-off, needed when the booking takes the company over its credit limit. */

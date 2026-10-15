@@ -1,5 +1,6 @@
 import { FEATURES, PLANS, featuresOf, planHas } from '../../lib/features'
-import type { FeatureKey, TenantStatus } from '../../lib/features'
+import type { CompanySize, FeatureKey, TenantStatus } from '../../lib/features'
+import { SIZE_LABEL } from '../../lib/corporate'
 import Switch from '../../components/Switch'
 import { useFeatures } from './featuresContext'
 
@@ -10,8 +11,14 @@ const STATUSES: { id: TenantStatus; label: string }[] = [
 ]
 
 export default function PlatformPage() {
-  const { tenants, tenant: current, selectTenant, setPlan, setStatus, setOverride, clearOverrides } =
+  const { tenants, tenant: current, selectTenant, setPlan, setStatus, setOverride, clearOverrides, setCompanySize } =
     useFeatures()
+
+  const SIZE_NOTE: Record<CompanySize, string> = {
+    small: 'Front desk approves bookings. Manager sets credit. No LPO needed unless the company asks.',
+    medium: 'Finance sets credit. Invoice companies must send an LPO. Bookers are checked at check-in.',
+    large: 'Finance sets credit. LPO for every invoice stay. Bookers must be on the company list and confirmed by call-back.',
+  }
 
   /** Why a switch cannot be turned on yet, from the same rules the app uses. */
   function blockedBy(on: Record<FeatureKey, boolean>, key: FeatureKey): string | null {
@@ -96,6 +103,29 @@ export default function PlatformPage() {
                     </p>
                   ) : null
                 })}
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink/50">
+                  Company accounts
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(['small', 'medium', 'large'] as CompanySize[]).map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setCompanySize(t.id, size)}
+                      className={`rounded-lg px-3 py-1.5 text-sm ${
+                        t.companySize === size ? 'bg-brand text-white' : 'border border-ink/15 text-ink hover:bg-canvas'
+                      }`}
+                    >
+                      {SIZE_LABEL[size]}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-ink/50">{SIZE_NOTE[t.companySize]}</p>
+                <p className="mt-1 text-xs text-ink/40">
+                  Chosen here by Gastora. The hotel sees these rules but cannot change them.
+                </p>
               </div>
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink/50">

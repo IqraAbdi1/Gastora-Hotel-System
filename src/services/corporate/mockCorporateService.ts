@@ -1,24 +1,14 @@
 import { sampleAccounts } from '../../data/corporate'
-import {
-  canChangePricing,
-  canSetCredit,
-  canSignStep,
-  contactRightsProblem,
-  missingSteps,
-  offersCredit,
-  STEP_LABEL,
-  stampNow,
-} from '../../lib/corporate'
+import { ACCOUNT_APPROVAL, canChangePricing, canSetCredit, contactRightsProblem, offersCredit, stampNow, STEP_LABEL } from '../../lib/corporate'
 import { ugx } from '../../lib/format'
 import { roleCan } from '../../lib/roles'
 import type { CorporateService } from './corporateService'
-import type { CorporateAccount, CorporateActor, CorporatePolicy } from './corporateTypes'
+import type { CorporateAccount, CorporateActor } from './corporateTypes'
 
 // In-memory company accounts for the prototype. Not saved and not shared. It applies the same
 // permission checks the backend must apply, so the screens can be tested against them.
 export function createMockCorporateService(): CorporateService {
   let accounts = sampleAccounts()
-  let policy: CorporatePolicy | null = null
   let counter = accounts.length
   const listeners = new Set<() => void>()
   const emit = () => listeners.forEach((l) => l())
@@ -35,10 +25,12 @@ export function createMockCorporateService(): CorporateService {
     return Promise.resolve(next)
   }
 
+  const isManager = (actor: CorporateActor) => roleCan(actor.role, 'approveCorporateManager')
+
   return {
     listAccounts: () => Promise.resolve(accounts.map((a) => ({ ...a }))),
 
-    requestAccount(input, pol, actor) {
+    requestAccount(input, actor) {
       if (!roleCan(actor.role, 'requestCorporate')) return deny('You cannot request company accounts.')
       if (!input.name.trim()) return deny('A company needs a name.')
       if (accounts.some((a) => a.name.trim().toLowerCase() === input.name.trim().toLowerCase())) {
@@ -53,75 +45,57 @@ export function createMockCorporateService(): CorporateService {
       if (new Set(names).size !== names.length) return deny('The booker and the charge approver must be different people.')
       counter += 1
       const now = stampNow()
+      const asked = input.requestedCreditLimit
+        ? `Asked for ${ugx(input.requestedCreditLimit)} credit, ${input.paymentTerms}. Credit is set separately after approval.`
+        : `Asked for ${input.paymentTerms}`
       const created: CorporateAccount = {
         ...input,
         id: `CA-${String(counter).padStart(3, '0')}`,
         name: input.name.trim(),
         tin: input.tin.trim(),
         status: 'pending',
-        // Asked-for terms are kept as a request. Nobody gets credit until an approver grants it.
+        // No credit until the credit approver sets it. The request is kept for them to decide.
         paymentTerms: 'prepaid',
         creditLimit: 0,
         requestedCreditLimit: input.requestedCreditLimit || undefined,
         outstandingBalance: 0,
         contacts: input.contacts.map((c, i) => ({ ...c, id: `CC-${Date.now()}-${i}` })),
-        requiredSteps: [...pol.accountApproval],
+        requiredSteps: [...ACCOUNT_APPROVAL],
         approvals: [],
         createdAt: now,
         createdBy: person(actor),
-        history: [
-          {
-            at: now,
-            by: person(actor),
-            action: 'Account requested',
-            detail: input.requestedCreditLimit
-              ? `Asked for ${ugx(input.requestedCreditLimit)} credit, ${input.paymentTerms}`
-              : `Asked for ${input.paymentTerms}`,
-          },
-        ],
+        history: [{ at: now, by: person(actor), action: 'Account requested', detail: asked }],
       }
       accounts = [created, ...accounts]
       emit()
       return Promise.resolve(created)
     },
 
-    approveAccount(id, step, grant, pol, actor) {
+    approveAccount(id, note, actor) {
       const a = accounts.find((x) => x.id === id)
       if (!a) return deny('Account not found')
       if (a.status !== 'pending') return deny('This account is not waiting for approval.')
-      if (!a.requiredSteps.includes(step)) return deny('This account does not need that approval.')
-      if (a.approvals.some((x) => x.step === step)) return deny(`${STEP_LABEL[step]} has already approved.`)
-      if (!canSignStep(actor.role, step)) return deny(`Only ${STEP_LABEL[step].toLowerCase()} can give this approval.`)
-      if (a.approvals.some((x) => x.by.id === actor.id)) return deny('The same person cannot give two approvals on one account.')
-      if (grant.creditLimit !== undefined && !canSetCredit(actor.role, pol)) return deny('You cannot set credit limits.')
-      if (grant.creditLimit && grant.paymentTerms && !offersCredit(grant.paymentTerms)) {
-        return deny('Credit needs invoice terms (15, 30 or 60 days).')
-      }
-
-      const approvals = [...a.approvals, { step, by: person(actor), at: stampNow(), note: grant.note }]
-      const done = missingSteps({ ...a, approvals }).length === 0
-      const credit = grant.creditLimit !== undefined ? `, credit ${ugx(grant.creditLimit)}` : ''
-      return change(id, actor, `${STEP_LABEL[step]} approved`, `${grant.note ?? ''}${credit}`.replace(/^, /, '') || undefined, (x) => ({
+      if (!isManager(actor)) return deny('Only a manager can approve a company account.')
+      if (a.createdBy.id === actor.id) return deny('You requested this account, so another manager must approve it.')
+      const credit = a.requestedCreditLimit
+        ? `Credit of ${ugx(a.requestedCreditLimit)} is not set yet. ${STEP_LABEL.finance} sets it under Credit.`
+        : ''
+      const detail = [note.trim(), credit].filter(Boolean).join(' ')
+      return change(id, actor, 'Approved', detail || undefined, (x) => ({
         ...x,
-        approvals,
-        status: done ? 'active' : 'pending',
-        creditLimit: grant.creditLimit ?? x.creditLimit,
-        paymentTerms: grant.paymentTerms ?? x.paymentTerms,
+        status: 'active',
+        approvals: [...x.approvals, { step: 'manager', by: person(actor), at: stampNow(), note: note.trim() || undefined }],
       }))
     },
 
     declineAccount(id, reason, actor) {
-      if (!roleCan(actor.role, 'approveCorporateManager') && !roleCan(actor.role, 'approveCorporateFinance')) {
-        return deny('Only an approver can decline an account.')
-      }
+      if (!isManager(actor)) return deny('Only a manager can decline an account.')
       if (!reason.trim()) return deny('Give a reason.')
       return change(id, actor, 'Declined', reason, (x) => ({ ...x, status: 'declined', statusReason: reason }))
     },
 
     setStatus(id, status, reason, actor) {
-      if (!roleCan(actor.role, 'approveCorporateManager') && !roleCan(actor.role, 'approveCorporateFinance')) {
-        return deny('Only a manager or finance can change an account status.')
-      }
+      if (!isManager(actor)) return deny('Only a manager can change an account status.')
       const a = accounts.find((x) => x.id === id)
       if (!a) return deny('Account not found')
       if (a.status === 'pending' || a.status === 'declined') return deny('Approve the account first.')
@@ -131,11 +105,11 @@ export function createMockCorporateService(): CorporateService {
     },
 
     setCredit(id, creditLimit, paymentTerms, reason, pol, actor) {
-      if (!canSetCredit(actor.role, pol)) return deny(`Only ${STEP_LABEL[pol.creditApprover].toLowerCase()} can change credit.`)
+      if (!canSetCredit(actor.role, pol)) return deny(`Only ${STEP_LABEL[pol.creditApprover]} can set credit for this hotel.`)
       if (creditLimit < 0) return deny('Credit cannot be negative.')
       if (creditLimit > 0 && !offersCredit(paymentTerms)) return deny('Credit needs invoice terms (15, 30 or 60 days).')
       if (!reason.trim()) return deny('Give a reason for the change.')
-      return change(id, actor, 'Credit changed', `${ugx(creditLimit)}, ${paymentTerms}. ${reason}`, (x) => ({
+      return change(id, actor, 'Credit set', `${ugx(creditLimit)}, ${paymentTerms}. ${reason}`, (x) => ({
         ...x,
         creditLimit,
         paymentTerms,
@@ -170,20 +144,11 @@ export function createMockCorporateService(): CorporateService {
     },
 
     saveAgreement(id, agreement, reason, actor) {
-      if (!canChangePricing(actor.role)) return deny('Only a manager can change a company agreement.')
+      if (!canChangePricing(actor.role)) return deny('Only a manager can set company prices.')
       if (!reason.trim()) return deny('Give a reason for the change.')
       if (agreement.validTo < agreement.validFrom) return deny('The agreement ends before it starts.')
-      return change(id, actor, 'Agreement changed', reason, (x) => ({ ...x, agreement }))
-    },
-
-    getPolicy: () => Promise.resolve(policy),
-
-    setPolicy(next, actor) {
-      if (!roleCan(actor.role, 'changeSettings')) return deny('Only the owner or hotel admin can change this.')
-      if (next.accountApproval.length === 0) return deny('At least one approval is needed to open an account.')
-      policy = next
-      emit()
-      return Promise.resolve()
+      const prior = accounts.find((a) => a.id === id)?.agreement
+      return change(id, actor, prior ? 'Prices changed' : 'Agreement added', reason, (x) => ({ ...x, agreement }))
     },
 
     subscribe(listener) {

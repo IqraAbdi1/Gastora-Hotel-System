@@ -50,17 +50,16 @@ export function sampleAccounts(): CorporateAccount[] {
           { id: 'PR-3', label: 'Long stay', kind: 'percent', value: 10, roomTypes: ['Standard', 'Deluxe', 'Suite'], validFrom: day(-200), validTo: day(165), minNights: 5, requiresApproval: false },
         ],
       },
-      requiredSteps: ['manager', 'finance'],
+      requiredSteps: ['manager'],
       approvals: [
         { step: 'manager', by: gm, at: at(-210) },
-        { step: 'finance', by: fin, at: at(-209), note: 'Credit 5,000,000 on 30 days.' },
       ],
       createdAt: at(-212),
       createdBy: system,
       history: [
         { at: at(-212), by: system, action: 'Account requested' },
-        { at: at(-210), by: gm, action: 'Manager approved' },
-        { at: at(-209), by: fin, action: 'Finance approved', detail: 'Credit limit UGX 5,000,000, invoice 30 days' },
+        { at: at(-210), by: gm, action: 'Approved' },
+        { at: at(-209), by: fin, action: 'Credit set', detail: 'Credit limit UGX 5,000,000, invoice 30 days' },
       ],
     },
     {
@@ -102,7 +101,7 @@ export function sampleAccounts(): CorporateAccount[] {
       createdBy: system,
       history: [
         { at: at(-62), by: system, action: 'Account requested' },
-        { at: at(-61), by: gm, action: 'Manager approved', detail: 'No credit: pays at departure' },
+        { at: at(-61), by: gm, action: 'Approved', detail: 'No credit: pays at departure' },
       ],
     },
     {
@@ -128,7 +127,7 @@ export function sampleAccounts(): CorporateAccount[] {
         { id: 'CC-5', name: 'Fred Kiwanuka', jobTitle: 'Operations manager', phone: '0772 500 301', email: 'fred@pearl-agro.example', canBook: true, canApproveCharges: false, active: true },
         { id: 'CC-7', name: 'Harriet Nalwoga', jobTitle: 'Accountant', phone: '0772 500 302', email: 'harriet@pearl-agro.example', canBook: false, canApproveCharges: true, active: true },
       ],
-      requiredSteps: ['manager', 'finance'],
+      requiredSteps: ['manager'],
       approvals: [],
       createdAt: at(-1),
       createdBy: desk,
@@ -157,16 +156,15 @@ export function sampleAccounts(): CorporateAccount[] {
         { id: 'CC-6', name: 'Agnes Tumusiime', jobTitle: 'Office manager', phone: '0772 600 401', email: 'agnes@rwenzori-consulting.example', canBook: true, canApproveCharges: false, active: true },
         { id: 'CC-8', name: 'Moses Byamugisha', jobTitle: 'Managing partner', phone: '0772 600 402', email: 'moses@rwenzori-consulting.example', canBook: false, canApproveCharges: true, active: true },
       ],
-      requiredSteps: ['manager', 'finance'],
+      requiredSteps: ['manager'],
       approvals: [
         { step: 'manager', by: gm, at: at(-400) },
-        { step: 'finance', by: fin, at: at(-399) },
       ],
       createdAt: at(-401),
       createdBy: system,
       history: [
         { at: at(-401), by: system, action: 'Account requested' },
-        { at: at(-399), by: fin, action: 'Finance approved', detail: 'Credit limit UGX 3,000,000, invoice 30 days' },
+        { at: at(-399), by: fin, action: 'Credit set', detail: 'Credit limit UGX 3,000,000, invoice 30 days' },
         { at: at(-5), by: fin, action: 'Put on hold', detail: 'Invoices more than 60 days overdue' },
       ],
     },

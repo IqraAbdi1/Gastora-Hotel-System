@@ -1,30 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { defaultPolicy } from '../../lib/corporate'
+import { POLICY_PRESETS } from '../../lib/corporate'
 import { corporateService } from '../../services'
-import type { CorporateAccount, CorporateActor, CorporatePolicy } from '../../services/corporate/corporateTypes'
+import type { CorporateAccount, CorporateActor } from '../../services/corporate/corporateTypes'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
 import { CorporateContext } from './corporateContext'
 import type { CorporateValue } from './corporateContext'
 
 // Company accounts for every screen that needs them. Lives in Root next to the other hotel data.
+// The company rules come from the hotel's size, which the platform admin sets. The hotel cannot change them.
 export default function CorporateProvider({ children }: { children: ReactNode }) {
   const { user, role } = useAuth()
   const { tenant } = useFeatures()
   const [accounts, setAccounts] = useState<CorporateAccount[]>([])
-  const [stored, setStored] = useState<CorporatePolicy | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
     const load = () =>
-      Promise.all([corporateService.listAccounts(), corporateService.getPolicy()])
-        .then(([list, pol]) => {
+      corporateService
+        .listAccounts()
+        .then((list) => {
           if (!alive) return
           setAccounts(list)
-          setStored(pol)
           setError(null)
         })
         .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : 'Could not load company accounts'))
@@ -47,7 +47,7 @@ export default function CorporateProvider({ children }: { children: ReactNode })
     return actor
   }, [actor])
 
-  const policy = stored ?? defaultPolicy(tenant.plan)
+  const policy = POLICY_PRESETS[tenant.companySize]
   const s = corporateService
 
   const value: CorporateValue = {
@@ -55,17 +55,15 @@ export default function CorporateProvider({ children }: { children: ReactNode })
     loading,
     error,
     policy,
-    policyIsDefault: !stored,
     byId: (id) => accounts.find((a) => a.id === id),
-    requestAccount: (input, pol) => s.requestAccount(input, pol, need()),
-    approveAccount: (id, step, grant, pol) => s.approveAccount(id, step, grant, pol, need()),
+    requestAccount: (input) => s.requestAccount(input, need()),
+    approveAccount: (id, note) => s.approveAccount(id, note, need()),
     declineAccount: (id, reason) => s.declineAccount(id, reason, need()),
     setStatus: (id, status, reason) => s.setStatus(id, status, reason, need()),
     setCredit: (id, limit, terms, reason, pol) => s.setCredit(id, limit, terms, reason, pol, need()),
     updateBilling: (id, billing) => s.updateBilling(id, billing, need()),
     saveContact: (id, contact) => s.saveContact(id, contact, need()),
     saveAgreement: (id, agreement, reason) => s.saveAgreement(id, agreement, reason, need()),
-    setPolicy: (pol) => s.setPolicy(pol, need()),
   }
 
   return <CorporateContext.Provider value={value}>{children}</CorporateContext.Provider>

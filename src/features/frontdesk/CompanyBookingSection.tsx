@@ -47,7 +47,7 @@ export default function CompanyBookingSection({
             type="checkbox"
             checked={on}
             onChange={(e) =>
-              onChange(e.target.checked ? { accountId: '', bookerContactId: '', bookerName: '', bookerPhone: '', billTo: 'company-room', ruleIds: [] } : null)
+              onChange(e.target.checked ? { accountId: '', bookerContactId: '', bookerName: '', bookerPhone: '', claimedLpo: '', billTo: 'company-room', ruleIds: [] } : null)
             }
           />
           Book for a company
@@ -73,6 +73,7 @@ export default function CompanyBookingSection({
                           bookerContactId: '',
                           bookerName: '',
                           bookerPhone: '',
+                          claimedLpo: '',
                           billTo: a.billing.defaultBillTo,
                           ruleIds: [],
                         })
@@ -144,6 +145,16 @@ export default function CompanyBookingSection({
                   </option>
                 ))}
               </Select>
+            </label>
+            <label className="block text-sm font-medium md:col-span-2">
+              LPO number, if the company has given one
+              <Input
+                value={value.claimedLpo}
+                onChange={(e) => set({ claimedLpo: e.target.value })}
+                placeholder="Leave blank if not yet given"
+                className="mt-1 bg-canvas"
+              />
+              <span className="mt-1 block text-xs font-normal text-ink/60">Noted now and checked against the company's LPO at check-in.</span>
             </label>
             {!value.bookerContactId && (
               <>

@@ -9,15 +9,14 @@ type Drop<F> = F extends (...args: infer A) => infer R
   : never
 
 /** The service calls, with the signed-in person filled in as the actor. */
-type Bound = { [K in Exclude<keyof CorporateService, 'listAccounts' | 'getPolicy' | 'subscribe'>]: Drop<CorporateService[K]> }
+type Bound = { [K in Exclude<keyof CorporateService, 'listAccounts' | 'subscribe'>]: Drop<CorporateService[K]> }
 
 export type CorporateValue = Bound & {
   accounts: CorporateAccount[]
   loading: boolean
   error: string | null
-  /** What the hotel uses: its saved policy, or the default for its plan. */
+  /** The company rules for this hotel, from its size. Set by the platform admin. */
   policy: CorporatePolicy
-  policyIsDefault: boolean
   byId: (id: string) => CorporateAccount | undefined
 }
 

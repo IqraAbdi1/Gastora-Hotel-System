@@ -2,13 +2,13 @@ import { planFor } from './booking'
 import { addDays } from './availability'
 import { roleCan } from './roles'
 import type { RoleId } from './roles'
-import type { PlanId } from './features'
 import { roomRate } from '../data/rates'
 import type {
   AccountStatus,
   ApprovalStep,
   CorporateAccount,
   CorporateContact,
+  CompanySize,
   CorporatePolicy,
   PaymentTerms,
   PricingRule,
@@ -18,39 +18,25 @@ import type { BillTo, CorporateBooking, Reservation, Room } from '../types'
 // Company account rules in one place, with no React and no sample data, so the same checks can be
 // read by staff, reused by the API version, and compared with what the backend enforces.
 
-// ---------- Policy ----------
+// ---------- Company rules by hotel size ----------
+// Set by the platform admin per hotel. Every hotel uses the same account system; the size only changes how strict it is.
+// A small hotel keeps the front desk in charge. A medium hotel adds finance for credit and an LPO. A large hotel also
+// requires listed bookers and a call-back to the company before any stay is billed to it.
 
-export const POLICY_PRESETS: Record<CorporatePolicy['size'], CorporatePolicy> = {
-  small: {
-    size: 'small',
-    accountApproval: ['manager'],
-    creditApprover: 'manager',
-    bookingApproval: 'over-credit',
-    bookerMustBeListed: false,
-    referenceRequired: false,
-  },
-  medium: {
-    size: 'medium',
-    accountApproval: ['manager'],
-    creditApprover: 'finance',
-    bookingApproval: 'always',
-    bookerMustBeListed: false,
-    referenceRequired: true,
-  },
-  large: {
-    size: 'large',
-    accountApproval: ['manager', 'finance'],
-    creditApprover: 'finance',
-    bookingApproval: 'always',
-    bookerMustBeListed: true,
-    referenceRequired: true,
-  },
+export const POLICY_PRESETS: Record<CompanySize, CorporatePolicy> = {
+  small: { size: 'small', creditApprover: 'manager', bookerMustBeListed: false, callbackRequired: false, lpoForCreditTerms: false },
+  medium: { size: 'medium', creditApprover: 'finance', bookerMustBeListed: false, callbackRequired: false, lpoForCreditTerms: true },
+  large: { size: 'large', creditApprover: 'finance', bookerMustBeListed: true, callbackRequired: true, lpoForCreditTerms: true },
 }
 
-/** The starting policy for a hotel on each plan. The hotel can change it. */
-export function defaultPolicy(plan: PlanId): CorporatePolicy {
-  return POLICY_PRESETS[plan === 'starter' ? 'small' : plan === 'standard' ? 'medium' : 'large']
+export const SIZE_LABEL: Record<CompanySize, string> = {
+  small: 'Small hotel',
+  medium: 'Medium hotel',
+  large: 'Large hotel',
 }
+
+/** Account approval is always one manager sign-off. Finance is only involved when credit is given. */
+export const ACCOUNT_APPROVAL: ApprovalStep[] = ['manager']
 
 export const STEP_LABEL: Record<ApprovalStep, string> = { manager: 'Manager', finance: 'Finance' }
 
@@ -60,6 +46,11 @@ export function canSignStep(role: RoleId, step: ApprovalStep) {
 }
 
 export const canSetCredit = (role: RoleId, policy: CorporatePolicy) => canSignStep(role, policy.creditApprover)
+
+/** Does this company need an LPO for this stay? The company can ask for one, and the hotel's rules can require one for invoice terms. */
+export function needsLpo(a: CorporateAccount, policy: CorporatePolicy) {
+  return a.billing.poRequired || (policy.lpoForCreditTerms && offersCredit(a.paymentTerms))
+}
 /** Changing agreements and approving price exceptions is a manager's call. */
 export const canChangePricing = (role: RoleId) => roleCan(role, 'approveCorporateManager')
 
@@ -258,36 +249,14 @@ export function companyChecksPending(r: Reservation) {
 }
 
 /**
- * Billing approval when the booking is made. Under an "over-credit" policy a verified booker
- * within the credit limit is enough. Otherwise a company approver must confirm it later.
- */
-export function initialBillingStatus(
-  policy: CorporatePolicy,
-  billTo: BillTo,
-  bookerVerified: boolean,
-  withinCredit: boolean,
-): CorporateBooking['billing']['status'] {
-  if (billTo === 'guest') return 'not-required'
-  if (policy.bookingApproval === 'over-credit' && bookerVerified && withinCredit) return 'approved'
-  return 'pending'
-}
-
-/**
- * Why a company-billed stay cannot be checked in yet, or null if it can. The company must be active,
- * the booker verified and billing approved (which already needs the LPO and any over-credit sign-off).
- * Staff can always switch billing to the guest instead, and the guest then pays as normal.
+ * Why a company-billed stay cannot be checked in at all, or null. Only the account itself is checked here.
+ * The booker, the LPO and the credit are confirmed in the check-in window, where staff can see the guest.
  */
 export function checkInBlock(r: Reservation, account: CorporateAccount | undefined): string | null {
   const c = r.corporate
   if (!c || c.billTo === 'guest') return null
-  const fallback = ' Or, if the company will not pay, choose "Guest pays instead" and take payment from the guest.'
   if (!account || account.status !== 'active') {
-    return `${c.accountName} is ${account ? STATUS_LABEL[account.status].toLowerCase() : 'not found'}, so the stay cannot be billed to it.${fallback}`
-  }
-  if (c.booker.status !== 'verified') return `Verify that ${c.booker.name} was allowed to book for ${c.accountName}.${fallback}`
-  if (c.billing.status !== 'approved') {
-    const lpo = account.billing.poRequired && !c.billing.lpo ? ' The LPO has not been received yet.' : ''
-    return `${c.accountName} has not approved billing for this stay.${lpo}${fallback}`
+    return `${c.accountName} is ${account ? STATUS_LABEL[account.status].toLowerCase() : 'not found'}, so this stay cannot be billed to it. Choose "Guest pays instead" to take payment from the guest.`
   }
   return null
 }

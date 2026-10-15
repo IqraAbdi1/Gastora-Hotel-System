@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Button, Field, Input, Select, Textarea } from '../../components/ui'
-import { BILL_TO_LABEL, canSetCredit, canSignStep, missingSteps, offersCredit, STEP_LABEL, TERMS_LABEL } from '../../lib/corporate'
+import { BILL_TO_LABEL, canSignStep, offersCredit, STEP_LABEL, TERMS_LABEL } from '../../lib/corporate'
 import { ugx } from '../../lib/format'
 import type { RoleId } from '../../lib/roles'
 import type {
@@ -26,48 +26,36 @@ function Box({ children }: { children: ReactNode }) {
 }
 
 // ---------- Approval of a new account ----------
+// One manager signs off. The person who asked for the account cannot approve it themselves.
 
 export function ApprovalBox({ a, role, userId }: { a: CorporateAccount; role: RoleId; userId: string }) {
   const { approveAccount, declineAccount, policy } = useCorporate()
   const { run, busy, error } = useAction()
-  const missing = missingSteps(a)
-  const already = a.approvals.some((x) => x.by.id === userId)
-  const mine = missing.find((s) => canSignStep(role, s))
-  const credit = canSetCredit(role, policy)
   const [note, setNote] = useState('')
-  const [limit, setLimit] = useState(String(a.requestedCreditLimit ?? 0))
-  const [terms, setTerms] = useState<PaymentTerms>(a.requestedCreditLimit ? 'net-30' : 'on-departure')
   const [declining, setDeclining] = useState(false)
   const [reason, setReason] = useState('')
+  const isManager = canSignStep(role, 'manager')
+  const isRequester = a.createdBy.id === userId
 
   return (
     <Box>
       <div>
-        <p className="text-sm font-semibold text-ink">Approval needed before this account can be used</p>
-        <ul className="mt-2 space-y-1 text-sm">
-          {a.requiredSteps.map((s) => {
-            const done = a.approvals.find((x) => x.step === s)
-            return (
-              <li key={s} className="flex justify-between gap-3">
-                <span>{STEP_LABEL[s]}</span>
-                <span className={done ? 'font-medium text-good' : 'text-ink/55'}>
-                  {done ? `Approved by ${done.by.name}, ${done.at}` : 'Waiting'}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+        <p className="text-sm font-semibold">Waiting for a manager's approval</p>
+        <p className="mt-1 text-xs text-ink/60">
+          Requested by {a.createdBy.name}, {a.createdAt}. Once approved the account can be billed.
+        </p>
         {a.requestedCreditLimit ? (
-          <p className="mt-2 text-xs text-ink/60">Requested credit: {ugx(a.requestedCreditLimit)}. Not granted until an approver sets it.</p>
+          <p className="mt-2 text-sm">
+            Credit asked for: {ugx(a.requestedCreditLimit)}. Approving the account does not give credit. {STEP_LABEL[policy.creditApprover]} sets it
+            afterwards.
+          </p>
         ) : null}
       </div>
 
-      {!mine ? (
-        <p className="text-xs text-ink/60">
-          {missing.map((s) => STEP_LABEL[s]).join(' and ')} must approve. You cannot give {missing.length === 1 ? 'this approval' : 'these approvals'}.
-        </p>
-      ) : already ? (
-        <p className="text-xs text-ink/60">You have already approved this account. Another person must give the next approval.</p>
+      {!isManager ? (
+        <p className="text-xs text-ink/60">Only a manager can approve this account.</p>
+      ) : isRequester ? (
+        <p className="text-xs text-ink/60">You asked for this account, so another manager must approve it.</p>
       ) : declining ? (
         <form
           className="space-y-2"
@@ -94,43 +82,14 @@ export function ApprovalBox({ a, role, userId }: { a: CorporateAccount; role: Ro
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
-            void run(() =>
-              approveAccount(
-                a.id,
-                mine,
-                credit ? { note, creditLimit: parseAmount(limit), paymentTerms: terms } : { note },
-                policy,
-              ),
-            )
+            void run(() => approveAccount(a.id, note))
           }}
         >
-          {credit ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Payment terms to grant">
-                {(id) => (
-                  <Select id={id} value={terms} onChange={(e) => setTerms(e.target.value as PaymentTerms)}>
-                    {TERMS.map((t) => (
-                      <option key={t} value={t}>
-                        {TERMS_LABEL[t]}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="Credit limit to grant (UGX)" hint={offersCredit(terms) ? undefined : 'No credit on these terms.'}>
-                {(id) => <Input id={id} inputMode="numeric" value={offersCredit(terms) ? limit : '0'} disabled={!offersCredit(terms)} onChange={(e) => setLimit(e.target.value)} />}
-              </Field>
-            </div>
-          ) : (
-            <p className="text-xs text-ink/60">
-              You approve the account itself. Credit stays at none until {STEP_LABEL[policy.creditApprover].toLowerCase()} sets it.
-            </p>
-          )}
           <Field label="Note (optional)">{(id) => <Input id={id} value={note} onChange={(e) => setNote(e.target.value)} />}</Field>
           <FormError error={error} />
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={busy}>
-              Approve as {STEP_LABEL[mine].toLowerCase()}
+              Approve account
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setDeclining(true)}>
               Decline

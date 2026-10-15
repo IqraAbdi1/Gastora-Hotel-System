@@ -6,6 +6,7 @@ import IdPhotoInput from '../../components/IdPhotoInput'
 import SignaturePad from '../../components/SignaturePad'
 import RoomPicker from './RoomPicker'
 import AskHousekeeping from './AskHousekeeping'
+import CompanyCheckIn from './CompanyCheckIn'
 import { checkInBlock } from '../../lib/corporate'
 import { useCorporate } from '../corporate/corporateContext'
 
@@ -16,11 +17,16 @@ const purposes = ['Leisure', 'Business', 'Conference', 'Transit', 'Other']
 const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-sm outline-none focus:border-brand'
 const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
-export default function CheckInPanel({ reservation: r, room: preferred, onClose }: Props) {
+export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
   const { rooms, reservations, checkIn } = useHotel()
+  // Always read the latest booking, so the company checks show what was just confirmed.
+  const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
   // A company-billed stay cannot be checked in until the company side is cleared.
   const blocked = r.corporate ? checkInBlock(r, byId(r.corporate.accountId)) : null
+  // Company-billed stays need the company confirmed (booker, LPO, approver) before the ID steps.
+  const companyPending =
+    !!r.corporate && r.corporate.billTo !== 'guest' && (r.corporate.booker.status !== 'verified' || r.corporate.billing.status !== 'approved')
 
   // Rooms she can use: right type, clean, and free for the whole stay (BR-FO-01, BR-FO-02)
   const readyRooms = useMemo(
@@ -102,13 +108,14 @@ export default function CheckInPanel({ reservation: r, room: preferred, onClose 
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-lg flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4">
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col rounded-xl bg-surface shadow-xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">Check in {r.guest}</h2>
           <p className="text-sm text-ink/60">
             {r.id} · {r.roomType}
-            {!doneRoom && !blocked && ` · Step ${step} of 2`}
+            {!doneRoom && !blocked && (companyPending ? ' · Company check first' : ` · Step ${step} of 2`)}
           </p>
         </div>
         <button type="button" onClick={onClose} className="text-sm font-semibold text-brand">
@@ -116,7 +123,11 @@ export default function CheckInPanel({ reservation: r, room: preferred, onClose 
         </button>
       </div>
 
-      {blocked && !doneRoom ? (
+      {!doneRoom && !blocked && companyPending ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <CompanyCheckIn reservation={r} />
+        </div>
+      ) : blocked && !doneRoom ? (
         <div className="flex-1 space-y-4 p-4">
           <div className="rounded-lg border border-bad/30 bg-bad/10 p-4 text-sm">
             <p className="font-semibold text-bad">Cannot check in on the company's account yet</p>
@@ -317,6 +328,7 @@ export default function CheckInPanel({ reservation: r, room: preferred, onClose 
           </div>
         </>
       )}
+    </div>
     </div>
   )
 }

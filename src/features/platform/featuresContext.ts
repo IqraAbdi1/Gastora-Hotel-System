@@ -5,6 +5,7 @@ import type {
   HotelOptions,
   InspectionMode,
   PlanId,
+  CompanySize,
   Tenant,
   TenantStatus,
 } from '../../lib/features'
@@ -23,6 +24,7 @@ export interface FeaturesValue {
   setOverride: (id: string, key: FeatureKey, value: boolean) => void
   clearOverrides: (id: string) => void
   setOptions: (patch: Partial<HotelOptions>) => void
+  setCompanySize: (id: string, size: CompanySize) => void
 }
 
 export const FeaturesContext = createContext<FeaturesValue | null>(null)

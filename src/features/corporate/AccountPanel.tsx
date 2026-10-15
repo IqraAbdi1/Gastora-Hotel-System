@@ -142,6 +142,11 @@ export default function AccountPanel({ a, onClose }: { a: CorporateAccount; onCl
                       ],
                     ]}
                   />
+                  {a.requestedCreditLimit && a.creditLimit === 0 && (
+                    <p className="rounded-lg bg-warn/10 px-3 py-2 text-sm text-warn">
+                      Credit asked for: {ugx(a.requestedCreditLimit)} on invoice terms. Not set yet. {STEP_LABEL[policy.creditApprover]} decides it.
+                    </p>
+                  )}
                   {a.creditLimit > 0 && (
                     <div className="h-2 overflow-hidden rounded-full bg-ink/10" aria-hidden="true">
                       <div className={`h-full ${usedPct >= 100 ? 'bg-bad' : usedPct >= 80 ? 'bg-warn' : 'bg-brand'}`} style={{ width: `${usedPct}%` }} />

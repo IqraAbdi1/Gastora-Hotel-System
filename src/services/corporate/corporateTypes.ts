@@ -76,6 +76,9 @@ export interface AccountEvent {
   detail?: string
 }
 
+/** Hotel size, which sets the company rules. Defined with the hotel record. */
+export type { CompanySize } from '../../lib/features'
+
 export interface CorporateAccount {
   id: string
   name: string
@@ -119,19 +122,19 @@ export interface NewAccountInput {
 }
 
 /**
- * How strict the hotel is with company accounts. One system for every hotel size: a small hotel
- * keeps it light, a large one adds a finance step and stricter booking checks.
+ * The company rules for one hotel. Set by the platform admin from the hotel's size, not by the hotel.
+ * Small hotels keep it simple, medium hotels add finance and checks, large hotels add call-backs and listed bookers.
  */
+import type { CompanySize } from '../../lib/features'
+
 export interface CorporatePolicy {
-  size: 'small' | 'medium' | 'large'
-  /** Sign-offs needed before a new account can be used. Never empty: accounts are not opened automatically. */
-  accountApproval: ApprovalStep[]
-  /** Who may set credit limits and approve a booking that goes over the limit. */
+  size: CompanySize
+  /** Who sets credit limits. Only this role can give a company credit. Account approval is always a manager's. */
   creditApprover: ApprovalStep
-  /** "over-credit": an authorised booker within the credit limit is enough. "always": a company approver must confirm each booking. */
-  bookingApproval: 'over-credit' | 'always'
-  /** Only people on the company's authorised list can book. Otherwise a callback or written authorisation can verify them. */
+  /** Only people on the company's authorised list may book. Otherwise the guest must be verified by call-back or written authorisation. */
   bookerMustBeListed: boolean
-  /** A reference (PO, approval email or form number) must be recorded to approve billing. */
-  referenceRequired: boolean
+  /** The company must be called back on the number in our records, not the number the guest gives. */
+  callbackRequired: boolean
+  /** Companies on invoice terms must send an LPO, even if the company did not ask for it to be recorded. */
+  lpoForCreditTerms: boolean
 }
