@@ -38,7 +38,7 @@ export default function ReorderDialog({
 
   function submit() {
     const res = topUp(lines)
-    if (!res.ok) return setError(res.error)
+    if (res.ok === false) return setError(res.error)
     onDone(res.value)
     onClose()
   }

@@ -62,8 +62,8 @@ export default function ReportLossDialog({ item, onClose }: { item: StockItem; o
 
   function save() {
     const res = reportLoss({ itemId: item.id, qty: n, reason, note, lastSeen, evidence: photo })
-    if (res.ok) onClose()
-    else setError(res.error)
+    if (res.ok === true) onClose()
+    else if (res.ok === false) setError(res.error)
   }
 
   const field = 'mt-1 block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'

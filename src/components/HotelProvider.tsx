@@ -88,6 +88,10 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     return created
   }
 
+  function updateGuest(guestId: string, patch: Partial<Omit<Guest, 'id'>>) {
+    setGuests((list) => list.map((guest) => guest.id === guestId ? { ...guest, ...patch } : guest))
+  }
+
   function amendReservation(reservationId: string, patch: AmendPatch, entry: Amendment) {
     setReservations((list) =>
       list.map((r) =>
@@ -199,6 +203,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         checkIn,
         addReservation,
         addGuest,
+        updateGuest,
         amendReservation,
         cancelReservation,
         addCharge,
