@@ -2,10 +2,14 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import StatusPill from '../../components/StatusPill'
+import FilterBar from '../../components/FilterBar'
+import { Badge, Button, Card, Chip, DataTable, PageHeader, StatCard } from '../../components/ui'
+import type { Column } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { addDays } from '../../lib/availability'
 import { roomTypes } from '../../lib/booking'
 import { dayMonth, ugx } from '../../lib/format'
+import { summarizeDay } from '../../lib/frontdesk'
 import { useHotel } from '../../lib/hotelContext'
 import { BIG_HOTEL } from '../../lib/rooms'
 import type { Reservation } from '../../types'
@@ -28,9 +32,9 @@ const sourceLabel: Record<Source | 'none', string> = {
 
 const views = [
   { key: 'all', label: 'All' },
-  { key: 'arrivals', label: 'Arrivals today' },
-  { key: 'departures', label: 'Departures today' },
-  { key: 'in-house', label: 'In house' },
+  { key: 'arrivals', label: 'Arrivals today', dot: 'bg-accent' },
+  { key: 'departures', label: 'Departures today', dot: 'bg-warn' },
+  { key: 'in-house', label: 'In house', dot: 'bg-brand' },
 ]
 
 const datesList = [
@@ -76,7 +80,7 @@ const sorters: Record<string, (a: Reservation, b: Reservation) => number> = {
   balance: (a, b) => b.total - b.paid - (a.total - a.paid),
 }
 
-const box = 'rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm outline-none focus:border-brand'
+const box = 'rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15'
 
 function Pick({
   label,
@@ -133,6 +137,9 @@ export default function ReservationsPage() {
     setPageNo(0)
   }
 
+  const day = useMemo(() => summarizeDay(reservations, rooms, TODAY), [reservations, rooms])
+  const availableTonight = Math.max(0, day.sellable - day.occupied)
+
   const rows = useMemo(() => {
     const list = filterFor(view, reservations).filter(
       (r) =>
@@ -162,54 +169,157 @@ export default function ReservationsPage() {
   const current = Math.min(pageNo, pages - 1)
   const shown = rows.slice(current * PAGE, current * PAGE + PAGE)
 
-  const changed =
-    view !== 'all' ||
-    dates !== datesDefault ||
-    status !== 'all' ||
-    source !== 'all' ||
-    type !== 'all' ||
-    payment !== 'all' ||
-    sort !== 'stay' ||
-    q !== ''
+  // How many of the dropdown filters are set. The search box and the quick chips show their own state.
+  const activeFilters = [
+    dates !== datesDefault,
+    status !== 'all',
+    source !== 'all',
+    type !== 'all',
+    payment !== 'all',
+    sort !== 'stay',
+  ].filter(Boolean).length
+  const changed = activeFilters > 0 || view !== 'all' || q !== ''
 
   const selected = reservations.find((r) => r.id === selectedId) ?? null
   const checkingIn = reservations.find((r) => r.id === checkInId) ?? null
 
+  const columns: Column<Reservation>[] = [
+    {
+      key: 'guest',
+      header: 'Guest',
+      cell: (r) => (
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-ink">{r.guest}</p>
+          <p className="text-xs text-ink/55">{r.id}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      hideBelow: 'lg',
+      cell: (r) => <Badge>{sourceLabel[r.source ?? 'none']}</Badge>,
+    },
+    {
+      key: 'room',
+      header: 'Room',
+      cell: (r) => (
+        <div>
+          <p>{r.room ? `Room ${r.room}` : 'Not assigned'}</p>
+          <p className="text-xs text-ink/55">{r.roomType}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'stay',
+      header: 'Stay',
+      cell: (r) => (
+        <span>
+          {dayMonth(r.arrival)} to {dayMonth(r.departure)}
+        </span>
+      ),
+    },
+    { key: 'status', header: 'Status', cell: (r) => <StatusPill status={r.status} /> },
+    {
+      key: 'balance',
+      header: 'Balance',
+      align: 'right',
+      cell: (r) => {
+        const balance = r.total - r.paid
+        return (
+          <span className={`font-semibold tabular-nums ${balance > 0 ? 'text-bad' : 'text-good'}`}>{ugx(balance)}</span>
+        )
+      },
+    },
+    {
+      key: 'act',
+      header: <span className="sr-only">Action</span>,
+      align: 'right',
+      cell: (r) =>
+        r.status === 'booked' && r.arrival <= TODAY ? (
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setCheckInId(r.id)
+            }}
+          >
+            Check in
+          </Button>
+        ) : null,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Reservations</h1>
-        <p className="text-sm text-ink/60">Click a guest to see the booking without leaving this page.</p>
+    <div className="space-y-5">
+      <PageHeader
+        title="Reservations"
+        description="Click a booking to see it without leaving this page. Guests due today have a Check in button."
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="Arrivals today"
+          icon="arrival"
+          value={day.expected.length}
+          hint={`${day.arrivedCount} checked in`}
+          active={view === 'arrivals'}
+          onClick={() => setParam('view', view === 'arrivals' ? 'all' : 'arrivals', 'all')}
+        />
+        <StatCard
+          label="Departures today"
+          icon="departure"
+          value={day.leaving.length}
+          hint={`${day.checkedOutCount} checked out`}
+          active={view === 'departures'}
+          onClick={() => setParam('view', view === 'departures' ? 'all' : 'departures', 'all')}
+        />
+        <StatCard
+          label="In house"
+          icon="guests"
+          value={day.inHouse.length}
+          hint={`${day.occupied} rooms occupied`}
+          active={view === 'in-house'}
+          onClick={() => setParam('view', view === 'in-house' ? 'all' : 'in-house', 'all')}
+        />
+        <StatCard
+          label="Available tonight"
+          icon="bed"
+          value={availableTonight}
+          hint={`of ${day.sellable} sellable rooms`}
+          to="/desk/rooms"
+          tone={availableTonight === 0 ? 'bad' : 'good'}
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
         {views.map((v) => (
-          <button
+          <Chip
             key={v.key}
-            type="button"
+            active={view === v.key}
+            dot={v.dot}
+            count={viewCounts[v.key]}
             onClick={() => setParam('view', v.key, 'all')}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-              view === v.key ? 'bg-brand text-white' : 'bg-surface text-ink/70 hover:bg-brand/10'
-            }`}
           >
-            {v.label} {viewCounts[v.key]}
-          </button>
+            {v.label}
+          </Chip>
         ))}
+        {changed && (
+          <button type="button" onClick={clear} className="px-2 text-sm font-semibold text-brand hover:underline">
+            Reset filters
+          </button>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl bg-surface p-3">
-        <label className="block text-xs font-medium text-ink/60">
-          Search
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPageNo(0)
-            }}
-            placeholder="Guest, booking or room"
-            className={`${box} mt-0.5 block text-ink`}
-          />
-        </label>
+      <FilterBar
+        query={search}
+        onQuery={(v) => {
+          setSearch(v)
+          setPageNo(0)
+        }}
+        placeholder="Search guest, booking or room"
+        active={activeFilters}
+      >
         <Pick label="Dates" value={dates} onChange={(v) => setParam('dates', v, datesDefault)}>
           {datesList.map((d) => (
             <option key={d.key} value={d.key}>
@@ -252,100 +362,51 @@ export default function ReservationsPage() {
             </option>
           ))}
         </Pick>
-        {changed && (
-          <button type="button" onClick={clear} className="pb-2 text-sm font-semibold text-brand">
-            Reset filters
-          </button>
+      </FilterBar>
+
+      <Card
+        title="Bookings"
+        icon="list"
+        count={rows.length}
+        description={
+          rows.length === 0
+            ? 'No reservations match.'
+            : `Showing ${current * PAGE + 1} to ${current * PAGE + shown.length} of ${rows.length} (${reservations.length} in total)${
+                big && dates === 'week' ? '. This hotel opens on the next 7 days. Change Dates to see more.' : ''
+              }`
+        }
+        padded={false}
+      >
+        <DataTable
+          columns={columns}
+          rows={shown}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => setSelectedId(r.id)}
+          empty={{ title: 'No reservations match these filters', hint: 'Change a filter or reset them.' }}
+        />
+        {pages > 1 && (
+          <div className="flex items-center justify-end gap-3 border-t border-ink/10 px-4 py-2.5 text-sm">
+            <Button variant="ghost" size="sm" onClick={() => setPageNo(current - 1)} disabled={current === 0}>
+              Previous
+            </Button>
+            <span className="text-ink/60">
+              Page {current + 1} of {pages}
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setPageNo(current + 1)} disabled={current >= pages - 1}>
+              Next
+            </Button>
+          </div>
         )}
-      </div>
-
-      <p className="text-xs text-ink/60">
-        {rows.length === 0
-          ? 'No reservations match.'
-          : `Showing ${current * PAGE + 1} to ${current * PAGE + shown.length} of ${rows.length} reservations (${reservations.length} in total)`}
-        {big && dates === 'week' && '. This hotel opens on the next 7 days. Change Dates to see more.'}
-      </p>
-
-      <div className="overflow-x-auto rounded-xl border border-ink/10 bg-surface">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/60">
-            <tr>
-              <th className="px-4 py-3">Guest</th>
-              <th className="px-4 py-3">Booking</th>
-              <th className="px-4 py-3">Source</th>
-              <th className="px-4 py-3">Room</th>
-              <th className="px-4 py-3">Stay</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/10">
-            {shown.map((r) => {
-              const balance = r.total - r.paid
-              return (
-                <tr
-                  key={r.id}
-                  onClick={() => setSelectedId(r.id)}
-                  className={`cursor-pointer hover:bg-canvas ${selectedId === r.id ? 'bg-canvas' : ''}`}
-                >
-                  <td className="px-4 py-3">
-                    <button type="button" onClick={() => setSelectedId(r.id)} className="font-semibold text-brand">
-                      {r.guest}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">{r.id}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-medium">
-                      {sourceLabel[r.source ?? 'none']}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{r.room ?? r.roomType}</td>
-                  <td className="px-4 py-3">
-                    {dayMonth(r.arrival)} to {dayMonth(r.departure)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusPill status={r.status} />
-                  </td>
-                  <td className={`px-4 py-3 text-right font-medium ${balance > 0 ? 'text-bad' : 'text-good'}`}>
-                    {ugx(balance)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        {rows.length === 0 && <p className="p-4 text-sm text-ink/60">No reservations match these filters.</p>}
-      </div>
-
-      {pages > 1 && (
-        <div className="flex items-center justify-end gap-3 text-sm">
-          <button
-            type="button"
-            onClick={() => setPageNo(current - 1)}
-            disabled={current === 0}
-            className="rounded-lg border border-ink/15 px-3 py-1.5 font-semibold disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="text-ink/60">
-            Page {current + 1} of {pages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPageNo(current + 1)}
-            disabled={current >= pages - 1}
-            className="rounded-lg border border-ink/15 px-3 py-1.5 font-semibold disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      )}
+      </Card>
 
       {selected && (
         <ReservationPanel
           reservation={selected}
           onClose={() => setSelectedId(null)}
-          onCheckIn={() => setCheckInId(selected.id)}
+          onCheckIn={() => {
+            setCheckInId(selected.id)
+            setSelectedId(null)
+          }}
         />
       )}
       {checkingIn && <CheckInPanel reservation={checkingIn} onClose={() => setCheckInId(null)} />}

@@ -180,7 +180,7 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-brand px-5 py-5 text-white shadow-sm sm:px-6 sm:py-6">
+      <section className="relative overflow-hidden rounded-2xl bg-linear-to-br from-brand-deep to-brand px-5 py-5 text-white shadow-sm sm:px-6 sm:py-6">
         <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-accent/25 blur-3xl" aria-hidden="true" />
         <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

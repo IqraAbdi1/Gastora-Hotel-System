@@ -12,6 +12,13 @@ const valueClass: Record<StatTone, string> = {
   bad: 'text-bad',
 }
 
+const tint: Record<StatTone, string> = {
+  default: 'from-brand/[0.08]',
+  good: 'from-good/[0.10]',
+  warn: 'from-warn/[0.10]',
+  bad: 'from-bad/[0.10]',
+}
+
 const iconClass: Record<StatTone, string> = {
   default: 'bg-brand/10 text-brand',
   good: 'bg-good/10 text-good',
@@ -25,6 +32,8 @@ export default function StatCard({
   value,
   hint,
   to,
+  onClick,
+  active = false,
   icon,
   tone = 'default',
 }: {
@@ -32,6 +41,10 @@ export default function StatCard({
   value: ReactNode
   hint?: ReactNode
   to?: string
+  /** Makes the card a button, for cards that filter the list on the same page. */
+  onClick?: () => void
+  /** Marks the card whose filter is on. */
+  active?: boolean
   icon?: UiIconName
   tone?: StatTone
 }) {
@@ -49,7 +62,20 @@ export default function StatCard({
       {hint && <p className="mt-0.5 truncate text-xs text-ink/60">{hint}</p>}
     </>
   )
-  const box = 'block rounded-xl border border-ink/10 bg-surface px-4 py-3 shadow-sm'
+  const box = `block rounded-xl border border-ink/10 bg-linear-to-br ${tint[tone]} via-surface to-surface px-4 py-3 shadow-sm`
+  const hover =
+    'text-left transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand'
+  if (onClick)
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={`${box} w-full ${hover} ${active ? 'border-brand ring-2 ring-brand/30' : ''}`}
+      >
+        {body}
+      </button>
+    )
   if (!to) return <div className={box}>{body}</div>
   return (
     <Link

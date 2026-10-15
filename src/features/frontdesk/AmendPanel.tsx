@@ -71,7 +71,8 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   const earliestDeparture = inHouse && TODAY > dayAfterArrival ? TODAY : dayAfterArrival
   
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true">
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">Change stay</h2>
@@ -242,6 +243,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
           </div>
         </>
       )}
+    </div>
     </div>
   )
 }

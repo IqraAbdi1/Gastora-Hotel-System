@@ -35,7 +35,6 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
   const rows: string[][] = [
-    ['Booking', r.id],
     ['Booked via', r.source ? sourceLabel[r.source] : 'Not recorded'],
     ['Room', r.room ? `${r.room} (${r.roomType})` : `${r.roomType}, not assigned yet`],
     ['Arrival', dayMonth(r.arrival)],
@@ -45,7 +44,6 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   if (r.plan) rows.push(['Rate plan', planFor(r.plan).name])
   if (r.guarantee) rows.push(['Guarantee', guarantees.find((g) => g.key === r.guarantee)?.label ?? r.guarantee])
   if (r.adults !== undefined) rows.push(['Guests', `${r.adults} adult${r.adults === 1 ? '' : 's'}${r.children ? `, ${r.children} child${r.children === 1 ? '' : 'ren'}` : ''}`])
-  rows.push(['Total', ugx(r.total)], ['Paid', ugx(r.paid)])
 
   const d = r.details
   const guestRows: string[][] = []
@@ -68,12 +66,22 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const c = r.cancellation
 
   return (
-    <div className="fixed inset-y-0 right-0 z-30 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Booking for ${r.guest}`}
+    >
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">{r.guest}</h2>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <StatusPill status={r.status} />
+            <span className="text-xs text-ink/55">{r.id}</span>
           </div>
         </div>
         <button type="button" onClick={onClose} className="text-sm font-semibold text-brand">
@@ -81,18 +89,28 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         </button>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
-        <dl className="space-y-3 text-sm">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-4">
-              <dt className="text-ink/60">{label}</dt>
-              <dd className="text-right font-medium">{value}</dd>
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ['Total', ugx(r.total), 'text-ink'],
+            ['Paid', ugx(r.paid), 'text-good'],
+            ['Balance', ugx(balance), balance > 0 ? 'text-bad' : 'text-good'],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="rounded-lg border border-ink/10 bg-linear-to-br from-brand/[0.06] to-surface px-2 py-2">
+              <p className="text-xs text-ink/55">{label}</p>
+              <p className={`text-sm font-bold tabular-nums ${tone}`}>{value}</p>
             </div>
           ))}
-          <div className="flex justify-between gap-4 border-t border-ink/10 pt-3">
-            <dt className="font-semibold">Balance</dt>
-            <dd className={`font-bold ${balance > 0 ? 'text-bad' : 'text-good'}`}>{ugx(balance)}</dd>
-          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs text-ink/55">{label}</dt>
+              <dd className="truncate font-medium" title={value}>
+                {value}
+              </dd>
+            </div>
+          ))}
         </dl>
 
         {r.corporate && (
@@ -233,6 +251,8 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
           </Link>
         </div>
       )}
+
+    </div>
 
       {amending && <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />}
       {cancelMode && (

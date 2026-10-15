@@ -29,7 +29,7 @@ export default function Card({
   return (
     <section className={`${cardClass} ${className}`}>
       {title && (
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-ink/10 px-4 py-3">
+        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-ink/10 bg-linear-to-r from-brand/[0.06] via-brand/[0.02] to-transparent px-4 py-3">
           <div className="flex min-w-0 items-start gap-3">
             {icon && (
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">

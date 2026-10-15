@@ -1,16 +1,21 @@
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import FilterBar from '../../components/FilterBar'
+import { Badge, Button, Card, Chip, DataTable, PageHeader, StatCard } from '../../components/ui'
+import type { Column } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { dayMonth, ugx } from '../../lib/format'
+import { summarizeDay } from '../../lib/frontdesk'
 import { useHotel } from '../../lib/hotelContext'
 import { BIG_HOTEL } from '../../lib/rooms'
+import type { Reservation } from '../../types'
 import FolioPanel from './FolioPanel'
 
 const PAGE = 25
 const chips = [
-  { key: 'leaving', label: 'Leaving today' },
-  { key: 'balance', label: 'Balance due' },
-  { key: 'inhouse', label: 'All in house' },
+  { key: 'leaving', label: 'Leaving today', dot: 'bg-warn' },
+  { key: 'balance', label: 'Balance due', dot: 'bg-bad' },
+  { key: 'inhouse', label: 'All in house', dot: 'bg-brand' },
   { key: 'out', label: 'Checked out' },
 ]
 
@@ -41,6 +46,8 @@ export default function FoliosPage() {
     return { inHouse: a, out: b }
   }, [reservations])
 
+  const day = useMemo(() => summarizeDay(reservations, rooms, TODAY), [reservations, rooms])
+
   const counts: Record<string, number> = {
     leaving: inHouse.filter((r) => r.departure <= TODAY).length,
     balance: inHouse.filter((r) => r.total > r.paid).length,
@@ -65,100 +72,127 @@ export default function FoliosPage() {
   // Always the live record, so the panel updates as charges and payments are posted
   const selected = selectedId ? reservations.find((r) => r.id === selectedId) : undefined
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Folios</h1>
-        <p className="text-sm text-ink/60">Charges, payments and check-out for guests in the house.</p>
-      </div>
+  const columns: Column<Reservation>[] = [
+    {
+      key: 'guest',
+      header: 'Guest',
+      cell: (r) => (
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-ink">{r.guest}</p>
+          <p className="text-xs text-ink/55">{r.id}</p>
+        </div>
+      ),
+    },
+    { key: 'room', header: 'Room', cell: (r) => (r.room ? `Room ${r.room}` : '') },
+    {
+      key: 'when',
+      header: view === 'out' ? 'Invoice' : 'Departure',
+      cell: (r) =>
+        view === 'out' ? (
+          <span className="font-mono text-xs">{r.invoice?.number}</span>
+        ) : r.departure < TODAY ? (
+          <Badge tone="bad">Was due {dayMonth(r.departure)}</Badge>
+        ) : r.departure === TODAY ? (
+          <Badge tone="warn">Today</Badge>
+        ) : (
+          dayMonth(r.departure)
+        ),
+    },
+    { key: 'total', header: 'Total', align: 'right', hideBelow: 'sm', cell: (r) => <span className="tabular-nums">{ugx(r.total)}</span> },
+    {
+      key: 'balance',
+      header: 'Balance',
+      align: 'right',
+      cell: (r) => {
+        const balance = r.total - r.paid
+        return balance > 0 ? <Badge tone="bad">Owes {ugx(balance)}</Badge> : <Badge tone="good">Settled</Badge>
+      },
+    },
+  ]
 
-      <div className="flex flex-wrap items-center gap-2">
-        {chips.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setParam('view', c.key, big ? 'leaving' : 'inhouse')}
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              view === c.key ? 'bg-brand text-white' : 'bg-surface text-ink/70 hover:bg-ink/5'
-            }`}
-          >
-            {c.label} ({counts[c.key]})
-          </button>
-        ))}
-        <input
-          value={q}
-          onChange={(e) => setParam('q', e.target.value)}
-          placeholder="Search guest, room or booking"
-          className="ml-auto w-64 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+  return (
+    <div className="space-y-5">
+      <PageHeader title="Folios" description="Charges, payments and check-out for guests in the house." />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="In house"
+          icon="guests"
+          value={day.inHouse.length}
+          hint="Open folios"
+          active={view === 'inhouse'}
+          onClick={() => setParam('view', 'inhouse', big ? 'leaving' : 'inhouse')}
+        />
+        <StatCard
+          label="Leaving today"
+          icon="departure"
+          value={day.leaving.length}
+          hint={`${day.checkedOutCount} checked out today`}
+          active={view === 'leaving'}
+          onClick={() => setParam('view', 'leaving', big ? 'leaving' : 'inhouse')}
+        />
+        <StatCard
+          label="Balances due"
+          icon="money"
+          value={day.owing.length}
+          hint={day.owing.length ? `${ugx(day.owedTotal)} owed` : 'All settled'}
+          tone={day.owing.length > 0 ? 'bad' : 'good'}
+          active={view === 'balance'}
+          onClick={() => setParam('view', 'balance', big ? 'leaving' : 'inhouse')}
+        />
+        <StatCard
+          label="Checked out"
+          icon="check"
+          value={out.length}
+          hint="Invoices issued"
+          active={view === 'out'}
+          onClick={() => setParam('view', 'out', big ? 'leaving' : 'inhouse')}
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-ink/10 bg-surface">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/50">
-            <tr>
-              <th className="px-4 py-3">Guest</th>
-              <th className="px-4 py-3">Room</th>
-              <th className="px-4 py-3">{view === 'out' ? 'Invoice' : 'Departure'}</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3 text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((r) => {
-              const balance = r.total - r.paid
-              return (
-                <tr
-                  key={r.id}
-                  onClick={() => setParam('r', r.id)}
-                  className="cursor-pointer border-b border-ink/5 hover:bg-ink/5"
-                >
-                  <td className="px-4 py-3 font-medium text-brand">{r.guest}</td>
-                  <td className="px-4 py-3">{r.room}</td>
-                  <td className="px-4 py-3">{view === 'out' ? r.invoice?.number : dayMonth(r.departure)}</td>
-                  <td className="px-4 py-3 text-right">{ugx(r.total)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold ${balance > 0 ? 'text-bad' : 'text-good'}`}>
-                    {ugx(balance)}
-                  </td>
-                </tr>
-              )
-            })}
-            {shown.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-ink/60">
-                  {view === 'leaving' ? 'Nobody is due to leave today.' : 'No guests match.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap gap-2">
+        {chips.map((c) => (
+          <Chip
+            key={c.key}
+            active={view === c.key}
+            dot={c.dot}
+            count={counts[c.key]}
+            onClick={() => setParam('view', c.key, big ? 'leaving' : 'inhouse')}
+          >
+            {c.label}
+          </Chip>
+        ))}
       </div>
 
-      {pages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-ink/60">
-            Page {page + 1} of {pages} · {list.length} guests
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setParam('page', String(page - 1), '0')}
-              className="rounded-lg border border-ink/15 px-3 py-1.5 font-semibold disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= pages - 1}
-              onClick={() => setParam('page', String(page + 1), '0')}
-              className="rounded-lg border border-ink/15 px-3 py-1.5 font-semibold disabled:opacity-40"
-            >
-              Next
-            </button>
+      <FilterBar query={q} onQuery={(v) => setParam('q', v)} placeholder="Search guest, room or booking" />
+
+      <Card title={chips.find((c) => c.key === view)?.label ?? 'Folios'} icon="money" count={list.length} padded={false}>
+        <DataTable
+          columns={columns}
+          rows={shown}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => setParam('r', r.id)}
+          empty={{
+            title: view === 'leaving' ? 'Nobody is due to leave today' : 'No guests match',
+            hint: view === 'leaving' ? undefined : 'Change the filter or the search.',
+          }}
+        />
+        {pages > 1 && (
+          <div className="flex items-center justify-between border-t border-ink/10 px-4 py-2.5 text-sm">
+            <span className="text-ink/60">
+              Page {page + 1} of {pages} · {list.length} guests
+            </span>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setParam('page', String(page - 1), '0')}>
+                Previous
+              </Button>
+              <Button variant="ghost" size="sm" disabled={page >= pages - 1} onClick={() => setParam('page', String(page + 1), '0')}>
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Card>
 
       {selected && <FolioPanel reservation={selected} onClose={() => setParam('r', '')} />}
     </div>

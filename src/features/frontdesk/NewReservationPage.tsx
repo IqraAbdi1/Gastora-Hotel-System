@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Badge, Card, Segmented, inputClass } from '../../components/ui'
 import { useHotel } from '../../lib/hotelContext'
 import { TODAY } from '../../data/sample'
 import { addDays } from '../../lib/availability'
 import { dayMonth, ugx } from '../../lib/format'
+import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal, suggestedDeposit } from '../../lib/booking'
 import { guarantees, ratePlans, roomRate } from '../../data/rates'
@@ -17,9 +19,7 @@ import { useCorporate } from '../corporate/corporateContext'
 import CheckInPanel from './CheckInPanel'
 import CompanyBookingSection from './CompanyBookingSection'
 
-const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-sm outline-none focus:border-brand'
-const card = 'space-y-3 rounded-xl bg-surface p-4'
-const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
+const field = inputClass
 const methods = ['MTN MoMo', 'Airtel Money', 'Card', 'Cash']
 
 export function NewReservationForm({
@@ -157,9 +157,6 @@ export function NewReservationForm({
     if (walkin) setCheckInFor(made)
   }
 
-  const mode = (on: boolean) =>
-    `rounded-lg px-4 py-1.5 text-sm font-semibold ${walkin === on ? 'bg-brand text-white' : 'bg-surface text-ink/70'}`
-
   if (created) {
     return (
       <div className="max-w-xl space-y-4">
@@ -229,20 +226,21 @@ export function NewReservationForm({
             {walkin ? 'The guest is here now. Book, then go straight to check-in.' : 'Dates, room type, guest and deposit.'}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => toggleWalkin(false)} className={mode(false)}>
-            Reservation
-          </button>
-          <button type="button" onClick={() => toggleWalkin(true)} className={mode(true)}>
-            Walk-in
-          </button>
-        </div>
+        <Segmented
+          label="Booking type"
+          value={walkin ? 'walkin' : 'reservation'}
+          onChange={(v) => toggleWalkin(v === 'walkin')}
+          options={[
+            { key: 'reservation', label: 'Reservation' },
+            { key: 'walkin', label: 'Walk-in' },
+          ]}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
-          <section className={card}>
-            <p className={heading}>Stay</p>
+          <Card title="Stay" padded>
+          <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <label className="block text-sm font-medium">
                 Arrival
@@ -277,10 +275,11 @@ export function NewReservationForm({
             <p className="text-sm text-ink/60">
               {datesOk ? `${nights} night${nights === 1 ? '' : 's'}` : 'Departure must be after arrival, and arrival cannot be in the past.'}
             </p>
-          </section>
+          </div>
+          </Card>
 
-          <section className={card}>
-            <p className={heading}>Room type and rate</p>
+          <Card title="Room type and rate" padded>
+          <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {roomTypes.map((t) => {
                 const f = datesOk ? free[t] : 0
@@ -290,13 +289,20 @@ export function NewReservationForm({
                     key={t}
                     type="button"
                     onClick={() => setType(t)}
-                    className={`rounded-xl border-2 p-3 text-left ${type === t ? 'border-brand bg-brand/10' : 'border-ink/10 bg-canvas'}`}
+                    aria-pressed={type === t}
+                    className={`rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+                      type === t
+                        ? 'border-brand bg-linear-to-br from-brand/15 to-surface ring-2 ring-brand'
+                        : 'border-ink/10 bg-surface shadow-sm hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md'
+                    }`}
                   >
                     <p className="font-semibold">{t}</p>
                     <p className="text-sm text-ink/60">{ugx(price)} per night</p>
-                    <p className={`mt-1 text-xs font-semibold ${!datesOk ? 'text-ink/50' : f < 1 ? 'text-bad' : f <= 2 ? 'text-warn' : 'text-good'}`}>
-                      {!datesOk ? 'Pick dates' : f < 1 ? 'Sold out' : `${f} free`}
-                    </p>
+                    <div className="mt-2">
+                      <Badge tone={!datesOk ? 'neutral' : f < 1 ? 'bad' : f <= 2 ? 'warn' : 'good'} dot>
+                        {!datesOk ? 'Pick dates' : f < 1 ? 'Sold out' : `${f} free`}
+                      </Badge>
+                    </div>
                   </button>
                 )
               })}
@@ -315,17 +321,47 @@ export function NewReservationForm({
             </label>
 
             {!walkin && roomChoices.length > 0 && (
-              <label className="block text-sm font-medium">
-                Room
-                <select value={roomValue} onChange={(e) => setRoom(e.target.value)} className={`${field} mt-1`}>
-                  <option value="">Assign at check-in (recommended)</option>
+              <div>
+                <p className="text-sm font-medium">Room</p>
+                <div className="mt-1.5 grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => setRoom('')}
+                    aria-pressed={roomValue === ''}
+                    className={`rounded-xl border p-3 text-left text-sm transition ${
+                      roomValue === ''
+                        ? 'border-brand bg-linear-to-br from-brand/15 to-surface ring-2 ring-brand'
+                        : 'border-ink/10 bg-surface shadow-sm hover:border-brand/40'
+                    }`}
+                  >
+                    <p className="font-bold text-ink">Assign later</p>
+                    <p className="text-xs text-ink/60">At check-in (recommended)</p>
+                  </button>
                   {roomChoices.map((r) => (
-                    <option key={r.number} value={r.number}>
-                      {r.number}
-                    </option>
+                    <button
+                      key={r.number}
+                      type="button"
+                      onClick={() => setRoom(r.number)}
+                      aria-pressed={roomValue === r.number}
+                      className={`rounded-xl border p-3 text-left transition ${
+                        roomValue === r.number
+                          ? 'border-brand bg-linear-to-br from-brand/15 to-surface ring-2 ring-brand'
+                          : 'border-ink/10 bg-surface shadow-sm hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md'
+                      }`}
+                    >
+                      <p className="text-lg font-bold text-ink">{r.number}</p>
+                      <p className="text-xs text-ink/60">
+                        {floorLabel(floorOf(r))} · {r.type}
+                      </p>
+                      <div className="mt-1.5">
+                        <Badge tone={r.status === 'clean' ? 'good' : 'warn'} dot>
+                          {r.status === 'clean' ? 'Ready' : r.status === 'occupied' ? 'Free for these dates' : 'Needs cleaning'}
+                        </Badge>
+                      </div>
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
             )}
 
             {soldOut && (
@@ -347,12 +383,13 @@ export function NewReservationForm({
                 )}
               </div>
             )}
-          </section>
+          </div>
+          </Card>
 
           <CompanyBookingSection value={company} onChange={changeCompany} plan={companyPlan} />
 
-          <section className={card}>
-            <p className={heading}>Guest</p>
+          <Card title="Guest" padded>
+          <div className="space-y-3">
                         {!walkin && (
               <label className="block text-sm font-medium">
                 Booked via
@@ -436,10 +473,11 @@ export function NewReservationForm({
                 ))}
               </div>
             )}
-          </section>
+          </div>
+          </Card>
 
-          <section className={card}>
-            <p className={heading}>Guarantee and deposit</p>
+          <Card title="Guarantee and deposit" padded>
+          <div className="space-y-3">
             <label className="block text-sm font-medium">
               Guarantee
               <select value={guarantee} onChange={(e) => setGuarantee(e.target.value as GuaranteeType)} className={`${field} mt-1`}>
@@ -484,11 +522,13 @@ export function NewReservationForm({
               Payment is simulated here. In the real system, mobile money and card bookings are confirmed only after the payment provider confirms (BR-FO-10).
               {deposit > 0 && ` Recorded as ${method}.`}
             </p>
-          </section>
+          </div>
+          </Card>
         </div>
 
-        <aside className="h-fit space-y-3 rounded-xl bg-surface p-4 lg:sticky lg:top-4">
-          <p className={heading}>Summary</p>
+        <aside className="h-fit lg:sticky lg:top-4">
+          <Card title="Summary" icon="money" padded>
+          <div className="space-y-3">
           <div className="space-y-1 text-sm">
             <p className="font-semibold">{type} · {planFor(planId).name}</p>
             <p className="text-ink/60">
@@ -529,6 +569,8 @@ export function NewReservationForm({
               ))}
             </ul>
           )}
+          </div>
+          </Card>
         </aside>
       </div>
     </div>

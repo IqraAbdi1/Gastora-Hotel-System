@@ -41,7 +41,8 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true">
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">{isNoShow ? 'Mark no-show' : 'Cancel booking'}</h2>
@@ -145,6 +146,7 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
           </div>
         </>
       )}
+    </div>
     </div>
   )
 }
