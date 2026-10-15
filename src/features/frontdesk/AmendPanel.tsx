@@ -6,6 +6,8 @@ import { nightsOf } from '../../lib/booking'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import type { Reservation } from '../../types'
+import { extrasOf } from '../../lib/folio'
+
 
 type Props = { reservation: Reservation; onClose: () => void; onDone: () => void }
 
@@ -30,7 +32,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   )
 
   const feeCharged = check.feeApplies && !waive ? check.fee : 0
-  const newTotal = check.newTotal + feeCharged
+  const newTotal = check.newTotal + feeCharged + extrasOf(r)
   const needsManager = (check.feeApplies && waive) || (check.needsOverride && override)
   const managerOk = !needsManager || managerReason.trim().length >= 5
   const valid =
@@ -64,7 +66,10 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   }
 
   const balanceAfter = newTotal - r.paid
-
+  // In house: the guest can leave today, but never before the night after arrival
+  const dayAfterArrival = addDays(arrival, 1)
+  const earliestDeparture = inHouse && TODAY > dayAfterArrival ? TODAY : dayAfterArrival
+  
   return (
     <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
@@ -131,7 +136,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
                 <input
                   type="date"
                   value={departure}
-                  min={addDays(inHouse ? TODAY : arrival, 1)}
+                  min={earliestDeparture}
                   onChange={(e) => setDeparture(e.target.value)}
                   className={`${field} mt-1`}
                 />

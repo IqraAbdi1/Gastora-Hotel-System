@@ -1,5 +1,5 @@
 import { DEPOSIT_RATE, ratePlans, roomRate } from '../data/rates'
-import { isRoomFree } from './availability'
+import { holdsRoom, isRoomFree } from './availability'
 import type { Reservation, Room } from '../types'
 
 export const roomTypes: Room['type'][] = ['Standard', 'Deluxe', 'Suite']
@@ -36,7 +36,7 @@ export function freeByType(rooms: Room[], reservations: Reservation[], from: str
 
   for (const r of rooms) if (r.status !== 'blocked') total[r.type] += 1
   for (const r of reservations) {
-    if (r.status === 'checked-out') continue
+    if (!holdsRoom(r)) continue
     const a = Math.max(0, nightsOf(from, r.arrival))
     const d = Math.min(nights, nightsOf(from, r.departure))
     for (let i = a; i < d; i++) booked[r.roomType][i] += 1

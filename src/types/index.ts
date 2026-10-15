@@ -1,12 +1,56 @@
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
+// Housekeeping detail the four front-desk statuses cannot express.
+// cleaning = dirty and being cleaned. cleaned = clean, attendant finished, waiting for inspection.
+// A clean room with no detail is ready to sell (inspected). The last three take the room out of sale
+// (or, for a discrepancy on an occupied room, flag it).
+export type HkState = 'cleaning' | 'cleaned' | 'out-of-service' | 'out-of-order' | 'discrepancy'
+
+// What housekeeping can ask for. 'dirty' and 'ready' simply clear any detail.
+export type HkRequest = 'dirty' | 'ready' | HkState
+
 export type Room = {
   number: string
   type: 'Standard' | 'Deluxe' | 'Suite'
   status: RoomStatus
+  hk?: HkState
+  hkReason?: string
 }
 
-export type ReservationStatus = 'booked' | 'in-house' | 'checked-out'
+export type Cancellation = {
+  kind: 'cancelled' | 'no-show'
+  at: string
+  reason: string
+  charge: number
+  refund: number
+  owed: number
+  waived: boolean
+}
+
+export type FolioCharge = {
+  id: string
+  at: string
+  category: string
+  description: string
+  amount: number
+}
+
+export type FolioPayment = {
+  id: string
+  at: string
+  method: string
+  reference?: string
+  amount: number
+}
+
+export type Invoice = {
+  number: string
+  issuedAt: string
+  amount: number
+  fiscalCode: string // simulated, not a real URA EFRIS code
+}
+
+export type ReservationStatus = 'booked' | 'in-house' | 'checked-out' | 'cancelled' | 'no-show'
 
 export type GuaranteeType = 'deposit' | 'card' | 'company' | 'none'
 
@@ -56,6 +100,13 @@ export type Reservation = {
   children?: number
   overrideReason?: string
   changes?: Amendment[]
+  cancellation?: Cancellation
+  charges?: FolioCharge[]
+  payments?: FolioPayment[]
+  invoice?: Invoice
+  checkedOutAt?: string
+  unpaidAtCheckout?: number
+  checkoutNote?: string
 }
 export type Amendment = {
   at: string

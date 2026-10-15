@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { useHotel } from '../../lib/hotelContext'
 import { TODAY } from '../../data/sample'
-import { addDays, clashingStay } from '../../lib/availability'
+import { addDays, clashingStay, holdsRoom } from '../../lib/availability'
 import { dayMonth, ugx } from '../../lib/format'
 import { BIG_HOTEL, floorLabel, floorOf } from '../../lib/rooms'
 import { useBooking } from '../../lib/bookingContext'
@@ -16,12 +16,16 @@ const barStyle: Record<ReservationStatus, string> = {
   'in-house': 'bg-brand text-white',
   booked: 'bg-accent text-ink',
   'checked-out': 'bg-ink/25 text-ink',
+  cancelled: 'bg-ink/25 text-ink',
+  'no-show': 'bg-ink/25 text-ink',
 }
 
 const statusLabel: Record<ReservationStatus, string> = {
   'in-house': 'In house',
   booked: 'Booked',
   'checked-out': 'Checked out',
+  cancelled: 'Cancelled',
+  'no-show': 'No-show',
 }
 
 const dot: Record<RoomStatus, string> = {
@@ -73,8 +77,7 @@ export default function RoomsCalendar() {
   const q = search.trim().toLowerCase()
 
   const dates = useMemo(() => Array.from({ length: days }, (_, i) => addDays(start, i)), [start, days])
-  const live = useMemo(() => reservations.filter((r) => r.status !== 'checked-out'), [reservations])
-
+  const live = useMemo(() => reservations.filter(holdsRoom), [reservations])
   // Built once per data change, so each room row is a quick lookup instead of a search.
   const byRoom = useMemo(() => {
     const m = new Map<string, Reservation[]>()
@@ -270,7 +273,7 @@ export default function RoomsCalendar() {
         </p>
       )}
 
-      <div className="overflow-auto rounded-xl border border-ink/10 bg-surface" style={{ maxHeight: '65vh' }}>
+      <div className="max-h-[65vh] overflow-auto rounded-xl border border-ink/10 bg-surface">
         <div style={{ minWidth: LABEL + width }}>
           <div className="sticky top-0 z-20 flex bg-surface">
             <div

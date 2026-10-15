@@ -222,6 +222,8 @@ export default function ReservationsPage() {
           <option value="booked">Booked</option>
           <option value="in-house">In house</option>
           <option value="checked-out">Checked out</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="no-show">No-show</option>
         </Pick>
         <Pick label="Source" value={source} onChange={(v) => setParam('source', v, 'all')}>
           <option value="all">Any source</option>
