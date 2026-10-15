@@ -10,6 +10,8 @@ import type { Reservation } from '../../types'
 import AmendPanel from './AmendPanel'
 import CancelPanel from './CancelPanel'
 import CompanyChecks from './CompanyChecks'
+import { checkInBlock } from '../../lib/corporate'
+import { useCorporate } from '../corporate/corporateContext'
 
 type Props = { reservation: Reservation; onClose: () => void; onCheckIn?: () => void }
 
@@ -29,6 +31,8 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [cancelMode, setCancelMode] = useState<CancelMode | null>(null)
   const [showPhoto, setShowPhoto] = useState(false)
   const balance = r.total - r.paid
+  const { byId } = useCorporate()
+  const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
   const rows: string[][] = [
     ['Booking', r.id],
@@ -173,13 +177,18 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         )}
       </div>
 
+      {blocked && isBooked && onCheckIn && (
+        <p className="border-t border-bad/20 bg-bad/10 px-4 py-2 text-xs font-medium text-bad">Check-in blocked: {blocked}</p>
+      )}
       {(canChange || (isBooked && onCheckIn)) && (
         <div className="flex flex-wrap gap-3 border-t border-ink/10 p-4">
           {isBooked && onCheckIn && (
             <button
               type="button"
               onClick={onCheckIn}
-              className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
+              disabled={!!blocked}
+              title={blocked ?? undefined}
+              className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               Check in
             </button>

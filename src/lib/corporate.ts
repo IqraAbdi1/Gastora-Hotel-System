@@ -272,4 +272,24 @@ export function initialBillingStatus(
   return 'pending'
 }
 
+/**
+ * Why a company-billed stay cannot be checked in yet, or null if it can. The company must be active,
+ * the booker verified and billing approved (which already needs the LPO and any over-credit sign-off).
+ * Staff can always switch billing to the guest instead, and the guest then pays as normal.
+ */
+export function checkInBlock(r: Reservation, account: CorporateAccount | undefined): string | null {
+  const c = r.corporate
+  if (!c || c.billTo === 'guest') return null
+  const fallback = ' Or, if the company will not pay, choose "Guest pays instead" and take payment from the guest.'
+  if (!account || account.status !== 'active') {
+    return `${c.accountName} is ${account ? STATUS_LABEL[account.status].toLowerCase() : 'not found'}, so the stay cannot be billed to it.${fallback}`
+  }
+  if (c.booker.status !== 'verified') return `Verify that ${c.booker.name} was allowed to book for ${c.accountName}.${fallback}`
+  if (c.billing.status !== 'approved') {
+    const lpo = account.billing.poRequired && !c.billing.lpo ? ' The LPO has not been received yet.' : ''
+    return `${c.accountName} has not approved billing for this stay.${lpo}${fallback}`
+  }
+  return null
+}
+
 export const stampNow = () => new Date().toISOString().slice(0, 16).replace('T', ' ')

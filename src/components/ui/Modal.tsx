@@ -10,6 +10,7 @@ export function Modal({
   onClose,
   side = false,
   wide = false,
+  header,
   footer,
   children,
 }: {
@@ -19,6 +20,8 @@ export function Modal({
   side?: boolean
   /** More room, for record details with several sections. */
   wide?: boolean
+  /** Extra content fixed under the title, such as tabs. It does not scroll away. */
+  header?: ReactNode
   footer?: ReactNode
   children: ReactNode
 }) {
@@ -44,7 +47,7 @@ export function Modal({
         className={`flex flex-col bg-surface shadow-xl ${
           side
             ? `h-full w-full ${wide ? 'max-w-2xl' : 'max-w-md'}`
-            : `max-h-[calc(100vh-2rem)] w-full rounded-xl ${wide ? 'max-w-2xl' : 'max-w-lg'}`
+            : `max-h-[calc(100vh-2rem)] w-full rounded-xl ${wide ? 'max-w-3xl' : 'max-w-lg'} ${header ? 'h-[min(52rem,calc(100vh-2rem))]' : ''}`
         }`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-ink/10 px-5 py-4">
@@ -61,6 +64,7 @@ export function Modal({
             ×
           </button>
         </div>
+        {header && <div className="border-b border-ink/10 px-5 pt-3 pb-2">{header}</div>}
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-ink/10 px-5 py-3">{footer}</div>}
       </div>

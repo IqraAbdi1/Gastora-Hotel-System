@@ -6,6 +6,8 @@ import IdPhotoInput from '../../components/IdPhotoInput'
 import SignaturePad from '../../components/SignaturePad'
 import RoomPicker from './RoomPicker'
 import AskHousekeeping from './AskHousekeeping'
+import { checkInBlock } from '../../lib/corporate'
+import { useCorporate } from '../corporate/corporateContext'
 
 type Props = { reservation: Reservation; room?: string; onClose: () => void }
 
@@ -16,6 +18,9 @@ const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
 export default function CheckInPanel({ reservation: r, room: preferred, onClose }: Props) {
   const { rooms, reservations, checkIn } = useHotel()
+  const { byId } = useCorporate()
+  // A company-billed stay cannot be checked in until the company side is cleared.
+  const blocked = r.corporate ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
   // Rooms she can use: right type, clean, and free for the whole stay (BR-FO-01, BR-FO-02)
   const readyRooms = useMemo(
@@ -103,7 +108,7 @@ export default function CheckInPanel({ reservation: r, room: preferred, onClose 
           <h2 className="text-lg font-semibold">Check in {r.guest}</h2>
           <p className="text-sm text-ink/60">
             {r.id} · {r.roomType}
-            {!doneRoom && ` · Step ${step} of 2`}
+            {!doneRoom && !blocked && ` · Step ${step} of 2`}
           </p>
         </div>
         <button type="button" onClick={onClose} className="text-sm font-semibold text-brand">
@@ -111,7 +116,18 @@ export default function CheckInPanel({ reservation: r, room: preferred, onClose 
         </button>
       </div>
 
-      {doneRoom ? (
+      {blocked && !doneRoom ? (
+        <div className="flex-1 space-y-4 p-4">
+          <div className="rounded-lg border border-bad/30 bg-bad/10 p-4 text-sm">
+            <p className="font-semibold text-bad">Cannot check in on the company's account yet</p>
+            <p className="mt-1 text-ink/80">{blocked}</p>
+          </div>
+          <p className="text-sm text-ink/60">Open the reservation and complete the company checks, then check in.</p>
+          <button type="button" onClick={onClose} className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-semibold">
+            Back
+          </button>
+        </div>
+      ) : doneRoom ? (
         <div className="flex-1 space-y-4 p-4">
           <p className="rounded-lg bg-good/10 p-3 text-sm font-semibold text-good">
             {r.guest} is checked in to room {doneRoom}. The room is now occupied. Guest details, ID photo and signature are saved on the booking.

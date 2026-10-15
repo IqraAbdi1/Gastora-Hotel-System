@@ -15,11 +15,13 @@ import {
   stampNow,
 } from '../../lib/corporate'
 import type { CheckState } from '../../lib/corporate'
-import { ugx } from '../../lib/format'
+import { TODAY } from '../../data/sample'
+import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import type { BillingCheckMethod, BookerCheckMethod, CorporateBooking, Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
+import { parseAmount } from '../corporate/corporateUi'
 
 const STATE: Record<CheckState, { label: string; tone: Tone }> = {
   ok: { label: 'Done', tone: 'good' },
@@ -68,7 +70,10 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
   const staff = user?.name ?? 'Front desk'
   const roleId = role?.id
 
-  const [form, setForm] = useState<'booker' | 'billing' | null>(null)
+  const [form, setForm] = useState<'booker' | 'billing' | 'lpo' | null>(null)
+  const [lpoNumber, setLpoNumber] = useState('')
+  const [lpoAmount, setLpoAmount] = useState('')
+  const [lpoDate, setLpoDate] = useState(TODAY)
   const [method, setMethod] = useState<string>('')
   const [reference, setReference] = useState('')
   const [approverId, setApproverId] = useState('')
@@ -114,7 +119,34 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
   const credit = account ? creditPosition(account, reservations, r.id) : null
   const usesCredit = !!account && offersCredit(account.paymentTerms)
   const overBy = usesCredit && credit ? r.total - credit.available : 0
-  const needRef = policy.referenceRequired || !!account?.billing.poRequired
+  const needsLpo = !!account?.billing.poRequired
+  const lpo = c.billing.lpo
+  // A reference is needed when the hotel's rules say so. For LPO companies the LPO number is the reference.
+  const needRef = policy.referenceRequired && !needsLpo
+
+  // The LPO is the company's written order for this stay. It must cover what the company is billed.
+  function recordLpo() {
+    const amount = parseAmount(lpoAmount)
+    if (!lpoNumber.trim()) return setError('Enter the LPO number exactly as it is on the document.')
+    if (!amount) return setError('Enter the amount the LPO covers.')
+    if (lpoDate > TODAY) return setError('The date received cannot be in the future.')
+    if (amount < r.total) {
+      return setError(`This LPO covers ${ugx(amount)} but the stay is ${ugx(r.total)}. Ask the company for an LPO that covers the stay.`)
+    }
+    save(
+      {
+        ...c,
+        billing: {
+          ...c.billing,
+          lpo: { number: lpoNumber.trim(), amount, receivedOn: lpoDate, recordedBy: staff, recordedAt: stampNow() },
+        },
+      },
+      `LPO ${lpoNumber.trim()} received (${ugx(amount)}, dated received ${lpoDate})`,
+    )
+    setLpoNumber('')
+    setLpoAmount('')
+    setLpoDate(TODAY)
+  }
   const canOverride = !!roleId && canSetCredit(roleId, policy)
 
   function approveBilling() {
@@ -125,7 +157,11 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
     const sameAsBooker = approverProblem(approver, c.booker)
     if (sameAsBooker) return setError(sameAsBooker)
     if (!method) return setError('Choose how they approved it.')
-    if (needRef && !reference.trim()) return setError(account.billing.poRequired ? 'Enter the LPO number.' : 'Enter the approval reference.')
+    if (needsLpo && !lpo) return setError('Record the LPO first. This company needs one for every stay.')
+    if (needsLpo && lpo && lpo.amount < r.total) {
+      return setError(`LPO ${lpo.number} covers ${ugx(lpo.amount)} but the stay is now ${ugx(r.total)}. Record an LPO that covers it.`)
+    }
+    if (needRef && !reference.trim()) return setError('Enter the approval reference.')
     if (overBy > 0 && !canOverride) {
       return setError(`This stay is ${ugx(overBy)} over the company's available credit. ${STEP_LABEL[policy.creditApprover]} must approve it.`)
     }
@@ -138,21 +174,22 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
           approverContactId: approver.id,
           approverName: approver.name,
           method: method as BillingCheckMethod,
-          reference: reference.trim() || undefined,
+          reference: (needsLpo ? lpo?.number : reference.trim()) || undefined,
+          lpo,
           overCreditApprovedBy: overBy > 0 ? staff : undefined,
           overCreditReason: overBy > 0 ? reason.trim() : undefined,
           by: staff,
           at: stampNow(),
         },
       },
-      `Billing approved by ${approver.name} (${BILLING_METHOD[method as BillingCheckMethod]}${reference.trim() ? `, ${reference.trim()}` : ''})${overBy > 0 ? `. Over credit by ${ugx(overBy)}, approved by ${staff}: ${reason.trim()}` : ''}`,
+      `Billing approved by ${approver.name} (${BILLING_METHOD[method as BillingCheckMethod]}${needsLpo && lpo ? `, LPO ${lpo.number}` : reference.trim() ? `, ${reference.trim()}` : ''})${overBy > 0 ? `. Over credit by ${ugx(overBy)}, approved by ${staff}: ${reason.trim()}` : ''}`,
       { guarantee: 'company' },
     )
   }
-  function declineBilling() {
+  function declineBilling(note: string) {
     save(
-      { ...c, billTo: 'guest', billing: { status: 'declined', by: staff, at: stampNow(), note: 'Company did not approve' } },
-      'Company billing declined. The guest pays.',
+      { ...c, billTo: 'guest', billing: { ...c.billing, status: 'declined', by: staff, at: stampNow(), note } },
+      `${note}. Billing moved to the guest.`,
       { guarantee: r.guarantee === 'company' ? 'none' : r.guarantee },
     )
   }
@@ -264,6 +301,57 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
               </span>
             </p>
           )}
+          {needsLpo && c.billTo !== 'guest' && (
+            <div className={`rounded-lg px-3 py-2 ${lpo ? 'bg-good/10' : 'bg-warn/10'}`}>
+              <p className="text-sm font-medium">
+                {lpo ? (
+                  <>
+                    LPO {lpo.number} received · covers {ugx(lpo.amount)}
+                    <span className="block text-xs font-normal text-ink/60">
+                      Received {dayMonth(lpo.receivedOn)} · recorded by {lpo.recordedBy}, {lpo.recordedAt}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    LPO not received
+                    <span className="block text-xs font-normal text-ink/60">
+                      {account?.name} needs a purchase order for every stay. Billing cannot be approved, and the guest cannot be checked in on
+                      the company's account, until it arrives.
+                    </span>
+                  </>
+                )}
+              </p>
+              {open && c.billing.status === 'pending' && form !== 'lpo' && (
+                <Button size="sm" variant={lpo ? 'ghost' : 'primary'} className="mt-2" onClick={() => setForm('lpo')}>
+                  {lpo ? 'Replace LPO' : 'Record LPO received'}
+                </Button>
+              )}
+              {form === 'lpo' && (
+                <div className="mt-2 space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Field label="LPO number" required>
+                      {(id) => <Input id={id} value={lpoNumber} onChange={(e) => setLpoNumber(e.target.value)} />}
+                    </Field>
+                    <Field label="Amount covered (UGX)" required hint={`Stay: ${ugx(r.total)}`}>
+                      {(id) => <Input id={id} inputMode="numeric" value={lpoAmount} onChange={(e) => setLpoAmount(e.target.value)} />}
+                    </Field>
+                    <Field label="Received on" required>
+                      {(id) => <Input id={id} type="date" max={TODAY} value={lpoDate} onChange={(e) => setLpoDate(e.target.value)} />}
+                    </Field>
+                  </div>
+                  <p className="text-xs text-ink/55">Check the LPO names this guest and dates, and keep the document (or a scan) on file.</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={recordLpo}>
+                      Save LPO
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {c.billing.status === 'declined' && <p>{c.billing.note}. The guest pays.</p>}
           {c.billing.status === 'not-required' && <p>The guest pays. Nothing goes to the company.</p>}
           {open && c.billing.status === 'pending' && (
@@ -276,13 +364,24 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
               )}
               {form !== 'billing' ? (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => setForm('billing')} disabled={c.booker.status !== 'verified'}>
+                  <Button
+                    size="sm"
+                    onClick={() => setForm('billing')}
+                    disabled={c.booker.status !== 'verified' || (needsLpo && !lpo) || form === 'lpo'}
+                  >
                     Record company approval
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={declineBilling}>
+                  <Button size="sm" variant="ghost" onClick={() => declineBilling('Company declined')}>
                     Company declined
                   </Button>
-                  {c.booker.status !== 'verified' && <p className="w-full text-xs text-ink/60">Verify the booker first.</p>}
+                  <Button size="sm" variant="ghost" onClick={() => declineBilling('Guest pays instead')}>
+                    Guest pays instead
+                  </Button>
+                  {c.booker.status !== 'verified' ? (
+                    <p className="w-full text-xs text-ink/60">Verify the booker first.</p>
+                  ) : needsLpo && !lpo ? (
+                    <p className="w-full text-xs text-ink/60">Record the LPO first.</p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="space-y-2 rounded-lg bg-canvas p-3">
@@ -307,9 +406,13 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                   )}
                   <p className="text-xs text-ink/55">The person who made the booking cannot approve its charges.</p>
                   {methodSelect(BILLING_METHOD)}
-                  <Field label={account?.billing.poRequired ? 'LPO number' : 'Reference'} required={needRef}>
-                    {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} />}
-                  </Field>
+                  {needsLpo ? (
+                    <p className="text-xs text-ink/60">Approval is for LPO {lpo?.number}.</p>
+                  ) : (
+                    <Field label="Reference" required={needRef} hint="Approval email, form number or the name of the person who confirmed.">
+                      {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} />}
+                    </Field>
+                  )}
                   {overBy > 0 && canOverride && (
                     <Field label="Reason for going over the credit limit" required>
                       {(id) => <Input id={id} value={reason} onChange={(e) => setReason(e.target.value)} />}
