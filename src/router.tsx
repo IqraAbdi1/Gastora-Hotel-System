@@ -8,6 +8,7 @@ import ReservationsPage from './features/frontdesk/ReservationsPage'
 import RoomsPage from './features/frontdesk/RoomsPage'
 import NewReservationPage from './features/frontdesk/NewReservationPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
+import GuestsPage from './features/guests/GuestsPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'desk/reservations', element: <ReservationsPage /> },
       { path: 'desk/rooms', element: <RoomsPage /> },
       { path: 'desk/new-reservation', element: <NewReservationPage /> },
+      { path: 'guests', element: <GuestsPage /> },
       { path: 'desk/folios', element: <PagePlaceholder title="Folios" /> },
 
       { path: 'housekeeping', element: <HousekeepingPage /> },
