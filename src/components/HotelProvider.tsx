@@ -4,6 +4,7 @@ import { reservations as sampleReservations, rooms as sampleRooms } from '../dat
 import { guests as sampleGuests } from '../data/guests'
 import { makeBigHotel } from '../data/bigHotel'
 import { deriveGuests } from '../lib/guests'
+import { mergeCheckIn } from '../lib/guestProfile'
 import { HotelContext } from '../lib/hotelContext'
 import type { AmendPatch } from '../lib/hotelContext'
 import type { Amendment, Guest, GuestDetails, NewReservation, Reservation } from '../types'
@@ -43,6 +44,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   const [guests, setGuests] = useState<Guest[]>(start.guests)
 
   function checkIn(reservationId: string, roomNumber: string, details: GuestDetails) {
+    const booking = reservations.find((r) => r.id === reservationId)
+    const profileId = booking?.guestId ?? guests.find((g) => g.name === booking?.guest)?.id
     setReservations((list) =>
       list.map((r) =>
         r.id === reservationId ? { ...r, status: 'in-house' as const, room: roomNumber, details } : r,
@@ -51,6 +54,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setRooms((list) =>
       list.map((room) => (room.number === roomNumber ? { ...room, status: 'occupied' as const } : room)),
     )
+    // Save what the guest gave us at check-in onto their profile.
+    if (profileId) setGuests((list) => list.map((g) => (g.id === profileId ? mergeCheckIn(g, details) : g)))
   }
 
   function addReservation(input: NewReservation) {
