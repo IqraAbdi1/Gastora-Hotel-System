@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ActionButtons from '../../components/ActionButtons'
-import { Badge, Button, Card, DataSourceBadge, DataTable, EmptyState, PageHeader, StatCard, buttonClass } from '../../components/ui'
+import { Badge, Button, Card, DataSourceBadge, DataTable, Icon, StatCard, buttonClass } from '../../components/ui'
 import type { Column } from '../../components/ui'
 import { aiSamples } from '../../data/assistant'
 import { TODAY } from '../../data/sample'
@@ -11,10 +10,13 @@ import { reservationsNeedingAttention, summarizeDay, upcomingArrivals } from '..
 import { useHotel } from '../../lib/hotelContext'
 import { buildRuleSuggestions } from '../../lib/rules'
 import type { Reservation } from '../../types'
+import { useAuth } from '../auth/authContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import ShortageBanner from '../housekeeping/ShortageBanner'
+import AttentionPanel from './AttentionPanel'
 import CheckInPanel from './CheckInPanel'
 import ReservationPanel from './ReservationPanel'
+import SuggestionsPanel from './SuggestionsPanel'
 import TasksCard from './TasksCard'
 
 // How many rows each list shows before linking to the full list.
@@ -41,6 +43,18 @@ function dayLabel(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+function greeting() {
+  const h = new Date().getHours()
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+// Buttons that sit on the green banner.
+const onBrand =
+  'inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
+const onBrandGhost = `${onBrand} border-white/25 bg-white/10 text-white hover:bg-white/20`
+
 function SeeAll({ count, to, noun }: { count: number; to: string; noun: string }) {
   if (count <= SHOW) return null
   return (
@@ -57,11 +71,14 @@ export default function TodayPage() {
   const { readyRooms, dismissReady } = useHousekeeping()
   const [checkIn, setCheckIn] = useState<{ id: string; room?: string } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [panel, setPanel] = useState<'attention' | 'suggestions' | null>(null)
+  const { user } = useAuth()
 
   const day = useMemo(() => summarizeDay(reservations, rooms, TODAY), [reservations, rooms])
   const upcoming = useMemo(() => upcomingArrivals(reservations, TODAY, 3), [reservations])
   const attention = useMemo(() => reservationsNeedingAttention(reservations, rooms, TODAY), [reservations, rooms])
-  const suggestions = useMemo(() => buildRuleSuggestions(reservations, rooms), [reservations, rooms])
+  const suggestions = useMemo(() => [...buildRuleSuggestions(reservations, rooms), ...aiSamples], [reservations, rooms])
+  const urgent = attention.some((a) => a.severity === 'bad')
 
   const occupancy = day.sellable ? Math.round((day.occupied / day.sellable) * 100) : 0
   const checkingIn = reservations.find((r) => r.id === checkIn?.id) ?? null
@@ -163,22 +180,63 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Front desk"
-        title="Today"
-        description={todayLabel}
-        meta={<DataSourceBadge />}
-        actions={
-          <>
-            <Link to="/desk/rooms" className={buttonClass('ghost')}>
+      <section className="relative overflow-hidden rounded-2xl bg-brand px-5 py-5 text-white shadow-sm sm:px-6 sm:py-6">
+        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-accent/25 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/70">
+              <span>Front desk · {todayLabel}</span>
+              <DataSourceBadge onDark />
+            </div>
+            <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+              {greeting()}
+              {user ? `, ${user.name.split(' ')[0]}` : ''}
+            </h1>
+            <p className="mt-1 text-sm text-white/80">
+              {plural(day.expected.length, 'arrival', 'arrivals')} still expected ·{' '}
+              {plural(day.leaving.length, 'departure', 'departures')} ·{' '}
+              {plural(day.owing.length, 'balance', 'balances')} due
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPanel('attention')}
+              className={
+                attention.length === 0
+                  ? onBrandGhost
+                  : urgent
+                    ? `${onBrand} border-transparent bg-bad text-white hover:bg-bad/90`
+                    : `${onBrand} border-transparent bg-accent text-ink hover:bg-accent/90`
+              }
+            >
+              <Icon name={attention.length ? 'alert' : 'check'} className="h-4 w-4" />
+              {attention.length ? 'Needs attention' : 'All clear'}
+              {attention.length > 0 && (
+                <span className={`rounded-full bg-white px-1.5 text-xs font-bold leading-5 ${urgent ? 'text-bad' : 'text-warn'}`}>
+                  {attention.length}
+                </span>
+              )}
+            </button>
+            <button type="button" onClick={() => setPanel('suggestions')} className={onBrandGhost}>
+              <Icon name="sparkles" className="h-4 w-4" />
+              Suggestions
+              {suggestions.length > 0 && (
+                <span className="rounded-full bg-white/20 px-1.5 text-xs font-bold leading-5">{suggestions.length}</span>
+              )}
+            </button>
+            <Link to="/desk/rooms" className={onBrandGhost}>
+              <Icon name="bed" className="h-4 w-4" />
               Rooms board
             </Link>
-            <Link to="/desk/reservations" className={buttonClass('ghost')}>
+            <Link to="/desk/reservations" className={onBrandGhost}>
+              <Icon name="list" className="h-4 w-4" />
               All reservations
             </Link>
-          </>
-        }
-      />
+          </div>
+        </div>
+      </section>
 
       {readyRooms.map((ready) => {
         const guest = day.expected.find((g) => g.roomType === ready.type && (!g.room || g.room === ready.room))
@@ -212,20 +270,25 @@ export default function TodayPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label="Arrivals"
+          icon="arrival"
           value={day.expected.length}
           hint={`${day.arrivedCount} checked in today`}
           to="/desk/reservations?view=arrivals"
         />
         <StatCard
           label="Departures"
+          icon="departure"
           value={day.leaving.length}
           hint={`${day.checkedOutCount} checked out today`}
           to="/desk/folios?view=leaving"
         />
-        <StatCard label="In house" value={day.inHouse.length} hint="Guests staying" to="/desk/reservations?view=in-house" />
-        <StatCard label="Occupancy" value={`${occupancy}%`} hint={`${day.occupied} of ${day.sellable} rooms`} to="/desk/rooms" />
+        <StatCard label="In house"
+          icon="guests" value={day.inHouse.length} hint="Guests staying" to="/desk/reservations?view=in-house" />
+        <StatCard label="Occupancy"
+          icon="occupancy" value={`${occupancy}%`} hint={`${day.occupied} of ${day.sellable} rooms`} to="/desk/rooms" />
         <StatCard
           label="Rooms to clean"
+          icon="clean"
           value={day.roomsToClean}
           hint="Open housekeeping"
           to="/housekeeping"
@@ -233,6 +296,7 @@ export default function TodayPage() {
         />
         <StatCard
           label="Balances due"
+          icon="money"
           value={day.owing.length}
           hint={day.owing.length ? `${ugx(day.owedTotal)} owed` : 'All settled'}
           to="/desk/folios"
@@ -242,7 +306,7 @@ export default function TodayPage() {
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="min-w-0 space-y-6 xl:col-span-2">
-          <Card title="Arrivals today" count={day.expected.length} description="Booked to arrive today and not yet checked in." padded={false}>
+          <Card icon="arrival" title="Arrivals today" count={day.expected.length} description="Booked to arrive today and not yet checked in." padded={false}>
             <DataTable
               columns={arrivalColumns}
               rows={day.expected.slice(0, SHOW)}
@@ -253,7 +317,7 @@ export default function TodayPage() {
             <SeeAll count={day.expected.length} to="/desk/reservations?view=arrivals" noun="arrivals" />
           </Card>
 
-          <Card title="Departures" count={day.leaving.length} description="Due out today, plus anyone past their departure date." padded={false}>
+          <Card icon="departure" title="Departures" count={day.leaving.length} description="Due out today, plus anyone past their departure date." padded={false}>
             <DataTable
               columns={departureColumns}
               rows={day.leaving.slice(0, SHOW)}
@@ -264,7 +328,7 @@ export default function TodayPage() {
             <SeeAll count={day.leaving.length} to="/desk/folios?view=leaving" noun="departures" />
           </Card>
 
-          <Card title="Upcoming arrivals" count={upcoming.length} description="Booked to arrive in the next 3 days." padded={false}>
+          <Card icon="calendar" title="Upcoming arrivals" count={upcoming.length} description="Booked to arrive in the next 3 days." padded={false}>
             <DataTable
               columns={upcomingColumns}
               rows={upcoming.slice(0, SHOW)}
@@ -276,69 +340,8 @@ export default function TodayPage() {
           </Card>
         </div>
 
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 xl:sticky xl:top-6 xl:self-start">
           <TasksCard />
-
-          <Card title="Needs attention" count={attention.length} description="Reservations to sort out today." padded={false}>
-            {attention.length === 0 ? (
-              <EmptyState title="Nothing needs attention" hint="No missed arrivals, overdue stays or unguaranteed arrivals." />
-            ) : (
-              <ul className="divide-y divide-ink/8">
-                {attention.slice(0, SHOW).map((a) => (
-                  <li key={`${a.kind}-${a.reservation.id}`}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(a.reservation.id)}
-                      className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-canvas/70"
-                    >
-                      <span
-                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${a.severity === 'bad' ? 'bg-bad' : 'bg-warn'}`}
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-ink">{a.title}</span>
-                        <span className="block text-xs text-ink/60">
-                          {a.reservation.guest} · {a.reservation.id}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-ink/60">{a.detail}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {attention.length > SHOW && (
-              <p className="border-t border-ink/10 px-4 py-2.5 text-xs text-ink/60">
-                {attention.length - SHOW} more. Use Reservations to see them all.
-              </p>
-            )}
-          </Card>
-
-          <Card
-            title="Suggestions"
-            description={
-              <>
-                <strong>Rule</strong> items are worked out from the bookings. <strong>AI (sample)</strong> items are fixed examples
-                for the demo, not real advice.
-              </>
-            }
-          >
-            {suggestions.length + aiSamples.length === 0 ? (
-              <EmptyState title="No suggestions right now" />
-            ) : (
-              <ul className="space-y-3">
-                {[...suggestions, ...aiSamples].map((s) => (
-                  <li key={s.text} className="rounded-lg border border-ink/8 bg-canvas/60 p-3 text-sm">
-                    <div className="mb-1">
-                      {s.source === 'rule' ? <Badge tone="brand">Rule</Badge> : <Badge tone="accent">AI (sample)</Badge>}
-                    </div>
-                    <p className="text-ink/85">{s.text}</p>
-                    <ActionButtons actions={s.actions} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
         </div>
       </div>
 
@@ -352,6 +355,17 @@ export default function TodayPage() {
           }}
         />
       )}
+      {panel === 'attention' && (
+        <AttentionPanel
+          items={attention}
+          onClose={() => setPanel(null)}
+          onOpen={(id) => {
+            setPanel(null)
+            setOpenId(id)
+          }}
+        />
+      )}
+      {panel === 'suggestions' && <SuggestionsPanel items={suggestions} onClose={() => setPanel(null)} />}
       {checkingIn && <CheckInPanel reservation={checkingIn} room={checkIn?.room} onClose={() => setCheckIn(null)} />}
     </div>
   )

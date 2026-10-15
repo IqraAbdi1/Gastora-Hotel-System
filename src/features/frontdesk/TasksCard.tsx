@@ -99,6 +99,7 @@ export default function TasksCard() {
   return (
     <div id="tasks" className="scroll-mt-4">
       <Card
+        icon="tasks"
         title="Tasks"
         count={tabCount.active}
         description={counts.overdue > 0 ? <span className="font-medium text-bad">{counts.overdue} overdue</span> : 'Front desk to-dos and follow-ups.'}
