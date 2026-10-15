@@ -62,8 +62,7 @@ export default function SignaturePad({ onChange }: Props) {
         onPointerMove={move}
         onPointerUp={end}
         onPointerLeave={end}
-        className="w-full rounded-lg border border-dashed border-ink/30 bg-white"
-        style={{ touchAction: 'none' }}
+        className="w-full touch-none rounded-lg border border-dashed border-ink/30 bg-white"
       />
       <div className="mt-1 flex items-center justify-between text-xs text-ink/60">
         <span>{hasInk ? 'Signature captured' : 'Sign above with mouse, finger or stylus'}</span>

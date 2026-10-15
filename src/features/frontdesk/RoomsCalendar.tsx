@@ -273,7 +273,7 @@ export default function RoomsCalendar() {
         </p>
       )}
 
-      <div className="overflow-auto rounded-xl border border-ink/10 bg-surface" style={{ maxHeight: '65vh' }}>
+      <div className="max-h-[65vh] overflow-auto rounded-xl border border-ink/10 bg-surface">
         <div style={{ minWidth: LABEL + width }}>
           <div className="sticky top-0 z-20 flex bg-surface">
             <div

@@ -24,17 +24,12 @@ function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: 
 
   return (
     <div
-      className="print-sheet bg-white text-black"
-      style={{
-        width: a4 ? '210mm' : '148mm',
-        maxWidth: '100%',
-        padding: a4 ? '14mm' : '9mm',
-        fontSize: a4 ? 13 : 11,
-        boxSizing: 'border-box',
-      }}
+      className={`print-sheet box-border max-w-full bg-white text-black ${
+        a4 ? 'w-[210mm] p-[14mm] text-[13px]' : 'w-[148mm] p-[9mm] text-[11px]'
+      }`}
     >
       <div className="flex items-start justify-between gap-4 border-b border-black/40 pb-3">
-        <p className="font-bold" style={{ fontSize: a4 ? 22 : 17 }}>
+        <p className={`font-bold ${a4 ? 'text-[22px]' : 'text-[17px]'}`}>
           {doc.hotel}
         </p>
         <div className="text-right">
@@ -122,7 +117,7 @@ function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: 
         ))}
       </div>
 
-      <p className={`mt-8 border-t border-black/20 pt-2 text-center ${muted}`} style={{ fontSize: a4 ? 11 : 9 }}>
+      <p className={`mt-8 border-t border-black/20 pt-2 text-center ${muted} ${a4 ? 'text-[11px]' : 'text-[9px]'}`}>
         Printed by {printedBy} on {stamp(new Date().toISOString())}
       </p>
     </div>

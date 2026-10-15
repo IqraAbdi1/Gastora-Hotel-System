@@ -9,7 +9,7 @@ const tones: Record<Tone, string> = {
   warn: 'bg-warn/10 text-warn ring-warn/20',
   bad: 'bg-bad/10 text-bad ring-bad/20',
   accent: 'bg-accent/15 text-ink ring-accent/30',
-  info: 'bg-sky-50 text-sky-800 ring-sky-200',
+  info: 'bg-info/10 text-info ring-info/20',
 }
 
 const dots: Record<Tone, string> = {
@@ -19,7 +19,7 @@ const dots: Record<Tone, string> = {
   warn: 'bg-warn',
   bad: 'bg-bad',
   accent: 'bg-accent',
-  info: 'bg-sky-600',
+  info: 'bg-info',
 }
 
 // The one status chip. Colour carries meaning: good = done/settled, warn = needs a look, bad = problem.
