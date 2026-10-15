@@ -21,9 +21,13 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
   const [terms, setTerms] = useState<PaymentTerms>('on-departure')
   const [credit, setCredit] = useState('')
   const [billing, setBilling] = useState<BillingInstructions>({ defaultBillTo: 'company-room', invoiceEmail: '', poRequired: false, instructions: '' })
-  const [contact, setContact] = useState<ContactDraft>(emptyContact)
+  // Two different people: one books stays, the other approves the company paying for them.
+  const [booker, setBooker] = useState<ContactDraft>({ ...emptyContact, canBook: true, canApproveCharges: false })
+  const [approver, setApprover] = useState<ContactDraft>({ ...emptyContact, canBook: false, canApproveCharges: true })
 
-  const valid = name.trim().length >= 2 && contact.name.trim().length >= 2
+  const hasApprover = approver.name.trim().length > 0
+  const samePerson = hasApprover && approver.name.trim().toLowerCase() === booker.name.trim().toLowerCase()
+  const valid = name.trim().length >= 2 && booker.name.trim().length >= 2 && !samePerson
 
   function submit() {
     void run(async () => {
@@ -38,7 +42,7 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
           paymentTerms: terms,
           requestedCreditLimit: offersCredit(terms) ? parseAmount(credit) : 0,
           billing,
-          contacts: [contact],
+          contacts: hasApprover ? [booker, approver] : [booker],
         },
         policy,
       )
@@ -100,8 +104,21 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
         </section>
 
         <section className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/50">Main contact</h3>
-          <ContactFields value={contact} onChange={setContact} />
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/50">Booking contact</h3>
+          <p className="text-xs text-ink/60">Makes bookings for the company. Cannot approve the charges.</p>
+          <ContactFields value={booker} onChange={setBooker} fixedRole />
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/50">Charge approver</h3>
+          <p className="text-xs text-ink/60">
+            A different person who approves the company paying, for example their finance or admin manager. Can be added later, but
+            no stay can be billed to the company until there is one.
+          </p>
+          <ContactFields value={approver} onChange={setApprover} fixedRole />
+          {samePerson && (
+            <p className="text-sm font-medium text-bad">The booker and the charge approver must be different people.</p>
+          )}
         </section>
 
         <FormError error={error} />

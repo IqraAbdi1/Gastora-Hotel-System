@@ -313,7 +313,22 @@ export function BillingFields({ value: b, onChange }: { value: BillingInstructio
 
 // ---------- Contacts ----------
 
-export function ContactFields({ value: c, onChange }: { value: ContactDraft; onChange: (c: ContactDraft) => void }) {
+const ROLES = [
+  { key: 'booker', label: 'Books stays for the company', canBook: true, canApproveCharges: false },
+  { key: 'approver', label: 'Approves charges to the company', canBook: false, canApproveCharges: true },
+] as const
+
+export function ContactFields({
+  value: c,
+  onChange,
+  fixedRole = false,
+}: {
+  value: ContactDraft
+  onChange: (c: ContactDraft) => void
+  /** The role is set by where the form is used, so it is not offered as a choice. */
+  fixedRole?: boolean
+}) {
+  const both = c.canBook && c.canApproveCharges
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -325,14 +340,26 @@ export function ContactFields({ value: c, onChange }: { value: ContactDraft; onC
         <Field label="Email">{(id) => <Input id={id} type="email" value={c.email} onChange={(e) => onChange({ ...c, email: e.target.value })} />}</Field>
       </div>
       <div className="space-y-1 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={c.canBook} onChange={(e) => onChange({ ...c, canBook: e.target.checked })} />
-          Can make bookings for the company
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={c.canApproveCharges} onChange={(e) => onChange({ ...c, canApproveCharges: e.target.checked })} />
-          Can approve charges to the company
-        </label>
+        {!fixedRole && (
+          <fieldset className="space-y-1">
+            <legend className="mb-1 font-medium text-ink/80">Role at the company</legend>
+            {ROLES.map((r) => (
+              <label key={r.key} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name={`role-${c.id ?? 'new'}`}
+                  checked={!both && c.canBook === r.canBook && c.canApproveCharges === r.canApproveCharges}
+                  onChange={() => onChange({ ...c, canBook: r.canBook, canApproveCharges: r.canApproveCharges })}
+                />
+                {r.label}
+              </label>
+            ))}
+            <p className="text-xs text-ink/55">
+              One person holds one role. Whoever books a stay cannot also approve the company paying for it.
+            </p>
+            {both && <p className="text-xs font-medium text-bad">This contact has both rights. Choose one before saving.</p>}
+          </fieldset>
+        )}
         {c.id && (
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={c.active} onChange={(e) => onChange({ ...c, active: e.target.checked })} />
@@ -361,7 +388,7 @@ export function ContactForm({ a, contact, onDone }: { a: CorporateAccount; conta
         <ContactFields value={c} onChange={setC} />
         <FormError error={error} />
         <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={busy || !c.name.trim()}>
+          <Button type="submit" size="sm" disabled={busy || !c.name.trim() || (c.canBook && c.canApproveCharges)}>
             Save contact
           </Button>
           <Button size="sm" variant="ghost" onClick={onDone}>

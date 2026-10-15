@@ -1,5 +1,14 @@
 import { sampleAccounts } from '../../data/corporate'
-import { canChangePricing, canSetCredit, canSignStep, missingSteps, offersCredit, STEP_LABEL, stampNow } from '../../lib/corporate'
+import {
+  canChangePricing,
+  canSetCredit,
+  canSignStep,
+  contactRightsProblem,
+  missingSteps,
+  offersCredit,
+  STEP_LABEL,
+  stampNow,
+} from '../../lib/corporate'
 import { ugx } from '../../lib/format'
 import { roleCan } from '../../lib/roles'
 import type { CorporateService } from './corporateService'
@@ -36,6 +45,12 @@ export function createMockCorporateService(): CorporateService {
         return deny('A company with this name already exists.')
       }
       if (input.tin && accounts.some((a) => a.tin === input.tin.trim())) return deny('A company with this TIN already exists.')
+      for (const c of input.contacts) {
+        const problem = contactRightsProblem(c)
+        if (problem) return deny(`${c.name}: ${problem}`)
+      }
+      const names = input.contacts.map((c) => c.name.trim().toLowerCase())
+      if (new Set(names).size !== names.length) return deny('The booker and the charge approver must be different people.')
       counter += 1
       const now = stampNow()
       const created: CorporateAccount = {
@@ -136,6 +151,15 @@ export function createMockCorporateService(): CorporateService {
     saveContact(id, contact, actor) {
       if (!roleCan(actor.role, 'manageCorporate')) return deny('You cannot edit company contacts.')
       if (!contact.name.trim()) return deny('A contact needs a name.')
+      const problem = contactRightsProblem(contact)
+      if (problem) return deny(problem)
+      const account = accounts.find((a) => a.id === id)
+      const clash = account?.contacts.find(
+        (c) => c.id !== contact.id && c.active && c.name.trim().toLowerCase() === contact.name.trim().toLowerCase(),
+      )
+      if (clash && contact.active) {
+        return deny(`${clash.name} is already a contact. One person holds one role: booker or charge approver.`)
+      }
       const isNew = !contact.id
       const saved = { ...contact, id: contact.id ?? `CC-${Date.now()}` }
       const rights = [saved.canBook && 'can book', saved.canApproveCharges && 'can approve charges'].filter(Boolean).join(', ')

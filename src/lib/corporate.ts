@@ -8,6 +8,7 @@ import type {
   AccountStatus,
   ApprovalStep,
   CorporateAccount,
+  CorporateContact,
   CorporatePolicy,
   PaymentTerms,
   PricingRule,
@@ -61,6 +62,29 @@ export function canSignStep(role: RoleId, step: ApprovalStep) {
 export const canSetCredit = (role: RoleId, policy: CorporatePolicy) => canSignStep(role, policy.creditApprover)
 /** Changing agreements and approving price exceptions is a manager's call. */
 export const canChangePricing = (role: RoleId) => roleCan(role, 'approveCorporateManager')
+
+// ---------- Separation of duties at the company ----------
+// The person who books a stay must not be the person who approves the company paying for it.
+// So one contact is either a booker or a charge approver, never both, and on each booking the
+// approver must be a different person from the booker.
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
+/** Why a contact's rights are not allowed, or null if they are. */
+export function contactRightsProblem(c: Pick<CorporateContact, 'canBook' | 'canApproveCharges'>): string | null {
+  if (c.canBook && c.canApproveCharges) {
+    return 'One person cannot both book and approve charges. Add the approver as a separate contact.'
+  }
+  return null
+}
+
+/** Why this contact may not approve billing for a stay they booked, or null if they may. */
+export function approverProblem(approver: CorporateContact, booker: { contactId?: string; name: string }): string | null {
+  if ((booker.contactId && approver.id === booker.contactId) || sameName(approver.name, booker.name)) {
+    return `${approver.name} made this booking, so they cannot also approve the charges. Another company approver must confirm it.`
+  }
+  return null
+}
 
 export function missingSteps(a: CorporateAccount): ApprovalStep[] {
   return a.requiredSteps.filter((s) => !a.approvals.some((x) => x.step === s))

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Badge, Button, Field, Input, Select } from '../../components/ui'
 import type { Tone } from '../../components/ui'
 import {
+  approverProblem,
   BILL_TO_LABEL,
   bookingChecks,
   canChangePricing,
@@ -107,7 +108,9 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
   }
 
   // ---- Billing ----
-  const approvers = account?.contacts.filter((x) => x.active && x.canApproveCharges) ?? []
+  // The person who booked never approves their own stay, even if the company gave them both rights.
+  const allApprovers = account?.contacts.filter((x) => x.active && x.canApproveCharges) ?? []
+  const approvers = allApprovers.filter((x) => !approverProblem(x, c.booker))
   const credit = account ? creditPosition(account, reservations, r.id) : null
   const usesCredit = !!account && offersCredit(account.paymentTerms)
   const overBy = usesCredit && credit ? r.total - credit.available : 0
@@ -119,6 +122,8 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
     if (c.booker.status !== 'verified') return setError('Verify the booker first.')
     const approver = approvers.find((x) => x.id === approverId)
     if (!approver) return setError('Choose the company contact who approved the charges.')
+    const sameAsBooker = approverProblem(approver, c.booker)
+    if (sameAsBooker) return setError(sameAsBooker)
     if (!method) return setError('Choose how they approved it.')
     if (needRef && !reference.trim()) return setError(account.billing.poRequired ? 'Enter the LPO number.' : 'Enter the approval reference.')
     if (overBy > 0 && !canOverride) {
@@ -293,7 +298,14 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                       </Select>
                     )}
                   </Field>
-                  {approvers.length === 0 && <p className="text-xs text-bad">Nobody at this company is allowed to approve charges.</p>}
+                  {approvers.length === 0 && (
+                    <p className="text-xs text-bad">
+                      {allApprovers.length > 0
+                        ? `Only ${c.booker.name} can approve charges, and they made this booking. The company must name another approver.`
+                        : 'Nobody at this company is allowed to approve charges.'}
+                    </p>
+                  )}
+                  <p className="text-xs text-ink/55">The person who made the booking cannot approve its charges.</p>
                   {methodSelect(BILLING_METHOD)}
                   <Field label={account?.billing.poRequired ? 'LPO number' : 'Reference'} required={needRef}>
                     {(id) => <Input id={id} value={reference} onChange={(e) => setReference(e.target.value)} />}

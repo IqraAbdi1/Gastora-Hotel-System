@@ -36,7 +36,7 @@ export function sampleAccounts(): CorporateAccount[] {
       },
       contacts: [
         { id: 'CC-1', name: 'Joan Akello', jobTitle: 'Travel coordinator', phone: '0772 300 101', email: 'joan.akello@lakeside-logistics.example', canBook: true, canApproveCharges: false, active: true },
-        { id: 'CC-2', name: 'Samuel Opio', jobTitle: 'Finance manager', phone: '0772 300 102', email: 'samuel.opio@lakeside-logistics.example', canBook: true, canApproveCharges: true, active: true },
+        { id: 'CC-2', name: 'Samuel Opio', jobTitle: 'Finance manager', phone: '0772 300 102', email: 'samuel.opio@lakeside-logistics.example', canBook: false, canApproveCharges: true, active: true },
       ],
       agreement: {
         reference: 'AGR-LL-01',
@@ -82,7 +82,7 @@ export function sampleAccounts(): CorporateAccount[] {
         instructions: 'All charges to the company. The company pays by bank transfer before the guest checks out.',
       },
       contacts: [
-        { id: 'CC-3', name: 'Dr Ruth Namubiru', jobTitle: 'Programme director', phone: '0772 400 201', email: 'ruth@equator-health.example', canBook: true, canApproveCharges: true, active: true },
+        { id: 'CC-3', name: 'Dr Ruth Namubiru', jobTitle: 'Programme director', phone: '0772 400 201', email: 'ruth@equator-health.example', canBook: false, canApproveCharges: true, active: true },
         { id: 'CC-4', name: 'Isaac Mukasa', jobTitle: 'Administrator', phone: '0772 400 202', email: 'isaac@equator-health.example', canBook: true, canApproveCharges: false, active: true },
       ],
       agreement: {
@@ -125,7 +125,8 @@ export function sampleAccounts(): CorporateAccount[] {
         instructions: 'Asked for invoice terms. Room to the company, extras to the guest.',
       },
       contacts: [
-        { id: 'CC-5', name: 'Fred Kiwanuka', jobTitle: 'Operations manager', phone: '0772 500 301', email: 'fred@pearl-agro.example', canBook: true, canApproveCharges: true, active: true },
+        { id: 'CC-5', name: 'Fred Kiwanuka', jobTitle: 'Operations manager', phone: '0772 500 301', email: 'fred@pearl-agro.example', canBook: true, canApproveCharges: false, active: true },
+        { id: 'CC-7', name: 'Harriet Nalwoga', jobTitle: 'Accountant', phone: '0772 500 302', email: 'harriet@pearl-agro.example', canBook: false, canApproveCharges: true, active: true },
       ],
       requiredSteps: ['manager', 'finance'],
       approvals: [],
@@ -153,7 +154,8 @@ export function sampleAccounts(): CorporateAccount[] {
         instructions: 'Room only to the company.',
       },
       contacts: [
-        { id: 'CC-6', name: 'Agnes Tumusiime', jobTitle: 'Office manager', phone: '0772 600 401', email: 'agnes@rwenzori-consulting.example', canBook: true, canApproveCharges: true, active: true },
+        { id: 'CC-6', name: 'Agnes Tumusiime', jobTitle: 'Office manager', phone: '0772 600 401', email: 'agnes@rwenzori-consulting.example', canBook: true, canApproveCharges: false, active: true },
+        { id: 'CC-8', name: 'Moses Byamugisha', jobTitle: 'Managing partner', phone: '0772 600 402', email: 'moses@rwenzori-consulting.example', canBook: false, canApproveCharges: true, active: true },
       ],
       requiredSteps: ['manager', 'finance'],
       approvals: [
