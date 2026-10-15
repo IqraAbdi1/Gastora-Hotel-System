@@ -43,6 +43,15 @@ const BILLING_METHOD: Record<BillingCheckMethod, string> = {
   'phone-callback': 'Phone call to the approver',
 }
 
+function Problem({ text }: { text: string | null }) {
+  if (!text) return null
+  return (
+    <p role="alert" className="rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">
+      {text}
+    </p>
+  )
+}
+
 function Check({ n, title, state, children }: { n: number; title: string; state: CheckState; children?: ReactNode }) {
   return (
     <li className="rounded-lg border border-ink/10 p-3">
@@ -79,6 +88,12 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
   const [approverId, setApproverId] = useState('')
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  // Opening or closing a form starts it with no old error showing.
+  function openForm(next: typeof form) {
+    setForm(next)
+    setError(null)
+  }
 
   function save(next: CorporateBooking, action: string, patch: Partial<Pick<Reservation, 'total' | 'guarantee'>> = {}) {
     setCorporate(r.id, { ...next, log: [...c.log, { at: stampNow(), by: staff, action }] }, patch)
@@ -129,8 +144,10 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
     const amount = parseAmount(lpoAmount)
     if (!lpoNumber.trim()) return setError('Enter the LPO number exactly as it is on the document.')
     if (!amount) return setError('Enter the amount the LPO covers.')
+    if (!lpoDate) return setError('Choose the date the LPO was received.')
     if (lpoDate > TODAY) return setError('The date received cannot be in the future.')
-    if (amount < r.total) {
+    // Compare whole shillings, so an LPO for exactly the amount shown is always accepted.
+    if (amount < Math.round(r.total)) {
       return setError(`This LPO covers ${ugx(amount)} but the stay is ${ugx(r.total)}. Ask the company for an LPO that covers the stay.`)
     }
     save(
@@ -158,7 +175,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
     if (sameAsBooker) return setError(sameAsBooker)
     if (!method) return setError('Choose how they approved it.')
     if (needsLpo && !lpo) return setError('Record the LPO first. This company needs one for every stay.')
-    if (needsLpo && lpo && lpo.amount < r.total) {
+    if (needsLpo && lpo && lpo.amount < Math.round(r.total)) {
       return setError(`LPO ${lpo.number} covers ${ugx(lpo.amount)} but the stay is now ${ugx(r.total)}. Record an LPO that covers it.`)
     }
     if (needRef && !reference.trim()) return setError('Enter the approval reference.')
@@ -248,7 +265,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
           {open && c.booker.status === 'pending' && form !== 'booker' && (
             <div className="flex flex-wrap gap-2">
               {!policy.bookerMustBeListed && (
-                <Button size="sm" onClick={() => setForm('booker')}>
+                <Button size="sm" onClick={() => openForm('booker')}>
                   Verify booker
                 </Button>
               )}
@@ -270,10 +287,11 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                 <Button size="sm" onClick={verifyBooker}>
                   Mark verified
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
+                <Button size="sm" variant="ghost" onClick={() => openForm(null)}>
                   Cancel
                 </Button>
               </div>
+              <Problem text={error} />
             </div>
           )}
         </Check>
@@ -322,7 +340,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                 )}
               </p>
               {open && c.billing.status === 'pending' && form !== 'lpo' && (
-                <Button size="sm" variant={lpo ? 'ghost' : 'primary'} className="mt-2" onClick={() => setForm('lpo')}>
+                <Button size="sm" variant={lpo ? 'ghost' : 'primary'} className="mt-2" onClick={() => openForm('lpo')}>
                   {lpo ? 'Replace LPO' : 'Record LPO received'}
                 </Button>
               )}
@@ -344,10 +362,11 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                     <Button size="sm" onClick={recordLpo}>
                       Save LPO
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
+                    <Button size="sm" variant="ghost" onClick={() => openForm(null)}>
                       Cancel
                     </Button>
                   </div>
+                  <Problem text={error} />
                 </div>
               )}
             </div>
@@ -366,7 +385,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
-                    onClick={() => setForm('billing')}
+                    onClick={() => openForm('billing')}
                     disabled={c.booker.status !== 'verified' || (needsLpo && !lpo) || form === 'lpo'}
                   >
                     Record company approval
@@ -422,10 +441,11 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
                     <Button size="sm" onClick={approveBilling}>
                       Approve billing
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setForm(null)}>
+                    <Button size="sm" variant="ghost" onClick={() => openForm(null)}>
                       Cancel
                     </Button>
                   </div>
+                  <Problem text={error} />
                 </div>
               )}
             </>
@@ -461,7 +481,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
         )}
       </ol>
 
-      {error && <p className="rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{error}</p>}
+      {!form && <Problem text={error} />}
 
       <details className="text-xs text-ink/60">
         <summary className="cursor-pointer font-semibold">Company history ({c.log.length})</summary>
