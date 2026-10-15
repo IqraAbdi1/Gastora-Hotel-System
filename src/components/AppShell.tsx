@@ -19,6 +19,7 @@ const sections = [
       { to: '/desk', label: 'Today', end: true },
       { to: '/desk/reservations', label: 'Reservations' },
       { to: '/desk/rooms', label: 'Rooms' },
+       { to: '/guests', label: 'Guests' },
       { to: '/desk/folios', label: 'Folios' },
     ],
   },
