@@ -65,6 +65,22 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     return created
   }
 
+  function updateGuest(guestId: string, patch: Partial<Omit<Guest, 'id'>>) {
+    const before = guests.find((g) => g.id === guestId)
+    if (!before) return
+    setGuests((list) => list.map((g) => (g.id === guestId ? { ...g, ...patch } : g)))
+    // Bookings keep a copy of the name, so a rename must follow the guest's bookings.
+    if (patch.name && patch.name !== before.name) {
+      setReservations((list) =>
+        list.map((r) =>
+          r.guestId === guestId || (!r.guestId && r.guest === before.name)
+            ? { ...r, guest: patch.name as string, guestId }
+            : r,
+        ),
+      )
+    }
+  }
+
   function amendReservation(reservationId: string, patch: AmendPatch, entry: Amendment) {
     setReservations((list) =>
       list.map((r) =>
@@ -75,7 +91,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
 
   return (
     <HotelContext.Provider
-      value={{ reservations, rooms, guests, checkIn, addReservation, addGuest, amendReservation }}
+      value={{ reservations, rooms, guests, checkIn, addReservation, addGuest, updateGuest, amendReservation }}
     >
       {children}
     </HotelContext.Provider>
