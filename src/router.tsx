@@ -100,6 +100,10 @@ export const router = createBrowserRouter([
           // POS
           { path: 'pos', element: <PosPage /> },
           { path: 'pos/orders', element: <PosPage /> },
+          { path: 'pos/tables', element: <PosPage /> },
+          { path: 'pos/menu', element: <PosPage /> },
+          { path: 'pos/payments', element: <PosPage /> },
+          { path: 'pos/recipes', element: <PosPage /> },
 
                     // Inventory
           {
