@@ -16,7 +16,7 @@ function ReturnCard({ r, onDone }: { r: ReturnRequest; onDone: (receipt: Receipt
 
   function confirm() {
     const res = q.confirmReturn(r.id, got, note)
-    if (!res.ok) return setError(res.error)
+    if (res.ok === false) return setError(res.error)
     onDone(res.value)
   }
 

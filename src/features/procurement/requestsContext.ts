@@ -179,6 +179,8 @@ export interface RequestsValue {
   setBudget: (department: string, monthly: number) => void
   addSupplier: (name: string, phone: string, supplies: string) => string | null
   setSupplierActive: (id: string, active: boolean) => void
+  // POS: deduct ingredient or packaged-item quantities from shared stock and record movements.
+  consumeStockForSale: (lines: { name: string; qty: number }[], saleId: string, outlet: string) => Result<Movement[]>
   // Stock control
   addItem: (input: ItemInput) => string | null
   updateItem: (

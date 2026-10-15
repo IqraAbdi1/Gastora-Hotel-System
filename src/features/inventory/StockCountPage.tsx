@@ -65,17 +65,17 @@ export function StockCountPage() {
       const id = scope.slice(STORE.length)
       const ids = q.stock.filter((s) => (s.store ?? MAIN_STORE_ID) === id).map((s) => s.id)
       const res = q.startCount(q.storeName(id), ids)
-      setError(res.ok ? '' : res.error)
+      setError(res.ok === true ? '' : res.ok === false ? res.error : '')
       return
     }
     const ids = q.stock.filter((s) => scope === ALL || (s.category ?? 'Other') === scope).map((s) => s.id)
     const res = q.startCount(scope, ids)
-    setError(res.ok ? '' : res.error)
+    setError(res.ok === true ? '' : res.ok === false ? res.error : '')
   }
 
   function startCycle() {
     const res = q.startCount('Cycle count', cycle.map((d) => d.item.id))
-    setError(res.ok ? '' : res.error)
+    setError(res.ok === true ? '' : res.ok === false ? res.error : '')
   }
 
   return (

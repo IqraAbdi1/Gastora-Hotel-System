@@ -30,6 +30,7 @@ import MovementsPage from './features/inventory/MovementsPage'
 import ReceiptsPage from './features/inventory/ReceiptsPage'
 import StockCountPage from './features/inventory/StockCountPage'
 import LossesPage from './features/inventory/LossesPage'
+import PosPage from './features/pos/PosPage'
 
 const page = (title: string) => <PagePlaceholder title={title} />
 
@@ -99,8 +100,8 @@ export const router = createBrowserRouter([
           },
 
           // POS
-          { path: 'pos', element: page('POS: Tables') },
-          { path: 'pos/orders', element: page('POS: Orders') },
+          { path: 'pos', element: <PosPage /> },
+          { path: 'pos/orders', element: <PosPage /> },
 
                     // Inventory
           {

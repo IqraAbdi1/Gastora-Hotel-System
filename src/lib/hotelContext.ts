@@ -23,6 +23,7 @@ export type HotelValue = {
   checkIn: (reservationId: string, roomNumber: string, details: GuestDetails) => void
   addReservation: (input: NewReservation) => Reservation
   addGuest: (input: Omit<Guest, 'id'>) => Guest
+  updateGuest: (guestId: string, patch: Partial<Omit<Guest, 'id'>>) => void
   amendReservation: (reservationId: string, patch: AmendPatch, entry: Amendment) => void
   cancelReservation: (reservationId: string, patch: CancelPatch, entry: Cancellation) => void
   addCharge: (reservationId: string, input: Omit<FolioCharge, 'id' | 'at'>) => void

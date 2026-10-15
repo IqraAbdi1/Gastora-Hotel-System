@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
+import { useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
@@ -94,19 +95,19 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
   const full = features.budgetApproval
   const flow: Flow = chain ? 'chain' : 'simple'
 
-  const [all, setAll] = useState<SupplyRequest[]>(SAMPLE_REQUESTS)
-  const [budgets, setBudgets] = useState(SAMPLE_BUDGETS)
-  const [stock, setStock] = useState(SAMPLE_STOCK)
-  const [stores, setStores] = useState<Store[]>(SAMPLE_STORES)
-  const [movements, setMovements] = useState<Movement[]>(SAMPLE_MOVEMENTS)
-  const [orders, setOrders] = useState<PurchaseOrder[]>(SAMPLE_ORDERS)
-  const [suppliers, setSuppliers] = useState(SAMPLE_SUPPLIERS)
-  const [receipts, setReceipts] = useState<Receipt[]>(SAMPLE_RECEIPTS)
-  const [counts, setCounts] = useState<StockCount[]>([])
-  const [losses, setLosses] = useState<LossReport[]>(SAMPLE_LOSSES)
-  const [lossLimit, setLossLimitState] = useState(DEFAULT_LOSS_LIMIT)
-  const [reversalAlert, setReversalAlertState] = useState(DEFAULT_REVERSAL_ALERT)
-  const [itemLog, setItemLog] = useState<ItemChange[]>([])
+  const [all, setAll] = useBrowserSyncedState<SupplyRequest[]>('gastora.inventory.requests.v1', SAMPLE_REQUESTS)
+  const [budgets, setBudgets] = useBrowserSyncedState('gastora.inventory.budgets.v1', SAMPLE_BUDGETS)
+  const [stock, setStock] = useBrowserSyncedState('gastora.inventory.stock.v1', SAMPLE_STOCK)
+  const [stores, setStores] = useBrowserSyncedState<Store[]>('gastora.inventory.stores.v1', SAMPLE_STORES)
+  const [movements, setMovements] = useBrowserSyncedState<Movement[]>('gastora.inventory.movements.v1', SAMPLE_MOVEMENTS)
+  const [orders, setOrders] = useBrowserSyncedState<PurchaseOrder[]>('gastora.inventory.orders.v1', SAMPLE_ORDERS)
+  const [suppliers, setSuppliers] = useBrowserSyncedState('gastora.inventory.suppliers.v1', SAMPLE_SUPPLIERS)
+  const [receipts, setReceipts] = useBrowserSyncedState<Receipt[]>('gastora.inventory.receipts.v1', SAMPLE_RECEIPTS)
+  const [counts, setCounts] = useBrowserSyncedState<StockCount[]>('gastora.inventory.counts.v1', [])
+  const [losses, setLosses] = useBrowserSyncedState<LossReport[]>('gastora.inventory.losses.v1', SAMPLE_LOSSES)
+  const [lossLimit, setLossLimitState] = useBrowserSyncedState('gastora.inventory.lossLimit.v1', DEFAULT_LOSS_LIMIT)
+  const [reversalAlert, setReversalAlertState] = useBrowserSyncedState('gastora.inventory.reversalAlert.v1', DEFAULT_REVERSAL_ALERT)
+  const [itemLog, setItemLog] = useBrowserSyncedState<ItemChange[]>('gastora.inventory.itemLog.v1', [])
   const seq = useRef(1009)
   const poSeq = useRef(2002)
   const mvSeq = useRef(100)
@@ -121,10 +122,10 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
   const batSeq = useRef(1001)
   // What the last issue or write-off took from which batches. The movement and receipt read it, then clear it.
   const drawn = useRef<Record<string, Draw[]>>({})
-  const [batches, setBatches] = useState<Batch[]>(SAMPLE_BATCHES)
-  const [expiryWarn, setExpiryWarnState] = useState(DEFAULT_EXPIRY_WARN_DAYS)
-  const [countDays, setCountDaysState] = useState<Record<CountClass, number>>(CLASS_DAYS)
-  const [returns, setReturns] = useState<ReturnRequest[]>([])
+  const [batches, setBatches] = useBrowserSyncedState<Batch[]>('gastora.inventory.batches.v1', SAMPLE_BATCHES)
+  const [expiryWarn, setExpiryWarnState] = useBrowserSyncedState('gastora.inventory.expiryWarn.v1', DEFAULT_EXPIRY_WARN_DAYS)
+  const [countDays, setCountDaysState] = useBrowserSyncedState<Record<CountClass, number>>('gastora.inventory.countDays.v1', CLASS_DAYS)
+  const [returns, setReturns] = useBrowserSyncedState<ReturnRequest[]>('gastora.inventory.returns.v1', [])
 
   const who = user?.name ?? 'Someone'
   // A hotel only sees requests of its own way of working.
@@ -434,6 +435,40 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
       return null
     },
     countsDue,
+
+    consumeStockForSale: (lines, saleId, outlet) => {
+      if (!saleId.trim()) return fail('A unique sale reference is required for stock deduction.')
+      // Idempotency guard: a retry of the same checkout must never deduct stock twice.
+      const alreadyIssued = movements.some((movement) => movement.reason === `POS sale ${saleId}`)
+      if (alreadyIssued) return fail(`Sale ${saleId} has already deducted inventory. Refresh the order history before retrying.`)
+      if (!lines.length) return fail('No stock lines were supplied for this sale.')
+      const merged: { name: string; qty: number }[] = []
+      for (const line of lines) {
+        const qty = Number(line.qty)
+        if (!line.name.trim() || !Number.isFinite(qty) || qty <= 0) return fail('Each stock deduction needs an item and a positive quantity.')
+        const existing = merged.find((x) => sameName(x.name, line.name))
+        if (existing) existing.qty += qty
+        else merged.push({ name: line.name.trim(), qty })
+      }
+      // Validate every line before changing any stock, so a failed sale never partially deducts inventory.
+      for (const line of merged) {
+        const item = stock.find((x) => sameName(x.name, line.name))
+        if (!item) return fail(`Inventory item “${line.name}” was not found. Configure the recipe to use an existing stock item.`)
+        const available = stockOf(item.name)
+        if (available < line.qty) return fail(`Insufficient stock for ${item.name}: ${available} ${item.unit} available, ${line.qty} required.`)
+      }
+      const at = new Date().toISOString()
+      const made: Movement[] = merged.map((line) => {
+        const item = stock.find((x) => sameName(x.name, line.name))!
+        return { id: `POS-${mvSeq.current++}`, at, by: who, kind: 'Issued', item: item.name, qty: line.qty, cost: item.unitCost, reason: `POS sale ${saleId}`, to: `${outlet} POS`, store: item.store ?? MAIN_STORE_ID }
+      })
+      setStock((current) => current.map((item) => {
+        const line = merged.find((x) => sameName(x.name, item.name))
+        return line ? { ...item, onHand: item.onHand - line.qty } : item
+      }))
+      setMovements((current) => [...made, ...current])
+      return { ok: true, value: made }
+    },
 
     raise: (input: NewRequest) => {
       const at = new Date().toISOString()

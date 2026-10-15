@@ -51,7 +51,7 @@ function ReturnDialog({
       handedInBy,
       lines: rows.map((r) => ({ name: r.name.trim(), qty: Math.max(0, parseInt(r.qty, 10) || 0) })),
     })
-    if (!res.ok) return setError(res.error)
+    if (res.ok === false) return setError(res.error)
     onDone(res.value.id)
     onClose()
   }

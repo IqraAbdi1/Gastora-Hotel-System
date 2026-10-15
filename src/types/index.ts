@@ -54,12 +54,31 @@ export type ReservationStatus = 'booked' | 'in-house' | 'checked-out' | 'cancell
 
 export type GuaranteeType = 'deposit' | 'card' | 'company' | 'none'
 
+export type GuestNote = { id: string; at: string; by: string; text: string }
+
+export type GuestPreferences = {
+  room?: string
+  bed?: string
+  diet?: string
+  language?: string
+  other?: string
+}
+
 export type Guest = {
   id: string
   name: string
   phone: string
   email?: string
   nationality?: string
+  dateOfBirth?: string
+  gender?: string
+  address?: string
+  idType?: IdType
+  idNumber?: string
+  vip?: boolean
+  marketingConsent?: boolean
+  preferences?: GuestPreferences
+  notes?: GuestNote[]
 }
 
 export type Reservation = {
