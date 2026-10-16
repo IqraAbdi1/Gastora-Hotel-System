@@ -7,7 +7,8 @@ import { addDays } from '../../lib/availability'
 import { dayMonth, ugx } from '../../lib/format'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
-import { freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal, suggestedDeposit } from '../../lib/booking'
+import { depositForStay, freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal } from '../../lib/booking'
+import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
 import { benefitList, loyaltyDiscount, stayHistory, tierFor } from '../../lib/loyalty'
 import { useFeatures } from '../platform/featuresContext'
 import GuestRecognition from '../guests/GuestRecognition'
@@ -107,7 +108,9 @@ export function NewReservationForm({
   const [loyaltyApproved, setLoyaltyApproved] = useState('')
   const discountOn = earned > 0 && useLoyalty && (loyalty.autoApply || loyaltyApproved !== '')
   const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
-  const suggested = suggestedDeposit(total, rates.depositPercent)
+  // A company account and its LPO are themselves the guarantee, so the guest is not asked for a deposit too.
+  const onCompany = !!company
+  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates)
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
   const matches = useMemo(
@@ -508,7 +511,8 @@ export function NewReservationForm({
                     </option>
                   ))}
               </select>
-              <span className="mt-1 block text-xs font-normal text-ink/60">{guarantees.find((g) => g.key === guarantee)?.rule}</span>
+              {/* The wording follows this hotel's own settings, not a fixed sample. */}
+              <span className="mt-1 block text-xs font-normal text-ink/60">{guaranteeRules(rates)[guarantee]}</span>
               <span className="mt-1 block text-xs font-normal text-ink/60">
                 {company
                   ? 'The company guarantee is added by itself once billing to the company is approved.'
@@ -526,7 +530,11 @@ export function NewReservationForm({
                   placeholder={suggested ? String(suggested) : '0'}
                   className={`${field} mt-1`}
                 />
-                <span className="mt-1 block text-xs font-normal text-ink/60">Suggested 30% of the total: {ugx(suggested)}</span>
+                <span className="mt-1 block text-xs font-normal text-ink/60">
+                  {onCompany
+                    ? 'No deposit: the company account and its LPO are the guarantee.'
+                    : `Suggested ${depositExplained(nightlyRate(type, planFor(planId, rates).extraPerNight, rates), nights, rates)}: ${ugx(suggested)}`}
+                </span>
               </label>
               <label className="block text-sm font-medium">
                 Paid by

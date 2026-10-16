@@ -34,9 +34,11 @@ export function checkCancel(r: Reservation, mode: CancelMode, waive: boolean, ra
     // Free until the hotel's window, then the nights it charges
     fullCharge = nightsOf(TODAY, r.arrival) < freeDays ? perNight * lateNights : 0
   } else {
-    // No-show follows the guarantee on the booking (see data/rates.ts)
+    // No-show follows the guarantee on the booking (see data/rates.ts). Whatever the guarantee, the
+    // charge is the nights the hotel actually lost: keeping a large deposit for one lost night is not
+    // what the cancellation screen beside this one does, and a guest who is over-charged disputes it.
     const g = r.guarantee ?? (r.paid > 0 ? 'deposit' : 'none')
-    if (g === 'deposit') fullCharge = r.paid
+    if (g === 'deposit') fullCharge = Math.min(r.paid, perNight * noShowNights)
     else if (g === 'card' || g === 'company') fullCharge = perNight * noShowNights
   }
 

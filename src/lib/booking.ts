@@ -1,4 +1,5 @@
 import { DEPOSIT_RATE, ratePlans, roomRate } from '../data/rates'
+import { depositFor, nightlyRate } from './rates'
 import type { RatesPolicy } from './rates'
 import { holdsRoom, isRoomFree } from './availability'
 import type { Reservation, Room } from '../types'
@@ -22,6 +23,18 @@ export function stayTotal(type: Room['type'], planId: string, nights: number, ra
 export function suggestedDeposit(total: number, percent?: number) {
   const share = percent === undefined ? DEPOSIT_RATE : percent / 100
   return Math.round((total * share) / 1000) * 1000
+}
+
+/** The deposit for a stay, following the hotel's rule. Use this wherever the room type and nights are known. */
+export function depositForStay(
+  type: Room['type'],
+  planId: string,
+  nights: number,
+  rates?: RatesPolicy,
+): number {
+  if (!rates) return suggestedDeposit(stayTotal(type, planId, nights, rates))
+  const nightly = nightlyRate(type, planFor(planId, rates).extraPerNight, rates)
+  return depositFor(nightly, nights, rates)
 }
 
 // Rooms of each type still free for every night of the stay: total minus booked minus blocked (FR-RMS-012).

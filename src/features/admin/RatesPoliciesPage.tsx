@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { Badge, Button, Card, Field, Input, PageHeader, Select, Textarea } from '../../components/ui'
 import { ugx } from '../../lib/format'
-import { defaultHouseRules, guaranteeRules, newPlanId, roomTypeList } from '../../lib/rates'
-import type { MealPlanSetting, RatesPolicy } from '../../lib/rates'
+import {
+  DEPOSIT_MODE_LABEL,
+  DEPOSIT_MODE_NOTE,
+  defaultHouseRules,
+  depositExplained,
+  depositFor,
+  guaranteeRules,
+  newPlanId,
+  nightlyRate,
+  roomTypeList,
+} from '../../lib/rates'
+import type { DepositMode, MealPlanSetting, RatesPolicy } from '../../lib/rates'
 import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
 import { useHotel } from '../../lib/hotelContext'
@@ -20,6 +30,7 @@ export default function RatesPoliciesPage() {
   const { accounts } = useCorporate()
   const { reservations } = useHotel()
   const [previewPlan, setPreviewPlan] = useState('')
+  const [previewNights, setPreviewNights] = useState(3)
   const rates = options.rates
   const editable = can('changeSettings')
 
@@ -165,22 +176,95 @@ export default function RatesPoliciesPage() {
           </div>
         </Card>
 
-        <Card title="Deposit" icon="money" padded description="What the desk suggests when it takes a booking. The desk can still change it.">
-          <div className="max-w-40">
-            <Field label="Suggested deposit %">
-              {(id) => (
-                <Input
-                  id={id}
-                  inputMode="numeric"
-                  className="tabular-nums"
-                  value={String(rates.depositPercent)}
-                  onChange={(e) => set({ depositPercent: Math.min(100, num(e.target.value)) })}
-                />
-              )}
-            </Field>
+        <Card
+          title="Deposit"
+          icon="money"
+          padded
+          description="What the desk asks for when it takes a booking. The desk can still change it."
+        >
+          <div className="space-y-2">
+            {(['floor', 'nights', 'percent'] as DepositMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => set({ depositMode: m })}
+                aria-pressed={rates.depositMode === m}
+                className={`block w-full rounded-lg px-4 py-3 text-left ring-1 transition ${
+                  rates.depositMode === m ? 'bg-brand/[0.08] ring-brand' : 'bg-white ring-ink/15 hover:ring-brand/40'
+                }`}
+              >
+                <span className="block text-sm font-semibold text-ink">{DEPOSIT_MODE_LABEL[m]}</span>
+                <span className="mt-0.5 block text-xs text-ink/60">{DEPOSIT_MODE_NOTE[m]}</span>
+              </button>
+            ))}
           </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {rates.depositMode !== 'nights' && (
+              <Field label="Share of the stay %">
+                {(id) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    className="tabular-nums"
+                    value={String(rates.depositPercent)}
+                    onChange={(e) => set({ depositPercent: Math.min(100, num(e.target.value)) })}
+                  />
+                )}
+              </Field>
+            )}
+            {rates.depositMode !== 'percent' && (
+              <Field label="Nights it must cover">
+                {(id) => (
+                  <Input
+                    id={id}
+                    inputMode="numeric"
+                    className="tabular-nums"
+                    value={String(rates.depositNights)}
+                    onChange={(e) => set({ depositNights: Math.min(30, Math.max(1, num(e.target.value))) })}
+                  />
+                )}
+              </Field>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-lg bg-brand/[0.06] p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-ink">What the desk would ask for</p>
+              <Select
+                aria-label="Nights to price"
+                className="w-auto"
+                value={String(previewNights)}
+                onChange={(e) => setPreviewNights(Number(e.target.value))}
+              >
+                {[1, 2, 3, 7, 10].map((n) => (
+                  <option key={n} value={n}>
+                    {n} night{n === 1 ? '' : 's'}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <ul className="mt-2 space-y-1 text-xs text-ink/70">
+              {roomTypeList.map((t) => {
+                const nightly = nightlyRate(t, 0, rates)
+                const amount = depositFor(nightly, previewNights, rates)
+                return (
+                  <li key={t} className="flex justify-between gap-4">
+                    <span>
+                      {t} &middot; {ugx(nightly)} a night
+                      <span className="block text-ink/50">{depositExplained(nightly, previewNights, rates)}</span>
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">{ugx(amount)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
           <p className="mt-2 text-xs text-ink/55">
-            On a {ugx(rates.roomRates.Standard)} night that suggests {ugx(Math.round((rates.roomRates.Standard * rates.depositPercent) / 100 / 1000) * 1000)}.
+            A no-show keeps {rates.noShowNights} night{rates.noShowNights === 1 ? '' : 's'} of this, and the rest is
+            refunded. A booking on a company account is not asked for a deposit: the account and its LPO are the
+            guarantee.
           </p>
         </Card>
 

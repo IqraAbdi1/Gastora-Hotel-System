@@ -10,6 +10,8 @@ type Props = { reservation: Reservation; mode: CancelMode; onClose: () => void; 
 
 const field = 'w-full rounded-lg border border-ink/15 bg-canvas px-3 py-2 text-sm outline-none focus:border-brand'
 
+const nightWord = (n: number) => `${n} night${n === 1 ? '' : 's'}`
+
 export default function CancelPanel({ reservation: r, mode, onClose, onDone }: Props) {
   const { cancelReservation } = useHotel()
   const isNoShow = mode === 'no-show'
@@ -128,10 +130,11 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
                   </label>
                 )}
 
+                {/* The wording follows this hotel's own settings, so it cannot drift from what is charged. */}
                 <p className="text-xs text-ink/60">
                   {isNoShow
-                    ? 'Sample policy: the no-show charge follows the booking guarantee. Deposit kept, one night for card or company, nothing if there was no guarantee. In the real system this is allowed after the hotel release time (18:00 for bookings with no guarantee).'
-                    : 'Sample policy: free to cancel 2 or more days before arrival. Closer than that, one night is kept from what the guest paid and the rest is refunded. Refunds are simulated here. Real mobile money refunds go through the payment provider.'}
+                    ? `This hotel charges ${nightWord(rates.noShowNights)} for a no-show, whatever the guarantee: kept from the deposit if one was paid, with the rest refunded; charged to the card or the company otherwise; and nothing at all where there was no guarantee. In the real system this is allowed after the release time (${rates.releaseTime} for bookings with no guarantee).`
+                    : `This hotel is free to cancel ${rates.cancelFreeDays} or more days before arrival. Closer than that, ${nightWord(rates.cancelChargeNights)} is kept from what the guest paid and the rest is refunded. Refunds are simulated here. Real mobile money refunds go through the payment provider.`}
                 </p>
               </>
             )}
