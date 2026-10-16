@@ -1,7 +1,9 @@
 import { FEATURES, PLANS, featuresOf, planHas } from '../../lib/features'
 import type { CompanySize, FeatureKey, TenantStatus } from '../../lib/features'
 import { SIZE_LABEL } from '../../lib/corporate'
+import { useState } from 'react'
 import Switch from '../../components/Switch'
+import NewHotelDialog from './NewHotelDialog'
 import { useFeatures } from './featuresContext'
 
 const STATUSES: { id: TenantStatus; label: string }[] = [
@@ -13,6 +15,8 @@ const STATUSES: { id: TenantStatus; label: string }[] = [
 export default function PlatformPage() {
   const { tenants, tenant: current, selectTenant, setPlan, setStatus, setOverride, clearOverrides, setCompanySize } =
     useFeatures()
+
+  const [adding, setAdding] = useState(false)
 
   const SIZE_NOTE: Record<CompanySize, string> = {
     small: 'Front desk approves bookings. Manager sets credit. No LPO needed unless the company asks.',
@@ -38,11 +42,23 @@ export default function PlatformPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold text-ink">Platform admin</h1>
+          <p className="mt-1 text-sm text-ink/60">
+            {tenants.length} hotel{tenants.length === 1 ? '' : 's'} on Gastora. You decide which features each one has paid
+            for. Hotels cannot switch these themselves.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
+        >
+          Add a hotel
+        </button>
+      </div>
       <div>
-        <h1 className="text-xl font-semibold text-ink">Platform admin</h1>
-        <p className="mt-1 text-sm text-ink/60">
-          You decide which features each hotel has paid for. Hotels cannot switch these themselves.
-        </p>
         <p className="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs text-ink/70">
           Prototype: this only hides screens. In the real system the backend stores each hotel&apos;s
           features and rejects calls for anything that is off.
@@ -58,6 +74,14 @@ export default function PlatformPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-semibold text-ink">{t.name}</h2>
+                {t.registry && (
+                  <p className="text-xs text-ink/55">
+                    {[t.registry.town, t.registry.stars ? `${t.registry.stars} star` : '', t.registry.tin ? `TIN ${t.registry.tin}` : '']
+                      .filter(Boolean)
+                      .join(' · ')}
+                    {t.registry.contactName ? ` · ${t.registry.contactName}${t.registry.contactPhone ? `, ${t.registry.contactPhone}` : ''}` : ''}
+                  </p>
+                )}
                 <p className="text-xs text-ink/60">{t.rooms} rooms</p>
               </div>
               <button
@@ -199,6 +223,8 @@ export default function PlatformPage() {
           </section>
         )
       })}
+    
+      {adding && <NewHotelDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); selectTenant(id) }} />}
     </div>
   )
 }

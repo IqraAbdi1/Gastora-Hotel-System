@@ -18,6 +18,7 @@ import type {
 } from '../../lib/features'
 import { DEFAULT_STAY_TIMES } from '../../lib/stayTimes'
 import type { StayTimes } from '../../lib/stayTimes'
+import type { NewTenant, TenantRegistry } from '../../lib/features'
 import { DEFAULT_TAX } from '../../lib/tax'
 import type { TaxSettings } from '../../lib/tax'
 import { FeaturesContext } from './featuresContext'
@@ -54,6 +55,26 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
     (patch: Partial<StayTimes>) =>
       setStayTimesById((m) => ({ ...m, [currentId]: { ...(m[currentId] ?? DEFAULT_STAY_TIMES), ...patch } })),
     [currentId],
+  )
+
+  const addTenant = useCallback((input: NewTenant) => {
+    const created: Tenant = {
+      id: `t${Date.now().toString().slice(-6)}`,
+      name: input.name.trim(),
+      rooms: input.rooms,
+      plan: input.plan,
+      status: 'active',
+      companySize: input.companySize,
+      overrides: {},
+      registry: input.registry,
+    }
+    setTenants((list) => [...list, created])
+    return created
+  }, [])
+
+  const setRegistry = useCallback(
+    (id: string, patch: Partial<TenantRegistry>) => patchTenant(id, (t) => ({ ...t, registry: { ...t.registry, ...patch } })),
+    [patchTenant],
   )
 
   const setStatus = useCallback(
@@ -108,8 +129,10 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       setCompanySize,
       setTax,
       setStayTimes,
+      addTenant,
+      setRegistry,
     }
-  }, [tenants, currentId, optionsById, taxById, stayTimesById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize, setTax, setStayTimes])
+  }, [tenants, currentId, optionsById, taxById, stayTimesById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize, setTax, setStayTimes, addTenant, setRegistry])
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>
 }

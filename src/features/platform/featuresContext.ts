@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { StayTimes } from '../../lib/stayTimes'
+import type { NewTenant, TenantRegistry } from '../../lib/features'
 import type { TaxSettings } from '../../lib/tax'
 import type {
   FeatureKey,
@@ -34,6 +35,9 @@ export interface FeaturesValue {
   /** Changes the tax rules of the hotel being shown. Only the hotel admin and owner use this. */
   setTax: (patch: Partial<TaxSettings>) => void
   setStayTimes: (patch: Partial<StayTimes>) => void
+  /** Gastora signs up a new hotel. */
+  addTenant: (input: NewTenant) => Tenant
+  setRegistry: (id: string, patch: Partial<TenantRegistry>) => void
 }
 
 export const FeaturesContext = createContext<FeaturesValue | null>(null)

@@ -19,6 +19,7 @@ export type FeatureKey =
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
 export type FeatureMap = Record<FeatureKey, boolean>
+export type NewTenant = Pick<Tenant, 'name' | 'rooms' | 'plan' | 'companySize'> & { registry: TenantRegistry }
 export type InspectionMode = 'off' | 'spot' | 'every'
 
 export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
@@ -148,10 +149,34 @@ export function planHas(plan: PlanId, key: FeatureKey): boolean {
 /** Hotel size for company accounts. Set by the platform admin. */
 export type CompanySize = 'small' | 'medium' | 'large'
 
+/** What Gastora records about a hotel when it signs up. */
+export interface TenantRegistry {
+  /** Trading name if it differs from the one on the certificate. */
+  legalName?: string
+  tin?: string
+  /** Tourism board or trading licence number. */
+  licenceNumber?: string
+  stars?: number
+  town?: string
+  address?: string
+  phone?: string
+  email?: string
+  /** Who Gastora talks to at the hotel. */
+  contactName?: string
+  contactRole?: string
+  contactPhone?: string
+  contactEmail?: string
+  /** When they signed up, and when billing starts. */
+  joinedOn?: string
+  billingStartsOn?: string
+  notes?: string
+}
+
 export interface Tenant {
   id: string
   name: string
   rooms: number
+  registry?: TenantRegistry
   plan: PlanId
   status: TenantStatus
   /** The company rules for this hotel, chosen from its size. The hotel cannot change it. */
