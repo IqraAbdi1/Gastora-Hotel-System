@@ -18,7 +18,7 @@ const stamp = (iso: string) =>
 function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: string }) {
   const a4 = size === 'A4'
   const total = doc.lines.reduce((s, l) => s + l.qty * l.unitCost, 0)
-  const costed = doc.lines.some((l) => l.unitCost > 0)
+  const costed = doc.lines.some((l) => l.unitCost !== 0)
   const muted = 'opacity-60'
   const cell = 'py-1 pr-2'
 
@@ -79,8 +79,8 @@ function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: 
               <td className={`${cell} text-right`}>{l.qty}</td>
               {costed && (
                 <>
-                  <td className={`${cell} text-right`}>{l.unitCost > 0 ? l.unitCost.toLocaleString('en-US') : ''}</td>
-                  <td className={`${cell} text-right`}>{l.unitCost > 0 ? (l.qty * l.unitCost).toLocaleString('en-US') : ''}</td>
+                  <td className={`${cell} text-right`}>{l.unitCost !== 0 ? l.unitCost.toLocaleString('en-US') : ''}</td>
+                  <td className={`${cell} text-right`}>{l.unitCost !== 0 ? (l.qty * l.unitCost).toLocaleString('en-US') : ''}</td>
                 </>
               )}
             </tr>
