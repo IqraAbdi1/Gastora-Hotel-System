@@ -117,7 +117,7 @@ export const ROLES: Role[] = [
     label: 'Finance',
     blurb: 'Money, budgets and over-budget approvals.',
     landing: '/finance',
-    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit', '/desk/companies'],
+    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit', '/desk/companies', '/admin/approvals'],
     actions: ['raiseRequest', 'approveOverBudget', 'requestCorporate', 'manageCorporate', 'approveCorporateFinance'],
   },
   {
