@@ -11,8 +11,12 @@ import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { folioOf, paymentMethods } from '../../lib/folio'
 import { suggestedDeposit } from '../../lib/booking'
 import { useHotel } from '../../lib/hotelContext'
+import { stayTaxes } from '../../lib/tax'
 import type { IdType, Reservation } from '../../types'
 import { useCorporate } from '../corporate/corporateContext'
+import { useFeatures } from '../platform/featuresContext'
+import GuestRecognition from '../guests/GuestRecognition'
+import PreferenceChips from '../guests/PreferenceChips'
 import CheckInRoomStep from './CheckInRoomStep'
 import CompanyCheckIn from './CompanyCheckIn'
 
@@ -44,7 +48,8 @@ function Row({ label, value, strong, tone }: { label: string; value: ReactNode; 
 // Check-in as a short wizard on its own page: guest, ID, room, payment, signature.
 // A stay billed to a company starts with the company check, because nothing else matters until it clears.
 export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
-  const { rooms, reservations, guests, checkIn, addPayment } = useHotel()
+  const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest } = useHotel()
+  const { tax } = useFeatures()
   // Always read the latest booking, so the company checks show what was just confirmed.
   const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
@@ -99,6 +104,9 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const [emergencyName, setEmergencyName] = useState('')
   const [emergencyPhone, setEmergencyPhone] = useState('')
   const [requests, setRequests] = useState('')
+  // Preferences are saved on the guest, so the next stay starts with them already known.
+  const [prefTags, setPrefTags] = useState<string[]>([])
+  const [prefNote, setPrefNote] = useState('')
   const [idPhoto, setIdPhoto] = useState<string | undefined>()
   const [signature, setSignature] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
@@ -110,13 +118,17 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
 
   const f = folioOf(r)
   const nights = nightsBetween(r.arrival, r.departure)
+  // Taxes on top of the room charge (Local Hotel Tax, service charge, VAT when added). Empty when the Tax lines feature is off.
+  const taxes = stayTaxes(tax, f.roomCharge, nights)
+  const total = f.total + taxes.onTopTotal
+  const balance = total - f.paid
   const planName = ratePlans.find((p) => p.id === r.plan)?.name
   const guaranteeLabel = guarantees.find((g) => g.key === r.guarantee)?.label
   // A deposit is suggested only when nothing is paid and no card or company guarantee covers the stay.
-  const suggested = r.paid === 0 && r.guarantee !== 'card' && r.guarantee !== 'company' ? suggestedDeposit(r.total) : 0
+  const suggested = r.paid === 0 && r.guarantee !== 'card' && r.guarantee !== 'company' ? suggestedDeposit(total) : 0
   const payAmount = payText === '' ? 0 : digits(payText)
-  const payOk = payAmount <= f.balance
-  const afterBalance = f.balance - (payOk ? payAmount : 0)
+  const payOk = payAmount <= balance
+  const afterBalance = balance - (payOk ? payAmount : 0)
 
   const valid: Record<string, boolean> = {
     company: true,
@@ -159,6 +171,18 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
       termsAccepted,
       signature: signature ?? undefined,
     })
+    // What the guest likes goes on their profile, not just this booking.
+    if (known && (prefTags.length > 0 || prefNote.trim() !== '')) {
+      updateGuest(known.id, {
+        preferences: {
+          ...known.preferences,
+          tags: [...new Set([...(known.preferences?.tags ?? []), ...prefTags])],
+          other: prefNote.trim() || known.preferences?.other,
+        },
+      })
+    }
+    // Taxes are posted first, so the balance the payment is taken against is the full one.
+    for (const l of taxes.onTop) addCharge(r.id, { category: l.category, description: l.label, amount: l.amount })
     // The payment goes on the folio straight after check-in, so the balance everywhere is right.
     if (payAmount > 0) addPayment(r.id, { method, amount: payAmount, reference: reference.trim() || undefined })
     setDoneRoom(room)
@@ -187,9 +211,13 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
         <Row label="Nights" value={nights} />
         <Row label="Guests" value={`${adults} adult${adults === 1 ? '' : 's'}${children ? `, ${children} child${children === 1 ? '' : 'ren'}` : ''}`} />
         {planName && <Row label="Rate plan" value={planName} />}
+        {r.upgrade && <Row label="Upgrade" value={`Free, from ${r.upgrade.from}`} />}
         {room && <Row label="Room" value={`Room ${room}`} />}
         {known?.phone && <Row label="Phone on file" value={known.phone} />}
       </dl>
+      <div className="mt-3">
+        <GuestRecognition guest={known} reservation={r} />
+      </div>
     </Card>
   )
 
@@ -198,8 +226,16 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
       <dl className="space-y-2.5">
         <Row label={`Room${planName ? ` and ${planName.toLowerCase()}` : ''} (${nights} night${nights === 1 ? '' : 's'})`} value={ugx(f.roomCharge)} />
         {f.extras > 0 && <Row label="Extras" value={ugx(f.extras)} />}
+        {taxes.onTop.map((l) => (
+          <Row key={l.key} label={l.label} value={ugx(l.amount)} />
+        ))}
         <div className="border-t border-ink/10 pt-2.5">
-          <Row label="Total" value={ugx(f.total)} strong />
+          <Row label="Total" value={ugx(total)} strong />
+          {taxes.vatInside > 0 && tax && (
+            <p className="mt-1 text-xs text-ink/55">
+              Includes VAT {Math.round(tax.vatRate * 100)}%: {ugx(taxes.vatInside)} on the room charge
+            </p>
+          )}
         </div>
         <Row label="Paid so far" value={f.paid > 0 ? `− ${ugx(f.paid)}` : ugx(0)} tone={f.paid > 0 ? 'good' : undefined} />
         {payAmount > 0 && payOk && <Row label="Taking now" value={`− ${ugx(payAmount)}`} tone="good" />}
@@ -207,7 +243,11 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
           <Row label="Balance due" value={ugx(afterBalance)} strong tone={afterBalance > 0 ? 'bad' : 'good'} />
         </div>
       </dl>
-      <p className="mt-3 text-xs text-ink/55">Taxes are part of the total in this prototype. They are not itemised yet.</p>
+      <p className="mt-3 text-xs text-ink/55">
+        {tax
+          ? 'Taxes are worked out from the hotel rules and posted to the folio when the guest checks in.'
+          : 'Taxes are part of the total. This hotel does not itemise them.'}
+      </p>
     </Card>
   )
 
@@ -312,7 +352,11 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                         {(id) => <Input id={id} type="number" min={0} value={children} onChange={(e) => setChildren(Math.max(0, Number(e.target.value) || 0))} />}
                       </Field>
                       <div className="sm:col-span-2">
-                        <Field label="Special requests">
+                        <div className="sm:col-span-2">
+                          <p className="mb-1.5 text-sm font-medium text-ink/80">What this guest likes</p>
+                          <PreferenceChips tags={prefTags} onTags={setPrefTags} note={prefNote} onNote={setPrefNote} />
+                        </div>
+                        <Field label="Special requests for this stay">
                           {(id) => (
                             <Textarea id={id} rows={3} value={requests} onChange={(e) => setRequests(e.target.value)} placeholder="For example: quiet room, late checkout, extra pillows" />
                           )}
@@ -363,7 +407,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
 
                 {current === 'room' && (
                   <Card title="Assign a room" description={`${r.roomType} · ${dayMonth(r.arrival)} to ${dayMonth(r.departure)}`} padded>
-                    <CheckInRoomStep type={r.roomType} ready={readyRooms} dirty={dirtyRooms} booked={r.room} value={room} onChange={setRoom} />
+                    <CheckInRoomStep type={r.roomType} ready={readyRooms} dirty={dirtyRooms} booked={r.room} reservation={r} value={room} onChange={setRoom} />
                   </Card>
                 )}
 
@@ -379,7 +423,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                           </Select>
                         )}
                       </Field>
-                      <Field label="Amount to take now (UGX)" error={!payOk ? `More than the balance of ${ugx(f.balance)}` : undefined}>
+                      <Field label="Amount to take now (UGX)" error={!payOk ? `More than the balance of ${ugx(balance)}` : undefined}>
                         {(id) => <Input id={id} inputMode="numeric" value={payText} onChange={(e) => setPayText(e.target.value)} placeholder="0" />}
                       </Field>
                       <div className="sm:col-span-2">
@@ -390,13 +434,13 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {suggested > 0 && (
-                        <Button variant="secondary" size="sm" onClick={() => setPayText(String(Math.min(suggested, f.balance)))}>
-                          Suggested deposit {ugx(Math.min(suggested, f.balance))}
+                        <Button variant="secondary" size="sm" onClick={() => setPayText(String(Math.min(suggested, balance)))}>
+                          Suggested deposit {ugx(Math.min(suggested, balance))}
                         </Button>
                       )}
-                      {f.balance > 0 && (
-                        <Button variant="ghost" size="sm" onClick={() => setPayText(String(f.balance))}>
-                          Full balance {ugx(f.balance)}
+                      {balance > 0 && (
+                        <Button variant="ghost" size="sm" onClick={() => setPayText(String(balance))}>
+                          Full balance {ugx(balance)}
                         </Button>
                       )}
                       {payText !== '' && (

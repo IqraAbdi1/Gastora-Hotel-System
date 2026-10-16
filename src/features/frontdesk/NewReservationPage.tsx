@@ -8,6 +8,11 @@ import { dayMonth, ugx } from '../../lib/format'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal, suggestedDeposit } from '../../lib/booking'
+import { benefitList, loyaltyDiscount, stayHistory, tierFor } from '../../lib/loyalty'
+import { useFeatures } from '../platform/featuresContext'
+import GuestRecognition from '../guests/GuestRecognition'
+import ApprovalGate from '../approvals/ApprovalGate'
+import { useApprovals } from '../approvals/approvalsContext'
 import { guarantees, ratePlans, roomRate } from '../../data/rates'
 import type { GuaranteeType, Guest, Reservation, Room } from '../../types'
 import type { BookingPreset } from '../../lib/bookingContext'
@@ -60,6 +65,9 @@ export function NewReservationForm({
   const [created, setCreated] = useState<Reservation | null>(null)
   const [checkInFor, setCheckInFor] = useState<Reservation | null>(null)
   const [company, setCompany] = useState<CompanyInput | null>(null)
+  const { options, tenant } = useFeatures()
+  const loyalty = options.loyalty
+  const { record } = useApprovals()
 
   const from = walkin ? TODAY : arrival
   const nights = nightsOf(from, departure)
@@ -87,7 +95,17 @@ export function NewReservationForm({
     [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights],
   )
 
-  const total = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights)) : 0
+  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights)) : 0
+
+  // A returning guest's reward. The room only, never on top of a company price, and only on finished stays.
+  const history = useMemo(() => (selectedGuest ? stayHistory(selectedGuest, reservations) : null), [selectedGuest, reservations])
+  const tier = history ? tierFor(history, loyalty) : null
+  const roomOnly = datesOk ? stayTotal(type, 'room-only', nights) : 0
+  const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
+  const [useLoyalty, setUseLoyalty] = useState(true)
+  const [loyaltyApproved, setLoyaltyApproved] = useState('')
+  const discountOn = earned > 0 && useLoyalty && (loyalty.autoApply || loyaltyApproved !== '')
+  const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
   const suggested = suggestedDeposit(total)
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
@@ -127,7 +145,7 @@ export function NewReservationForm({
     setCompany(next)
   }
 
-  function useGuest(g: Guest) {
+  function pickGuest(g: Guest) {
     setName(g.name)
     setPhone(g.phone)
     setSelectedGuest(g)
@@ -449,7 +467,7 @@ export function NewReservationForm({
                     <span>
                       {m.guest.name} · {m.guest.phone} <span className="text-ink/60">({m.reason})</span>
                     </span>
-                    <button type="button" onClick={() => useGuest(m.guest)} className="font-semibold text-brand">
+                    <button type="button" onClick={() => pickGuest(m.guest)} className="font-semibold text-brand">
                       Use this guest
                     </button>
                   </div>
@@ -466,7 +484,7 @@ export function NewReservationForm({
                     <span>
                       {m.guest.name} · {m.guest.phone}
                     </span>
-                    <button type="button" onClick={() => useGuest(m.guest)} className="font-semibold text-brand">
+                    <button type="button" onClick={() => pickGuest(m.guest)} className="font-semibold text-brand">
                       Use
                     </button>
                   </div>
@@ -527,6 +545,57 @@ export function NewReservationForm({
         </div>
 
         <aside className="h-fit lg:sticky lg:top-4">
+          {selectedGuest && (
+            <div className="mb-3">
+              <GuestRecognition guest={selectedGuest} />
+            </div>
+          )}
+          {earned > 0 && tier && (
+            <div className="mb-3 space-y-2 rounded-xl border border-brand/25 bg-brand/[0.06] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-ink">{tier.name} reward: {ugx(earned)} off</p>
+                <label className="flex items-center gap-2 text-xs font-medium">
+                  <input type="checkbox" checked={useLoyalty} onChange={(e) => setUseLoyalty(e.target.checked)} />
+                  Give it
+                </label>
+              </div>
+              <p className="text-xs text-ink/70">{benefitList(tier).join(' · ')}.</p>
+              {useLoyalty && !loyalty.autoApply && (
+                loyaltyApproved ? (
+                  <p className="text-xs font-semibold text-good">Approved by {loyaltyApproved}.</p>
+                ) : (
+                  <ApprovalGate
+                    amount={earned}
+                    limits={options.limits}
+                    plan={tenant.plan}
+                    kind="charge-reversal"
+                    what={`${tier.name} discount for ${selectedGuest?.name ?? 'the guest'}`}
+                    onCancel={() => setUseLoyalty(false)}
+                    onApproved={(approvers, photoSkipped) => {
+                      const names = approvers.map((a) => a.name).join(' and ')
+                      setLoyaltyApproved(names)
+                      record({
+                        kind: 'charge-reversal',
+                        what: `${tier.name} discount · ${selectedGuest?.name ?? 'guest'}`,
+                        amount: earned,
+                        requestedBy: user?.name ?? 'Front desk',
+                        reason: `Loyalty reward, ${history?.stays ?? 0} previous stays`,
+                        approvers,
+                        level: 'manager',
+                        photoSkipped,
+                      })
+                    }}
+                  />
+                )
+              )}
+              {useLoyalty && loyalty.autoApply && (
+                <p className="text-xs text-ink/60">Given automatically by the hotel's loyalty rules.</p>
+              )}
+              {companyPlan?.selected.length ? (
+                <p className="text-xs text-warn">A company price already applies, so the loyalty discount is not added on top.</p>
+              ) : null}
+            </div>
+          )}
           <Card title="Summary" icon="money" padded>
           <div className="space-y-3">
           <div className="space-y-1 text-sm">
@@ -549,6 +618,9 @@ export function NewReservationForm({
                   <p className="flex justify-between text-good"><span>Company discount</span><span>− {ugx(companyPlan.quote.discountTotal)}</span></p>
                 )}
               </>
+            )}
+            {discountOn && (
+              <p className="flex justify-between text-good"><span>{tier?.name} discount</span><span>− {ugx(earned)}</span></p>
             )}
             <p className="flex justify-between"><span>Total</span><span className="font-semibold">{ugx(total)}</span></p>
             <p className="flex justify-between"><span>Deposit</span><span>{ugx(deposit)}</span></p>
