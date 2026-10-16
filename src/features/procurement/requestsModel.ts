@@ -400,9 +400,11 @@ const STORE_STATUSES: RequestStatus[] = ['Endorsed', 'Ordered', 'Received', 'Iss
 const PURCHASING_STATUSES: RequestStatus[] = ['Requisition', 'Needs finance', 'Approved', 'Ordered', 'Rejected']
 
 /** Whose workload a request is: the store's (Inventory), purchasing's (Procurement) or Finance's (any requisition that went against a budget). */
-export const inScope = (r: Pick<SupplyRequest, 'flow' | 'status' | 'requisitionAt'>, scope: Scope) => {
+export const inScope = (r: Pick<SupplyRequest, 'flow' | 'status' | 'requisitionAt' | 'department'>, scope: Scope) => {
   if (r.flow === 'simple') return scope === 'purchasing'
   if (scope === 'finance') return !!r.requisitionAt
+  // The store's own requisitions stay on the store's page so the storekeeper can follow them.
+  if (scope === 'store' && r.department === STORE_DEPARTMENT) return true
   return (scope === 'store' ? STORE_STATUSES : PURCHASING_STATUSES).includes(r.status)
 }
 

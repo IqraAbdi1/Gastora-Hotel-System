@@ -54,6 +54,8 @@ export default function NewRequestDialog({
         : 'The storekeeper checks the store first.'
 
   const field = 'w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
+  // Same box without w-full, so the item and quantity keep their own columns.
+  const cell = 'rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
@@ -101,20 +103,20 @@ export default function NewRequestDialog({
         )}
         <div className="space-y-2">
           {rows.map((r, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="grid grid-cols-[minmax(0,1fr)_4.5rem_auto] items-center gap-2">
               <input
                 value={r.name}
                 onChange={(e) => setRow(i, { name: e.target.value })}
                 placeholder="Item"
                 list={chain ? 'stock-items' : undefined}
-                className={`${field} flex-1`}
+                className={`${cell} min-w-0`}
               />
               <input
                 value={r.qty}
                 onChange={(e) => setRow(i, { qty: e.target.value })}
                 inputMode="numeric"
                 aria-label="Quantity"
-                className={`${field} w-16`}
+                className={`${cell} text-center`}
               />
               {rows.length > 1 && (
                 <button
