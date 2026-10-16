@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button, Input } from '../../components/ui'
+import { TODAY } from '../../data/sample'
+import { useHotel } from '../../lib/hotelContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import { estimateReady } from '../housekeeping/hkModel'
 import type { HkRoom } from '../housekeeping/hkModel'
@@ -93,15 +95,22 @@ function RoomRow({ x, note, onRushed }: { x: HkRoom; note: string; onRushed: () 
 // to them about it. Used at check-in and on the Today page's "Needs attention" list.
 // With `room`, only that room is offered (the guest already has it); otherwise any room of the type.
 export default function AskHousekeeping({ roomType, room }: { roomType: string; room?: string }) {
-  const { rooms } = useHousekeeping()
+  const { rooms, sendMessage } = useHousekeeping()
+  const { reservations } = useHotel()
   const [note, setNote] = useState('')
+  const [asked, setAsked] = useState<string[]>([])
 
   const waiting = rooms
     .filter((x) => (room ? x.room === room : x.type === roomType) && (x.status === 'Dirty' || x.status === 'Being Cleaned'))
     .sort((a, b) => Number(b.rushed ?? false) - Number(a.rushed ?? false) || Number(a.room) - Number(b.room))
   const shown = waiting.slice(0, 3)
 
-  if (waiting.length === 0) {
+  // Rooms of this type whose guest leaves today. They are not dirty yet, so they cannot be rushed, but housekeeping can be told to clean them first.
+  const leaving = reservations
+    .filter((x) => x.status === 'in-house' && x.room && x.departure <= TODAY && (room ? x.room === room : rooms.some((h) => h.room === x.room && h.type === roomType)))
+    .slice(0, 3)
+
+  if (waiting.length === 0 && leaving.length === 0) {
     return (
       <p className="rounded-lg border border-ink/10 bg-canvas p-3 text-sm text-ink/70">
         {room
@@ -113,6 +122,15 @@ export default function AskHousekeeping({ roomType, room }: { roomType: string; 
 
   const anyToRush = shown.some((x) => !x.rushed)
 
+  function askFirst(roomNumber: string) {
+    sendMessage(
+      roomNumber,
+      'Front desk',
+      note.trim() ? `Guest leaves today. ${note.trim()}` : `Guest leaves today. Please clean this room first once it is empty, a ${roomType} arrival is waiting.`,
+    )
+    setAsked((list) => [...list, roomNumber])
+  }
+
   return (
     <div className="space-y-3 rounded-lg border border-ink/10 bg-canvas p-3">
       <div>
@@ -122,7 +140,7 @@ export default function AskHousekeeping({ roomType, room }: { roomType: string; 
         </p>
       </div>
 
-      {anyToRush && (
+      {(anyToRush || leaving.length > 0) && (
         <label className="block text-xs font-medium text-ink/70">
           Note to send with the rush (optional)
           <Input
@@ -141,6 +159,27 @@ export default function AskHousekeeping({ roomType, room }: { roomType: string; 
         {waiting.length > shown.length && (
           <p className="text-xs text-ink/60">And {waiting.length - shown.length} more {roomType} room(s) waiting.</p>
         )}
+        {waiting.length === 0 && (
+          <p className="text-xs text-ink/60">No {roomType} room is dirty yet. These guests leave today:</p>
+        )}
+        {leaving.map((x) => (
+          <div key={x.id} className="rounded-lg bg-surface p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Room {x.room}</p>
+                <p className="text-xs text-ink/60">{x.guest} leaves today. Not cleaned yet, so it cannot be rushed.</p>
+              </div>
+              {asked.includes(x.room as string) ? (
+                <p className="text-right text-xs font-semibold text-good">Message sent</p>
+              ) : (
+                <Button size="sm" onClick={() => askFirst(x.room as string)}>
+                  Ask to clean first
+                </Button>
+              )}
+            </div>
+            {asked.includes(x.room as string) && <RoomMessages room={x.room as string} />}
+          </div>
+        ))}
       </div>
     </div>
   )

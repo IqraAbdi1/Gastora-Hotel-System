@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Badge } from '../../components/ui'
 import { floorLabel, floorOf } from '../../lib/rooms'
-import type { Room } from '../../types'
-import AskHousekeeping from './AskHousekeeping'
+import type { Reservation, Room } from '../../types'
+import ArrivalRoomHelp from './ArrivalRoomHelp'
 
 const SHOW = 24
 const box =
@@ -15,6 +15,7 @@ export default function CheckInRoomStep({
   ready,
   dirty,
   booked,
+  reservation,
   value,
   onChange,
 }: {
@@ -23,6 +24,7 @@ export default function CheckInRoomStep({
   dirty: Room[]
   /** The room already assigned to this booking, if any. */
   booked?: string | null
+  reservation: Reservation
   value: string
   onChange: (room: string) => void
 }) {
@@ -47,7 +49,7 @@ export default function CheckInRoomStep({
           No clean {type} room is free for this stay.
           {dirty.length > 0 && ` ${dirty.length} ${type} room${dirty.length === 1 ? ' is' : 's are'} dirty. Ask housekeeping to clean one first.`}
         </div>
-        <AskHousekeeping roomType={type} room={booked ?? undefined} />
+        <ArrivalRoomHelp reservation={reservation} force />
       </div>
     )
   }

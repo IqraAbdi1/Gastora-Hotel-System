@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, EmptyState, Icon, Modal } from '../../components/ui'
 import type { Attention } from '../../lib/frontdesk'
-import AskHousekeeping from './AskHousekeeping'
+import ArrivalRoomHelp from './ArrivalRoomHelp'
 
 const groups = [
   { severity: 'bad' as const, label: 'Urgent', dot: 'bg-bad', text: 'text-bad' },
@@ -72,7 +72,7 @@ export default function AttentionPanel({
                         </div>
                         {roomProblem && asking && (
                           <div className="mt-3">
-                            <AskHousekeeping roomType={r.roomType} room={r.room ?? undefined} />
+                            <ArrivalRoomHelp reservation={r} force />
                           </div>
                         )}
                       </li>
