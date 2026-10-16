@@ -108,6 +108,8 @@ export default function StockEntryDialog({
   }
 
   const field = 'w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
+  // The row's own boxes set their own width, so they must not carry w-full as well.
+  const cell = 'rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
   const label = 'text-xs font-medium text-ink/60'
 
   /** One short line under each item: the store, and what is on hand or can come back. */
@@ -188,20 +190,21 @@ export default function StockEntryDialog({
           <div className="space-y-2">
             {rows.map((r, i) => (
               <div key={i} className="rounded-lg border border-ink/10 p-2">
-                <div className="flex items-center gap-2">
+                <div className={`grid items-center gap-2 ${purchase ? "grid-cols-[minmax(0,1fr)_4.5rem_auto] sm:grid-cols-[minmax(0,1fr)_5rem_7rem_auto]" : "grid-cols-[minmax(0,1fr)_4.5rem_auto]"}`}>
                   <input
                     value={r.name}
                     onChange={(e) => pickName(i, e.target.value)}
                     list="entry-items"
                     placeholder="Item"
-                    className={`${field} min-w-0 flex-1`}
+                    className={`${cell} min-w-0`}
                   />
                   <input
                     value={r.qty}
                     onChange={(e) => setRow(i, { qty: e.target.value })}
                     inputMode="numeric"
                     aria-label="Quantity"
-                    className={`${field} w-20 shrink-0`}
+                    placeholder="Qty"
+                    className={`${cell} w-full text-center`}
                   />
                   {purchase && (
                     <input
@@ -210,7 +213,7 @@ export default function StockEntryDialog({
                       inputMode="numeric"
                       placeholder="UGX each"
                       aria-label="Cost of one"
-                      className={`${field} w-28 shrink-0`}
+                      className={`${cell} col-span-2 w-full sm:col-span-1`}
                     />
                   )}
                   {rows.length > 1 && (
