@@ -4,6 +4,8 @@ import { Button, Tabs } from '../../components/ui'
 import type { TabItem } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { chargeCategories, folioOf, paymentMethods } from '../../lib/folio'
+import { BILL_TO_SUMMARY, payerFor, splitFolio } from '../../lib/folioSplit'
+import { useCorporate } from '../corporate/corporateContext'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { nightsBetween } from '../../lib/format'
@@ -29,6 +31,11 @@ const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0
 export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' }: Props) {
   const { addCharge, addPayment, checkOut, reverseCharge } = useHotel()
   const f = folioOf(r)
+  const { byId } = useCorporate()
+  // One stay, two bills when the company carries part of it. For an ordinary stay this is just the one bill.
+  const s = splitFolio(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined)
+  // The desk can only take money from the guest, so every balance the desk acts on is the guest's side.
+  const owed = s.split ? s.guestBalance : f.balance
   const { tax, stayTimes, tenant, options } = useFeatures()
   const { record } = useApprovals()
   const { user } = useAuth()
@@ -58,14 +65,14 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
   const chargeAmount = digits(chargeText)
   const chargeValid = chargeAmount > 0 && description.trim() !== ''
   const payAmount = digits(payText)
-  const payValid = payAmount > 0 && payAmount <= f.balance
+  const payValid = payAmount > 0 && payAmount <= owed
 
   // Late check-out, from the hotel's times and the clock now. The rate is one night's room charge.
   const clock = nowTime()
   const nights = Math.max(1, nightsBetween(r.arrival, r.departure))
   const late = lateCheckoutFee(stayTimes, clock, f.roomCharge / nights)
   const lateCharged = (r.charges ?? []).some((c) => c.category === 'Late check-out')
-  const canOut = f.balance <= 0 || (authorise && authReason.trim().length >= 5)
+  const canOut = owed <= 0 || (authorise && authReason.trim().length >= 5)
 
   function postCharge() {
     addCharge(r.id, { category, description: description.trim(), amount: chargeAmount })
@@ -82,7 +89,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
   }
 
   function confirmCheckOut() {
-    checkOut(r.id, f.balance > 0 ? authReason.trim() : undefined)
+    checkOut(r.id, owed > 0 ? authReason.trim() : undefined)
   }
 
   const tabs: TabItem<Tab>[] = [
@@ -91,7 +98,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
       ? ([
           { key: 'charge', label: 'Add charge' },
           { key: 'payment', label: 'Payment' },
-          { key: 'out', label: 'Check out', alert: f.balance > 0 && r.departure <= TODAY },
+          { key: 'out', label: 'Check out', alert: owed > 0 && r.departure <= TODAY },
         ] as TabItem<Tab>[])
       : []),
   ]
@@ -123,11 +130,18 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
           </button>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          {[
-            ['Total', ugx(f.total), 'text-ink'],
-            ['Paid', ugx(f.paid), 'text-good'],
-            ['Balance', ugx(f.balance), f.balance > 0 ? 'text-bad' : 'text-good'],
-          ].map(([label, value, tone]) => (
+          {(s.split
+            ? [
+                ['To the company', ugx(s.companyBalance), 'text-ink'],
+                ['Guest paid', ugx(s.paid), 'text-good'],
+                ['Guest owes', ugx(s.guestBalance), s.guestBalance > 0 ? 'text-bad' : 'text-good'],
+              ]
+            : [
+                ['Total', ugx(f.total), 'text-ink'],
+                ['Paid', ugx(f.paid), 'text-good'],
+                ['Balance', ugx(f.balance), f.balance > 0 ? 'text-bad' : 'text-good'],
+              ]
+          ).map(([label, value, tone]) => (
             <div key={label} className="rounded-lg border border-ink/10 bg-surface px-2 py-1.5">
               <p className="text-xs text-ink/55">{label}</p>
               <p className={`text-sm font-bold tabular-nums ${tone}`}>{value}</p>
@@ -145,6 +159,45 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {tab === 'folio' && (
           <>
+            {s.split && (
+              <div className="rounded-xl border border-info/25 bg-info/[0.07] p-3">
+                <p className="text-sm font-semibold text-ink">
+                  One stay, two bills{s.accountName ? ` · ${s.accountName}` : ''}
+                </p>
+                <p className="mt-0.5 text-xs text-ink/70">{s.billTo ? BILL_TO_SUMMARY[s.billTo] : ''}</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {[
+                    { key: 'company' as const, title: 'Billed to the company', side: s.company, foot: 'Invoiced to the account against the LPO.' },
+                    { key: 'guest' as const, title: 'The guest pays', side: s.guest, foot: 'Settled at the desk before they leave.' },
+                  ].map((col) => (
+                    <div key={col.key} className="rounded-lg border border-ink/10 bg-surface p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink/55">{col.title}</p>
+                      <ul className="mt-2 space-y-1 text-xs">
+                        {col.side.lines.length === 0 && <li className="text-ink/50">Nothing on this side yet.</li>}
+                        {col.side.lines.map((l) => (
+                          <li key={l.id} className="flex justify-between gap-3">
+                            <span className={l.cancelled ? 'text-ink/40 line-through' : 'text-ink/70'}>{l.label}</span>
+                            <span className={`shrink-0 tabular-nums ${l.cancelled ? 'text-ink/40 line-through' : ''}`}>
+                              {l.amount < 0 ? `− ${ugx(Math.abs(l.amount))}` : ugx(l.amount)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mt-2 flex justify-between gap-3 border-t border-ink/10 pt-2 text-sm font-bold">
+                        <span>Total</span>
+                        <span className="tabular-nums">{ugx(col.side.total)}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-ink/55">{col.foot}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-ink/60">
+                  The guest can check out once their own side is settled. What the company carries is never in
+                  their way at the desk.
+                </p>
+              </div>
+            )}
+
             <div>
               <p className={heading}>Charges</p>
               <dl className="mt-2 space-y-2 text-sm">
@@ -160,6 +213,11 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                     <div className="flex justify-between gap-4">
                       <dt className={c.reversedBy ? 'text-ink/40 line-through' : 'text-ink/60'}>
                         {c.category}: {c.description}
+                        {s.split && (
+                          <span className="ml-1.5 rounded-full bg-ink/[0.07] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink/60 no-underline">
+                            {payerFor(c.category, s.billTo ?? 'guest') === 'company' ? 'Company' : 'Guest'}
+                          </span>
+                        )}
                         <span className="block text-xs no-underline">
                           {c.at}
                           {c.reversedBy && ' · cancelled'}
@@ -302,7 +360,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
 
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPrinting(true)}>
-                {r.invoice ? 'Print tax invoice' : f.balance <= 0 ? 'Print receipt' : 'Print folio'}
+                {r.invoice ? 'Print tax invoice' : owed <= 0 ? 'Print receipt' : 'Print folio'}
               </Button>
               <span className="self-center text-xs text-ink/55">
                 {r.invoice ? 'The invoice as issued at check-out.' : 'A copy of the folio so far, for the guest.'}
@@ -439,13 +497,13 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
               <Button variant="secondary" onClick={takePayment} disabled={!payValid}>
                 Record payment
               </Button>
-              {f.balance > 0 && (
-                <button type="button" onClick={() => setPayText(String(f.balance))} className="text-sm font-semibold text-brand">
+              {owed > 0 && (
+                <button type="button" onClick={() => setPayText(String(owed))} className="text-sm font-semibold text-brand">
                   Pay full balance
                 </button>
               )}
             </div>
-            {payAmount > f.balance && <p className="text-xs text-bad">That is more than the balance.</p>}
+            {payAmount > owed && <p className="text-xs text-bad">That is more than the guest owes.</p>}
             <p className="text-xs text-ink/60">
               Payments are simulated here. In the real system a mobile money payment is recorded only after the provider confirms it.
             </p>
@@ -479,10 +537,10 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                 Departure is booked for {dayMonth(r.departure)}. If the guest is leaving on a different day, use Change stay first so the room charges are right.
               </p>
             )}
-            {f.balance > 0 ? (
+            {owed > 0 ? (
               <>
                 <p className="rounded-lg bg-bad/10 p-3 text-sm text-bad">
-                  The guest still owes {ugx(f.balance)}. Take the payment, or a manager can authorise check-out with a reason.
+                  The guest still owes {ugx(owed)}. Take the payment, or a manager can authorise check-out with a reason.
                 </p>
                 <label className="flex items-start gap-2 text-sm">
                   <input type="checkbox" checked={authorise} onChange={(e) => setAuthorise(e.target.checked)} className="mt-1" />
