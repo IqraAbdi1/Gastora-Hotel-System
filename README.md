@@ -82,7 +82,8 @@ Browser storage is not a transactional database. Avoid using multiple tabs to ch
 
 ## POS workflow additions
 
-- Menu management lets staff add menu items, change prices, and remove items. Each menu item must have an inventory recipe before a sale can be completed.
+- POS navigation is organized into separate pages: Tables / New sale (`/pos`), Orders / History (`/pos/orders`), Menu management (`/pos/menu`), and Recipe & inventory mapping (`/pos/recipes`). Use the POS section dropdown in the page header to switch between them.
+- Menu management lets staff add menu items, choose Restaurant or Bar, change prices, and remove items. Menu and price changes persist in this browser and synchronize between open tabs. Each menu item must have an inventory recipe before a sale can be completed.
 - Orders can be dine-in, takeaway, or delivery and include a table/address field, customer name, order notes, and a percentage discount.
 - Cash checkout captures amount tendered and calculates change. Mobile money and card checkout capture a transaction reference. Room charges require a room number.
 - Orders can be held and resumed without payment or stock deduction.

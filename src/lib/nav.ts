@@ -53,6 +53,9 @@ export const modules: NavModule[] = [
   module('pos', 'POS', 'pos', [
     { to: '/pos', label: 'Tables', end: true },
     { to: '/pos/orders', label: 'Orders' },
+    { to: '/kitchen', label: 'Kitchen display' },
+    { to: '/pos/menu', label: 'Menu management' },
+    { to: '/pos/recipes', label: 'Recipe & inventory mapping' },
   ]),
   module('inventory', 'Inventory', 'inventory', [
     { to: '/inventory/requests', label: 'Store requests', feature: 'supplyChain', badge: 'storeRequests', icon: 'procurement' },
