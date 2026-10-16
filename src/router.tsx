@@ -5,6 +5,11 @@ import Landing from './components/Landing'
 import PagePlaceholder from './components/PagePlaceholder'
 import Root from './components/Root'
 import HotelSettingsPage from './features/admin/HotelSettingsPage'
+import TaxSettingsPage from './features/admin/TaxSettingsPage'
+import NightAuditPage from './features/frontdesk/NightAuditPage'
+import GuestDocumentsPage from './features/frontdesk/GuestDocumentsPage'
+import LostFoundPage from './features/lostfound/LostFoundPage'
+import ApprovalsPage from './features/approvals/ApprovalsPage'
 import LoginPage from './features/auth/LoginPage'
 import DashboardPage from './features/dashboard/DashboardPage'
 import TodayPage from './features/frontdesk/TodayPage'
@@ -57,6 +62,10 @@ export const router = createBrowserRouter([
           { path: 'desk/new-reservation', element: <NewReservationPage /> },
           { path: 'desk/folios', element: <FoliosPage /> },
           { path: 'desk/companies', element: <CompaniesPage /> },
+          { path: 'desk/documents', element: <GuestDocumentsPage /> },
+          { path: 'desk/lost-found', element: <LostFoundPage /> },
+          { path: 'housekeeping/lost-found', element: <LostFoundPage /> },
+          { path: 'desk/night-audit', element: <NightAuditPage /> },
 
           // Housekeeping
           { path: 'housekeeping', element: <HousekeepingPage /> },
@@ -202,6 +211,8 @@ export const router = createBrowserRouter([
 
           // Admin
           { path: 'admin', element: <HotelSettingsPage /> },
+          { path: 'admin/taxes', element: <TaxSettingsPage /> },
+          { path: 'admin/approvals', element: <ApprovalsPage /> },
           { path: 'admin/staff', element: page('Admin: Staff and roles') },
           { path: 'admin/policies', element: page('Admin: Rates and policies') },
 

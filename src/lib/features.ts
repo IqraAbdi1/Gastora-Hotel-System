@@ -1,3 +1,6 @@
+import { DEFAULT_EFRIS, DEFAULT_TAX } from './tax'
+import type { TaxSettings } from './tax'
+
 export type FeatureKey =
   | 'inspections'
   | 'maintenanceFull'
@@ -11,6 +14,7 @@ export type FeatureKey =
   | 'lossReversal'
   | 'supplyChain'
   | 'budgetApproval'
+  | 'taxLines'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -78,6 +82,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     label: 'Budget check and approval',
     blurb: 'Department budgets, costed requisitions and Finance approval when over budget.',
   },
+  {
+    key: 'taxLines',
+    label: 'Tax lines',
+    blurb: 'VAT, Local Hotel Tax, service charge and the hotel\'s own taxes are itemised at check-in and on the folio. The hotel admin or owner sets the rates and the EFRIS choice.',
+  },
 ]
 
 export const PLANS: {
@@ -106,6 +115,7 @@ export const PLANS: {
       'batchExpiry',
       'lossReversal',
       'supplyChain',
+      'taxLines',
     ],
   },
   {
@@ -125,6 +135,7 @@ export const PLANS: {
       'lossReversal',
       'supplyChain',
       'budgetApproval',
+      'taxLines',
     ],
   },
 ]
@@ -171,6 +182,11 @@ export function featuresOf(t: Tenant): FeatureMap {
   return out
 }
 
+import type { ApprovalLimits } from './approvals'
+import { DEFAULT_LIMITS } from './approvals'
+import type { LoyaltySettings } from './loyalty'
+import { DEFAULT_LOYALTY } from './loyalty'
+
 export interface HotelOptions {
   inspectionMode: 'spot' | 'every'
   spotPercent: number
@@ -178,9 +194,21 @@ export interface HotelOptions {
   alwaysInspectArrivals: boolean
   /** A room the front desk rushed goes straight to ready. */
   skipRushed: boolean
+  /** Who may approve money coming off a folio, and up to how much. */
+  limits: ApprovalLimits
+  /** How long lost property is kept before it may be disposed of. */
+  keepFoundDays: number
+  /** The hotel can switch the night audit off if it does not close the day that way. */
+  nightAudit: boolean
+  /** Tiers and rewards for guests who come back. Every hotel sets its own. */
+  loyalty: LoyaltySettings
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
+  limits: DEFAULT_LIMITS,
+  keepFoundDays: 90,
+  nightAudit: true,
+  loyalty: DEFAULT_LOYALTY,
   inspectionMode: 'spot',
   spotPercent: 20,
   alwaysInspectArrivals: true,
@@ -192,3 +220,20 @@ export const SAMPLE_TENANTS: Tenant[] = [
   { id: 't2', name: 'Mbale Town Inn', rooms: 18, plan: 'starter', status: 'active', overrides: {}, companySize: 'small' },
   { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {}, companySize: 'medium' },
 ]
+
+/** Starting tax rules for the sample hotels. After this the hotel admin or owner changes them. */
+export const SAMPLE_TAX: Record<string, TaxSettings> = {
+  t1: {
+    ...DEFAULT_TAX,
+    vatMode: 'included',
+    lhtBand: 'star45',
+    efris: { ...DEFAULT_EFRIS, status: 'registered', tin: '1000123456', legalName: 'Lakeview Grand Hotel Ltd', deviceNo: 'TCS-0042' },
+  },
+  t3: {
+    ...DEFAULT_TAX,
+    vatMode: 'added',
+    lhtBand: 'star23',
+    servicePercent: 5,
+    efris: { ...DEFAULT_EFRIS, status: 'exempt', exemptReason: 'Not VAT registered. Below the registration threshold.' },
+  },
+}

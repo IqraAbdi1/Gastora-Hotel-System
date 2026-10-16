@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   DEFAULT_OPTIONS,
+  SAMPLE_TAX,
   SAMPLE_TENANTS,
   featuresOf,
   planHas,
@@ -15,6 +16,10 @@ import type {
   Tenant,
   TenantStatus,
 } from '../../lib/features'
+import { DEFAULT_STAY_TIMES } from '../../lib/stayTimes'
+import type { StayTimes } from '../../lib/stayTimes'
+import { DEFAULT_TAX } from '../../lib/tax'
+import type { TaxSettings } from '../../lib/tax'
 import { FeaturesContext } from './featuresContext'
 import type { FeaturesValue } from './featuresContext'
 
@@ -22,6 +27,8 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
   const [tenants, setTenants] = useState<Tenant[]>(SAMPLE_TENANTS)
   const [currentId, setCurrentId] = useState('t1')
   const [optionsById, setOptionsById] = useState<Record<string, HotelOptions>>({})
+  const [taxById, setTaxById] = useState<Record<string, TaxSettings>>(SAMPLE_TAX)
+  const [stayTimesById, setStayTimesById] = useState<Record<string, StayTimes>>({})
 
   const patchTenant = useCallback((id: string, fn: (t: Tenant) => Tenant) => {
     setTenants((list) => list.map((t) => (t.id === id ? fn(t) : t)))
@@ -35,6 +42,18 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
   const setCompanySize = useCallback(
     (id: string, size: CompanySize) => patchTenant(id, (t) => ({ ...t, companySize: size })),
     [patchTenant],
+  )
+
+  const setTax = useCallback(
+    (patch: Partial<TaxSettings>) =>
+      setTaxById((m) => ({ ...m, [currentId]: { ...(m[currentId] ?? DEFAULT_TAX), ...patch } })),
+    [currentId],
+  )
+
+  const setStayTimes = useCallback(
+    (patch: Partial<StayTimes>) =>
+      setStayTimesById((m) => ({ ...m, [currentId]: { ...(m[currentId] ?? DEFAULT_STAY_TIMES), ...patch } })),
+    [currentId],
   )
 
   const setStatus = useCallback(
@@ -76,6 +95,8 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       tenants,
       tenant,
       features,
+      tax: features.taxLines ? (taxById[tenant.id] ?? DEFAULT_TAX) : null,
+      stayTimes: stayTimesById[tenant.id] ?? DEFAULT_STAY_TIMES,
       options,
       inspectionMode,
       selectTenant: setCurrentId,
@@ -85,8 +106,10 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       clearOverrides,
       setOptions,
       setCompanySize,
+      setTax,
+      setStayTimes,
     }
-  }, [tenants, currentId, optionsById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize])
+  }, [tenants, currentId, optionsById, taxById, stayTimesById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize, setTax, setStayTimes])
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>
 }

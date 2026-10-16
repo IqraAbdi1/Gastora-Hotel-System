@@ -33,6 +33,13 @@ export type FolioCharge = {
   category: string
   description: string
   amount: number
+  /** Set on a reversing line: the id of the charge it cancels. The wrong line is never deleted. */
+  reverses?: string
+  /** Set on a charge that has been reversed, so the folio can grey it out. */
+  reversedBy?: string
+  /** Why it was reversed and who approved it. On the reversing line. */
+  reason?: string
+  approvedBy?: string
 }
 
 export type FolioPayment = {
@@ -48,6 +55,14 @@ export type Invoice = {
   issuedAt: string
   amount: number
   fiscalCode: string // simulated, not a real URA EFRIS code
+  /** How the hotel's EFRIS choice applied to this invoice. Missing when the hotel does not use tax lines. */
+  fiscal?: 'efris' | 'exempt' | 'notSet'
+  tin?: string
+  /** Simulated verification code. The real one comes back from URA. */
+  verification?: string
+  exemptReason?: string
+  /** Printed when the guest stayed in a higher room type than booked, at no extra charge. */
+  roomNote?: string
 }
 
 export type ReservationStatus = 'booked' | 'in-house' | 'checked-out' | 'cancelled' | 'no-show'
@@ -62,6 +77,8 @@ export type GuestPreferences = {
   diet?: string
   language?: string
   other?: string
+  /** Quick things the desk taps at check-in, such as "Quiet room" or "High floor". */
+  tags?: string[]
 }
 
 export type Guest = {
@@ -109,7 +126,23 @@ export type Reservation = {
   checkoutNote?: string
   /** Set when the stay is booked for a company. */
   corporate?: CorporateBooking
+  /** Room moves during the stay. The newest is last. */
+  moves?: RoomMove[]
+  /** A free upgrade given because no room of the booked type could be used. The price does not change. */
+  upgrade?: { from: Room['type']; to: Room['type']; at: string; reason: string }
 }
+export type RoomMove = {
+  at: string
+  from: string
+  to: string
+  reason: string
+  by: string
+  /** Set when the new room is a different type from the old one. */
+  typeChange?: { from: Room['type']; to: Room['type'] }
+  /** A move to a higher type at no extra charge. */
+  free?: boolean
+}
+
 export type Amendment = {
   at: string
   fromArrival: string

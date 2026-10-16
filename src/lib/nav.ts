@@ -9,6 +9,8 @@ export type NavPage = {
   badge?: BadgeKind
   /** Page only shows when the hotel has this feature. */
   feature?: FeatureKey
+  /** Page the hotel itself can switch off in its settings. */
+  option?: 'nightAudit'
   /** Optional small icon in front of the page name. */
   icon?: IconName
 }
@@ -29,6 +31,9 @@ export const modules: NavModule[] = [
     { to: '/desk/rooms', label: 'Rooms' },
     { to: '/desk/folios', label: 'Folios' },
     { to: '/desk/companies', label: 'Companies', badge: 'companies' },
+    { to: '/desk/documents', label: 'Guest documents' },
+    { to: '/desk/lost-found', label: 'Lost and found' },
+    { to: '/desk/night-audit', label: 'Night audit', option: 'nightAudit' },
   ]),
   module('housekeeping', 'Housekeeping', 'housekeeping', [
     { to: '/housekeeping', label: 'Rooms', end: true, badge: 'toClean' },
@@ -36,6 +41,7 @@ export const modules: NavModule[] = [
     { to: '/housekeeping/my-rooms', label: 'My rooms' },
     { to: '/housekeeping/inspections', label: 'Inspections', badge: 'toInspect', feature: 'inspections' },
     { to: '/housekeeping/issues', label: 'Issues', badge: 'issues' },
+    { to: '/housekeeping/lost-found', label: 'Lost and found' },
     { to: '/housekeeping/supplies', label: 'Supplies', feature: 'requests' },
   ]),
   module('maintenance', 'Maintenance', 'maintenance', [
@@ -69,6 +75,8 @@ export const modules: NavModule[] = [
   ]),
   module('admin', 'Admin', 'admin', [
     { to: '/admin', label: 'Hotel settings', end: true },
+    { to: '/admin/taxes', label: 'Taxes and EFRIS', feature: 'taxLines' },
+    { to: '/admin/approvals', label: 'Approvals to review' },
     { to: '/admin/staff', label: 'Staff and roles' },
     { to: '/admin/policies', label: 'Rates and policies' },
   ]),
@@ -84,11 +92,17 @@ export const otherApps = [
 export function visibleModules(
   features: FeatureMap,
   canOpen: (pathname: string) => boolean = () => true,
+  options?: { nightAudit: boolean },
 ): NavModule[] {
   return modules
     .map((m) => ({
       ...m,
-      pages: m.pages.filter((p) => (!p.feature || features[p.feature]) && canOpen(p.to)),
+      pages: m.pages.filter(
+        (p) =>
+          (!p.feature || features[p.feature]) &&
+          (!p.option || !options || options[p.option]) &&
+          canOpen(p.to),
+      ),
     }))
     .filter((m) => m.pages.length > 0)
     .map((m) => ({ ...m, to: m.pages[0].to }))

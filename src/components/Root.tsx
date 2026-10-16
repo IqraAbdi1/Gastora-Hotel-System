@@ -1,8 +1,11 @@
 import { Outlet } from 'react-router-dom'
+import HotelProvider from './HotelProvider'
 import AuthProvider from '../features/auth/AuthProvider'
 import CorporateProvider from '../features/corporate/CorporateProvider'
 import FrontDeskProvider from '../features/frontdesk/FrontDeskProvider'
 import HousekeepingProvider from '../features/housekeeping/HousekeepingProvider'
+import ApprovalsProvider from '../features/approvals/ApprovalsProvider'
+import LostFoundProvider from '../features/lostfound/LostFoundProvider'
 import FeaturesProvider from '../features/platform/FeaturesProvider'
 import RequestsProvider from '../features/procurement/RequestsProvider'
 
@@ -11,17 +14,23 @@ import RequestsProvider from '../features/procurement/RequestsProvider'
 export default function Root() {
   return (
     <FeaturesProvider>
-      <AuthProvider>
-        <HousekeepingProvider>
-          <RequestsProvider>
-            <CorporateProvider>
-              <FrontDeskProvider>
-                <Outlet />
-              </FrontDeskProvider>
-            </CorporateProvider>
-          </RequestsProvider>
-        </HousekeepingProvider>
-      </AuthProvider>
+      <HotelProvider>
+        <AuthProvider>
+          <HousekeepingProvider>
+            <RequestsProvider>
+              <CorporateProvider>
+                <FrontDeskProvider>
+                  <ApprovalsProvider>
+                    <LostFoundProvider>
+                      <Outlet />
+                    </LostFoundProvider>
+                  </ApprovalsProvider>
+                </FrontDeskProvider>
+              </CorporateProvider>
+            </RequestsProvider>
+          </HousekeepingProvider>
+        </AuthProvider>
+      </HotelProvider>
     </FeaturesProvider>
   )
 }

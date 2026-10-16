@@ -1,4 +1,6 @@
 import { createContext, useContext } from 'react'
+import type { StayTimes } from '../../lib/stayTimes'
+import type { TaxSettings } from '../../lib/tax'
 import type {
   FeatureKey,
   FeatureMap,
@@ -15,6 +17,10 @@ export interface FeaturesValue {
   /** The hotel the app is currently showing (demo selector). */
   tenant: Tenant
   features: FeatureMap
+  /** This hotel's tax rules, or null when the Tax lines feature is off. */
+  tax: TaxSettings | null
+  /** This hotel's check-in and check-out times. Always set; the hotel admin or owner changes them. */
+  stayTimes: StayTimes
   options: HotelOptions
   /** Off if the hotel has no inspections feature, otherwise the hotel's choice. */
   inspectionMode: InspectionMode
@@ -25,6 +31,9 @@ export interface FeaturesValue {
   clearOverrides: (id: string) => void
   setOptions: (patch: Partial<HotelOptions>) => void
   setCompanySize: (id: string, size: CompanySize) => void
+  /** Changes the tax rules of the hotel being shown. Only the hotel admin and owner use this. */
+  setTax: (patch: Partial<TaxSettings>) => void
+  setStayTimes: (patch: Partial<StayTimes>) => void
 }
 
 export const FeaturesContext = createContext<FeaturesValue | null>(null)

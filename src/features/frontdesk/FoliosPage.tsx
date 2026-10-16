@@ -6,6 +6,8 @@ import type { Column } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { dayMonth, ugx } from '../../lib/format'
 import { summarizeDay } from '../../lib/frontdesk'
+import { nowTime } from '../../lib/stayTimes'
+import { useFeatures } from '../platform/featuresContext'
 import { useHotel } from '../../lib/hotelContext'
 import { BIG_HOTEL } from '../../lib/rooms'
 import type { Reservation } from '../../types'
@@ -28,6 +30,21 @@ export default function FoliosPage() {
   const q = params.get('q') ?? ''
   const page = Math.max(0, Number(params.get('page') ?? 0) || 0)
   const selectedId = params.get('r')
+  const startOn = params.get('tab') === 'charge' ? 'charge' : undefined
+
+  // Open a guest's folio straight on the Add charge tab.
+  function postChargeFor(id: string) {
+    const next = new URLSearchParams(params)
+    next.set('r', id)
+    next.set('tab', 'charge')
+    setParams(next, { replace: true })
+  }
+  function closeFolio() {
+    const next = new URLSearchParams(params)
+    next.delete('r')
+    next.delete('tab')
+    setParams(next, { replace: true })
+  }
 
   function setParam(key: string, value: string, fallback = '') {
     const next = new URLSearchParams(params)
@@ -67,6 +84,8 @@ export default function FoliosPage() {
     )
   }, [inHouse, out, view, q])
 
+  const { stayTimes } = useFeatures()
+  const pastCheckout = nowTime() > stayTimes.checkOutTime
   const pages = Math.max(1, Math.ceil(list.length / PAGE))
   const shown = list.slice(page * PAGE, page * PAGE + PAGE)
   // Always the live record, so the panel updates as charges and payments are posted
@@ -93,7 +112,11 @@ export default function FoliosPage() {
         ) : r.departure < TODAY ? (
           <Badge tone="bad">Was due {dayMonth(r.departure)}</Badge>
         ) : r.departure === TODAY ? (
-          <Badge tone="warn">Today</Badge>
+          pastCheckout && r.status === 'in-house' ? (
+            <Badge tone="bad">Past check-out {stayTimes.checkOutTime}</Badge>
+          ) : (
+            <Badge tone="warn">Today</Badge>
+          )
         ) : (
           dayMonth(r.departure)
         ),
@@ -107,6 +130,24 @@ export default function FoliosPage() {
         const balance = r.total - r.paid
         return balance > 0 ? <Badge tone="bad">Owes {ugx(balance)}</Badge> : <Badge tone="good">Settled</Badge>
       },
+    },
+    {
+      key: 'post',
+      header: '',
+      align: 'right',
+      cell: (r) =>
+        r.status === 'in-house' ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              postChargeFor(r.id)
+            }}
+          >
+            Post charge
+          </Button>
+        ) : null,
     },
   ]
 
@@ -194,7 +235,7 @@ export default function FoliosPage() {
         )}
       </Card>
 
-      {selected && <FolioPanel reservation={selected} onClose={() => setParam('r', '')} />}
+      {selected && <FolioPanel key={`${selected.id}-${startOn ?? ''}`} reservation={selected} startOn={startOn} onClose={closeFolio} />}
     </div>
   )
 }

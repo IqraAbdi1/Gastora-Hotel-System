@@ -6,6 +6,8 @@ import { makeBigHotel } from '../data/bigHotel'
 import { deriveGuests } from '../lib/guests'
 import { stamp } from '../lib/folio'
 import { HotelContext } from '../lib/hotelContext'
+import type { EfrisSettings } from '../lib/tax'
+import { useFeatures } from '../features/platform/featuresContext'
 import type { AmendPatch, CancelPatch } from '../lib/hotelContext'
 import type {
   Amendment,
@@ -19,6 +21,8 @@ import type {
   Invoice,
   NewReservation,
   Reservation,
+  Room,
+  RoomMove,
 } from '../types'
 
 // Test switch: open the app with ?big=1 for a 400-room hotel, ?big=0 to go back to the 12-room sample.
@@ -50,6 +54,15 @@ function nextId(list: Reservation[]) {
   return `R-${max + 1}`
 }
 
+// What the hotel's EFRIS choice means for one invoice. Registered hotels get a simulated fiscal document number and
+// verification code. Exempt hotels print their reason instead. With the Tax lines feature off nothing changes.
+function efrisFields(e: EfrisSettings | undefined, seed: string): Partial<Invoice> {
+  if (!e) return {}
+  if (e.status === 'registered') return { fiscal: 'efris', tin: e.tin, verification: fakeFiscalCode(`v${seed}`).replace('SIM-', 'VER-') }
+  if (e.status === 'exempt') return { fiscal: 'exempt', fiscalCode: 'EFRIS exempt', exemptReason: e.exemptReason }
+  return { fiscal: 'notSet', fiscalCode: 'Not fiscalised' }
+}
+
 // Stands in for the URA EFRIS fiscal code. The real one comes back from EFRIS.
 function fakeFiscalCode(seed: string) {
   let h = 7
@@ -58,6 +71,7 @@ function fakeFiscalCode(seed: string) {
 }
 
 export default function HotelProvider({ children }: { children: ReactNode }) {
+  const { tax } = useFeatures()
   const [reservations, setReservations] = useState(start.reservations)
   const [rooms, setRooms] = useState(start.rooms)
   const [guests, setGuests] = useState<Guest[]>(start.guests)
@@ -108,6 +122,43 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Moving an in-house guest. The room they leave goes dirty for housekeeping and the new one becomes occupied,
+  // so the board, housekeeping and the folio all agree. The price does not change: a move is not a re-booking.
+  function moveRoom(reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) {
+    const r = reservations.find((x) => x.id === reservationId)
+    if (!r || r.status !== 'in-house' || !r.room || r.room === toRoom) return
+    const target = rooms.find((x) => x.number === toRoom)
+    if (!target) return
+    // The booked room type stays on the stay, so the folio and the invoice keep billing what the guest booked.
+    const from = r.room
+    const move: RoomMove = { ...entry, at: stamp() }
+    setReservations((list) =>
+      list.map((x) =>
+        x.id === reservationId
+          ? { ...x, room: toRoom, moves: [...(x.moves ?? []), move] }
+          : x,
+      ),
+    )
+    setRooms((list) =>
+      list.map((room) => {
+        if (room.number === from) return { ...room, status: 'dirty' as const, hk: undefined, hkReason: undefined }
+        if (room.number === toRoom) return { ...room, status: 'occupied' as const, hk: undefined, hkReason: undefined }
+        return room
+      }),
+    )
+  }
+
+  // A free upgrade: only a stay that has not checked in yet. The price stays the same and nobody has to approve it.
+  function upgradeStay(reservationId: string, toType: Room['type'], roomNumber: string, reason: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId && r.status === 'booked'
+          ? { ...r, roomType: toType, room: roomNumber, upgrade: { from: r.upgrade?.from ?? r.roomType, to: toType, at: stamp(), reason } }
+          : r,
+      ),
+    )
+  }
+
   // A charge raises the total, so the balance and every screen that shows it stay correct.
   function addCharge(reservationId: string, input: Omit<FolioCharge, 'id' | 'at'>) {
     setReservations((list) =>
@@ -115,6 +166,34 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         if (r.id !== reservationId || r.status !== 'in-house') return r
         const charge: FolioCharge = { ...input, id: `C-${(r.charges?.length ?? 0) + 1}`, at: stamp() }
         return { ...r, total: r.total + input.amount, charges: [...(r.charges ?? []), charge] }
+      }),
+    )
+  }
+
+  // A wrong charge is never deleted: a reversing line of the same amount is added next to it, both carrying
+  // the reason and who approved it. The folio total falls back and the guest can see what happened.
+  function reverseCharge(reservationId: string, chargeId: string, reason: string, approvedBy: string) {
+    setReservations((list) =>
+      list.map((r) => {
+        if (r.id !== reservationId || r.status !== 'in-house') return r
+        const wrong = (r.charges ?? []).find((c) => c.id === chargeId)
+        if (!wrong || wrong.reversedBy || wrong.reverses) return r
+        const id = `C-${(r.charges?.length ?? 0) + 1}R`
+        const entry: FolioCharge = {
+          id,
+          at: stamp(),
+          category: wrong.category,
+          description: `Reversal of ${wrong.description}`,
+          amount: -wrong.amount,
+          reverses: wrong.id,
+          reason,
+          approvedBy,
+        }
+        return {
+          ...r,
+          total: r.total - wrong.amount,
+          charges: [...(r.charges ?? []).map((c) => (c.id === chargeId ? { ...c, reversedBy: id } : c)), entry],
+        }
       }),
     )
   }
@@ -141,6 +220,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
       issuedAt: stamp(),
       amount: r.total,
       fiscalCode: fakeFiscalCode(`${number}${r.id}`),
+      ...efrisFields(tax?.efris, `${number}${r.id}`),
+      ...(r.upgrade ? { roomNote: `${r.upgrade.to}, complimentary upgrade from ${r.upgrade.from}. Charged at the ${r.upgrade.from} rate.` } : {}),
     }
     const balance = r.total - r.paid
     setReservations((list) =>
@@ -214,6 +295,9 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         amendReservation,
         cancelReservation,
         addCharge,
+        reverseCharge,
+        moveRoom,
+        upgradeStay,
         addPayment,
         checkOut,
         setHousekeeping,

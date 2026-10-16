@@ -26,6 +26,9 @@ export function folioOf(r: Reservation) {
   }
 }
 
+// The hotel's own clock, not UTC. A stamp written at 00:30 in Kampala must read as that day, not the one before.
 export function stamp() {
-  return new Date().toISOString().slice(0, 16).replace('T', ' ')
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }

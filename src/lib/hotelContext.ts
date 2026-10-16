@@ -11,6 +11,7 @@ import type {
   NewReservation,
   Reservation,
   Room,
+  RoomMove,
 } from '../types'
 
 export type AmendPatch = { arrival: string; departure: string; total: number; room: string | null }
@@ -27,8 +28,14 @@ export type HotelValue = {
   amendReservation: (reservationId: string, patch: AmendPatch, entry: Amendment) => void
   cancelReservation: (reservationId: string, patch: CancelPatch, entry: Cancellation) => void
   addCharge: (reservationId: string, input: Omit<FolioCharge, 'id' | 'at'>) => void
+  /** Cancels a wrong charge with a reversing line. Both lines stay on the folio. */
+  reverseCharge: (reservationId: string, chargeId: string, reason: string, approvedBy: string) => void
   addPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
   checkOut: (reservationId: string, note?: string) => void
+  /** Moves an in-house guest to another room. The old room goes dirty, the new one becomes occupied. */
+  moveRoom: (reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) => void
+  /** Free upgrade: moves a booked stay to a higher room type and assigns the room. The total stays the same. */
+  upgradeStay: (reservationId: string, toType: Room['type'], roomNumber: string, reason: string) => void
   setHousekeeping: (roomNumber: string, request: HkRequest, reason?: string) => void
   setCorporate: (
     reservationId: string,

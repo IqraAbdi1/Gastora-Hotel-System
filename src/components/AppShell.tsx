@@ -48,10 +48,10 @@ function Shell() {
   const [booking, setBooking] = useState<BookingPreset | null>(null)
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { tenant, features } = useFeatures()
+  const { tenant, features, options } = useFeatures()
   const { user, role, actualRole, viewAs, isViewingAs, canOpen, setViewAs, logout } = useAuth()
   const inHousekeeping = pathname.startsWith('/housekeeping')
-  const allowedModules = visibleModules(features, canOpen)
+  const allowedModules = visibleModules(features, canOpen, options)
   const landingId = role ? moduleOf(role.landing)?.id : undefined
   // The module the person lives in goes first.
   const modules = [...allowedModules].sort((a, b) => Number(b.id === landingId) - Number(a.id === landingId))
