@@ -15,6 +15,7 @@ export type BadgeKind =
   | 'financeRequests'
   | 'losses'
   | 'companies'
+  | 'waiting'
 
 export default function NavBadge({ kind }: { kind: BadgeKind }) {
   const { counts, allDefects } = useHousekeeping()
@@ -41,6 +42,13 @@ export default function NavBadge({ kind }: { kind: BadgeKind }) {
             missingSteps(a).some((s) => canSignStep(role.id, s)),
         ).length
       : 0
+  } else if (kind === 'waiting') {
+    // Supply requests and write-offs sitting on this person: the rest of the list is on the page itself.
+    value =
+      waitingIn('purchasing') +
+      waitingIn('store') +
+      waitingIn('finance') +
+      (can('approveRequest') ? losses.filter((l) => l.status === 'Waiting approval').length : 0)
   } else if (kind === 'losses') {
     // Only the people who approve write-offs see a count.
     value = can('approveRequest') ? losses.filter((l) => l.status === 'Waiting approval').length : 0

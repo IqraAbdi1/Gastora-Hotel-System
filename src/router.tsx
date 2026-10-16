@@ -8,6 +8,7 @@ import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
 import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
+import WaitingPage from './features/dashboard/WaitingPage'
 import GuestDocumentsPage from './features/frontdesk/GuestDocumentsPage'
 import LostFoundPage from './features/lostfound/LostFoundPage'
 import ApprovalsPage from './features/approvals/ApprovalsPage'
@@ -54,7 +55,7 @@ export const router = createBrowserRouter([
 
           // Overview
           { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'manager', element: page('Manager: Dashboard') },
+          { path: 'waiting', element: <WaitingPage /> },
 
           // Front desk
           { path: 'desk', element: <TodayPage /> },

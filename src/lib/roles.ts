@@ -52,7 +52,7 @@ export interface Role {
 
 const ALL_HOTEL = [
   '/dashboard',
-  '/manager',
+  '/waiting',
   '/desk',
   '/housekeeping',
   '/maintenance',
@@ -98,7 +98,7 @@ export const ROLES: Role[] = [
     id: 'gm',
     label: 'General manager',
     blurb: 'Runs operations and approves requisitions.',
-    landing: '/manager',
+    landing: '/dashboard',
     allow: ALL_HOTEL,
     actions: [
       'raiseRequest',

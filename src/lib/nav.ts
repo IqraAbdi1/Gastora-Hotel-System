@@ -23,7 +23,7 @@ function module(id: string, label: string, icon: IconName, pages: NavPage[]): Na
 export const modules: NavModule[] = [
   module('overview', 'Overview', 'overview', [
     { to: '/dashboard', label: 'Dashboard', end: true },
-    { to: '/manager', label: 'Manager' },
+    { to: '/waiting', label: 'Waiting for me', badge: 'waiting' },
   ]),
   module('frontdesk', 'Front desk', 'frontdesk', [
     { to: '/desk', label: 'Today', end: true },
@@ -55,6 +55,7 @@ export const modules: NavModule[] = [
   ]),
   module('inventory', 'Inventory', 'inventory', [
     { to: '/inventory/requests', label: 'Store requests', feature: 'supplyChain', badge: 'storeRequests', icon: 'procurement' },
+    { to: '/procurement/requests', label: 'Supply requests', feature: 'requests', badge: 'requests' },
     { to: '/inventory', label: 'Stock', end: true, feature: 'stockControl' },
     { to: '/inventory/receipts', label: 'Receipts', feature: 'stockControl' },
     { to: '/inventory/counts', label: 'Stock counts', feature: 'stockControl' },
@@ -62,7 +63,6 @@ export const modules: NavModule[] = [
     { to: '/inventory/movements', label: 'Movements', feature: 'stockControl' },
   ]),
   module('procurement', 'Procurement', 'procurement', [
-    { to: '/procurement/requests', label: 'Requests', feature: 'requests', badge: 'requests' },
     { to: '/procurement', label: 'Purchase orders', end: true, feature: 'supplyChain' },
     { to: '/procurement/audit', label: 'Audit log', feature: 'supplyChain' },
     { to: '/procurement/suppliers', label: 'Suppliers', feature: 'supplyChain' },

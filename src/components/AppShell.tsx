@@ -52,9 +52,9 @@ function Shell() {
   const { user, role, actualRole, viewAs, isViewingAs, canOpen, setViewAs, logout } = useAuth()
   const inHousekeeping = pathname.startsWith('/housekeeping')
   const allowedModules = visibleModules(features, canOpen, options)
-  const landingId = role ? moduleOf(role.landing)?.id : undefined
-  // The module the person lives in goes first.
-  const modules = [...allowedModules].sort((a, b) => Number(b.id === landingId) - Number(a.id === landingId))
+  // The same order for everyone, so the menu does not move about from role to role.
+  // Settings sit at the bottom, where settings belong.
+  const modules = allowedModules
   const totalPages = modules.reduce((n, m) => n + m.pages.length, 0)
   // Rule: few pages stand on their own, a few modules stay open, many modules fold.
   const layout: 'flat' | 'open' | 'accordion' =
