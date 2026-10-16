@@ -30,6 +30,7 @@ import ReceiptsPage from './features/inventory/ReceiptsPage'
 import StockCountPage from './features/inventory/StockCountPage'
 import LossesPage from './features/inventory/LossesPage'
 import PosPage from './features/pos/PosPage'
+import KitchenDisplayPage from './features/pos/KitchenDisplayPage'
 
 const page = (title: string) => <PagePlaceholder title={title} />
 
@@ -104,6 +105,7 @@ export const router = createBrowserRouter([
           { path: 'pos/menu', element: <PosPage /> },
           { path: 'pos/payments', element: <PosPage /> },
           { path: 'pos/recipes', element: <PosPage /> },
+          { path: 'kitchen', element: <KitchenDisplayPage /> },
 
                     // Inventory
           {

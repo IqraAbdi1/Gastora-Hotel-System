@@ -49,6 +49,7 @@ const ALL_HOTEL = [
   '/housekeeping',
   '/maintenance',
   '/pos',
+  '/kitchen',
   '/inventory',
   '/procurement',
   '/hr',
@@ -150,9 +151,9 @@ export const ROLES: Role[] = [
   {
     id: 'pos',
     label: 'POS / F&B staff',
-    blurb: 'Restaurant and bar. Module not built yet.',
+    blurb: 'Restaurant, bar, and kitchen order operations.',
     landing: '/pos',
-    allow: ['/pos'],
+    allow: ['/pos', '/kitchen'],
     actions: [],
   },
   {
