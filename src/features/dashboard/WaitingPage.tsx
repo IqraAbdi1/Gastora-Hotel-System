@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, PageHeader, StatCard } from '../../components/ui'
 import { TODAY } from '../../data/sample'
+import { nowTime } from '../../lib/stayTimes'
 import { ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { frontDeskWaiting, lostFoundWaiting, sortWaiting } from '../../lib/waiting'
@@ -20,7 +21,9 @@ function Row({ item }: { item: WaitItem }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-ink">{item.title}</p>
-          <Badge tone={TONE[item.severity]}>{item.kind === 'approve' ? 'Needs approval' : 'To review'}</Badge>
+          <Badge tone={TONE[item.severity]}>
+            {item.kind === 'approve' ? 'Needs approval' : item.kind === 'todo' ? 'To do now' : 'To review'}
+          </Badge>
           <span className="text-xs text-ink/50">{item.area}</span>
         </div>
         <p className="mt-0.5 text-sm text-ink/70">{item.detail}</p>
@@ -90,14 +93,15 @@ export default function WaitingPage() {
   }, [losses, lossLimit, features.lossReports, can])
 
   const desk = useMemo(
-    () => (can('manageCorporate') || can('changeSettings') || can('approveRequest') ? frontDeskWaiting(reservations, rooms, accounts, TODAY) : []),
-    [reservations, rooms, accounts, can],
+    () => (can('manageCorporate') || can('changeSettings') || can('approveRequest') ? frontDeskWaiting(reservations, rooms, accounts, TODAY, options.rates.releaseTime, nowTime()) : []),
+    [reservations, rooms, accounts, can, options.rates.releaseTime],
   )
   const lost = useMemo(() => lostFoundWaiting(items, options.keepFoundDays, TODAY), [items, options.keepFoundDays])
 
   const all = sortWaiting([...supplies, ...writeOffs, ...desk, ...lost])
   const toApprove = all.filter((i) => i.kind === 'approve')
   const toReview = all.filter((i) => i.kind === 'review')
+  const toDo = all.filter((i) => i.kind === 'todo')
   const money = all.reduce((n, i) => n + (i.amount ?? 0), 0)
   const oldest = all.reduce((n, i) => Math.max(n, i.age ?? 0), 0)
 
@@ -128,6 +132,22 @@ export default function WaitingPage() {
           </ul>
         )}
       </Card>
+
+      {toDo.length > 0 && (
+        <Card
+          title="To do now"
+          icon="alert"
+          count={toDo.length}
+          padded
+          description="Time-limited. These are worth less the longer they sit."
+        >
+          <ul className="space-y-2">
+            {toDo.map((i) => (
+              <Row key={i.id} item={i} />
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title="Worth a look" icon="alert" count={toReview.length} padded description="Already done, but somebody should see it.">
         {toReview.length === 0 ? (

@@ -1,3 +1,4 @@
+import type { ConfirmCall } from '../lib/confirmCalls'
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
 // Housekeeping detail the four front-desk statuses cannot express.
@@ -130,6 +131,8 @@ export type Reservation = {
   moves?: RoomMove[]
   /** A free upgrade given because no room of the booked type could be used. The price does not change. */
   upgrade?: { from: Room['type']; to: Room['type']; at: string; reason: string }
+  /** The arrival-day call to a guest whose booking nothing is securing. */
+  confirmCall?: ConfirmCall
 }
 export type RoomMove = {
   at: string

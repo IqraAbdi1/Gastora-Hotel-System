@@ -36,4 +36,6 @@ export const reservations: Reservation[] = [
   { id: 'R-1047', guest: 'John Ssemwogerere', roomType: 'Suite', room: '301', arrival: day(1), departure: day(3), status: 'booked', total: 700000, paid: 0, source: 'ota' },
   { id: 'R-1048', guest: 'Esther Auma', roomType: 'Standard', room: null, arrival: day(3), departure: day(6), status: 'booked', total: 450000, paid: 135000, source: 'phone' },
   { id: 'R-1049', guest: 'Brian Kigozi', roomType: 'Standard', room: null, arrival: day(2), departure: day(4), status: 'booked', total: 300000, paid: 0, source: 'front desk' },
+  // Arrives today with nothing holding it: no deposit, no card. The desk has to ring him.
+  { id: 'R-1051', guest: 'Daniel Wasswa', roomType: 'Standard', room: null, arrival: day(0), departure: day(1), status: 'booked', total: 180000, paid: 0, source: 'phone', guarantee: 'none', details: { phone: '0772 455 677', idType: 'NIN', idNumber: 'CM900112345678', nationality: 'Ugandan', specialRequests: '' } },
 ]

@@ -5,6 +5,7 @@ import { guests as sampleGuests } from '../data/guests'
 import { makeBigHotel } from '../data/bigHotel'
 import { deriveGuests } from '../lib/guests'
 import { stamp } from '../lib/folio'
+import type { CallOutcome } from '../lib/confirmCalls'
 import { HotelContext } from '../lib/hotelContext'
 import type { EfrisSettings } from '../lib/tax'
 import { useFeatures } from '../features/platform/featuresContext'
@@ -209,6 +210,20 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  /**
+   * The arrival-day call to a guest whose booking nothing is securing. Recording it is the point:
+   * by the release time the desk knows which rooms it can honestly put back on sale.
+   */
+  function recordConfirmCall(reservationId: string, outcome: CallOutcome, by: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId && r.status === 'booked'
+          ? { ...r, confirmCall: { at: stamp(), by, outcome } }
+          : r,
+      ),
+    )
+  }
+
   // BR-FO-06: the screen only allows this with no balance, or a manager's reason. The room goes dirty for housekeeping.
   function checkOut(reservationId: string, note?: string) {
     const r = reservations.find((x) => x.id === reservationId)
@@ -299,6 +314,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         moveRoom,
         upgradeStay,
         addPayment,
+    recordConfirmCall,
         checkOut,
         setHousekeeping,
         setCorporate,

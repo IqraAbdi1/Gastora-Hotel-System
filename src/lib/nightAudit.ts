@@ -1,5 +1,6 @@
 import { folioOf } from './folio'
 import { nightsOf } from './booking'
+import { isUnguaranteed } from './confirmCalls'
 import type { Reservation, Room } from '../types'
 
 // The night audit is the end-of-day check. It is run once, after the last arrival, before the date rolls.
@@ -41,12 +42,22 @@ export function auditReport(reservations: Reservation[], rooms: Room[], today: s
   for (const r of reservations) {
     if (r.status === 'booked' && r.arrival <= today) {
       arrivals += 1
+      // A booking nothing was securing is a different problem: there is no charge to make, and the
+      // room sat empty all evening. Saying so is what stops it happening again next week.
+      const unheld = isUnguaranteed(r)
+      const called = r.confirmCall?.outcome
       items.push({
         kind: 'not-arrived',
         reservation: r,
         severity: 'bad',
         title: `${r.guest} has not arrived`,
-        detail: `Booked to arrive ${r.arrival}. Check the guest in or record a no-show before the date rolls.`,
+        detail: unheld
+          ? called === 'confirmed'
+            ? `Booked to arrive ${r.arrival}. The guest confirmed by phone but never came, and there was no deposit or card to charge.`
+            : called
+              ? `Booked to arrive ${r.arrival}. Nothing was holding this booking and the call reached nobody. There is nothing to charge.`
+              : `Booked to arrive ${r.arrival}. Nothing was holding this booking and nobody called the guest, so the room was never put back on sale.`
+          : `Booked to arrive ${r.arrival}. Check the guest in or record a no-show before the date rolls.`,
       })
     }
     if (r.status === 'checked-out' && r.checkedOutAt?.startsWith(today)) departures += 1

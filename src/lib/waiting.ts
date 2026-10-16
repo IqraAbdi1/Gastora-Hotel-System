@@ -2,6 +2,7 @@ import { folioOf } from './folio'
 import { daysHeld } from './lostFound'
 import type { CorporateAccount } from '../services/corporate/corporateTypes'
 import type { LostItem } from './lostFound'
+import { toConfirm } from './confirmCalls'
 import type { Reservation, Room } from '../types'
 
 /**
@@ -9,7 +10,7 @@ import type { Reservation, Room } from '../types'
  * A manager should not have to remember five places. Rules, not AI: each line is a record
  * that is genuinely sitting unfinished, with the page that can finish it.
  */
-export type WaitKind = 'approve' | 'review'
+export type WaitKind = 'approve' | 'review' | 'todo'
 
 export interface WaitItem {
   id: string
@@ -38,8 +39,32 @@ export function frontDeskWaiting(
   rooms: Room[],
   accounts: CorporateAccount[],
   today: string,
+  releaseTime?: string,
+  now?: string,
 ): WaitItem[] {
   const out: WaitItem[] = []
+
+  // Nothing is holding these bookings and nobody has confirmed them. Every hour one sits here is an
+  // hour the room could have been sold to someone else.
+  if (releaseTime && now) {
+    for (const { reservation: r, state } of toConfirm(reservations, today, releaseTime, now)) {
+      if (state === 'confirmed') continue
+      const late = state === 'overdue' || state === 'not coming'
+      out.push({
+        id: `confirm-${r.id}`,
+        kind: 'todo',
+        area: 'Front desk',
+        title: late ? `${r.guest} never confirmed: the room can be resold` : `Call ${r.guest} to confirm tonight`,
+        detail: late
+          ? `Nothing is holding this booking and ${releaseTime} has passed.`
+          : `No deposit and no card. The room is released at ${releaseTime}.`,
+        age: 0,
+        severity: late ? 'bad' : 'warn',
+        to: '/desk',
+        action: late ? 'Release the room' : 'Call the guest',
+      })
+    }
+  }
 
   for (const r of reservations) {
     // A guest who left owing money is the hotel's loss until someone chases it.

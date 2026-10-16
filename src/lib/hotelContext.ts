@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { CallOutcome } from './confirmCalls'
 import type {
   Amendment,
   Cancellation,
@@ -31,6 +32,8 @@ export type HotelValue = {
   /** Cancels a wrong charge with a reversing line. Both lines stay on the folio. */
   reverseCharge: (reservationId: string, chargeId: string, reason: string, approvedBy: string) => void
   addPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
+  /** Record the arrival-day call to a guest whose booking nothing is securing. */
+  recordConfirmCall: (reservationId: string, outcome: CallOutcome, by: string) => void
   checkOut: (reservationId: string, note?: string) => void
   /** Moves an in-house guest to another room. The old room goes dirty, the new one becomes occupied. */
   moveRoom: (reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) => void
