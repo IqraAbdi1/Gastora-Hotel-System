@@ -65,8 +65,9 @@ function Shell() {
   // One module open at a time. The module you are in opens by itself. A choice you make by hand
   // only lasts while you stay in that module, so moving elsewhere opens the right group again.
   const current = moduleOf(pathname)?.id
-  // The search and booking buttons belong to the front desk, so other modules do not carry them.
-  const showDeskBar = current === 'overview' || current === 'frontdesk'
+  // The search and booking buttons belong to the front desk. Nobody else is taking a booking,
+  // so no other module carries them.
+  const showDeskBar = current === 'frontdesk'
   const [manual, setManual] = useState<{ at?: string; id: string | null } | null>(null)
   const openId = manual && manual.at === current ? manual.id : current
 
