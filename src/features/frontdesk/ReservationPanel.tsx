@@ -9,7 +9,9 @@ import type { CancelMode } from '../../lib/cancel'
 import type { Reservation } from '../../types'
 import AmendPanel from './AmendPanel'
 import CancelPanel from './CancelPanel'
+import ArrivalRoomHelp from './ArrivalRoomHelp'
 import CompanyChecks from './CompanyChecks'
+import MoveRoomPanel from './MoveRoomPanel'
 import { checkInBlock } from '../../lib/corporate'
 import { useCorporate } from '../corporate/corporateContext'
 
@@ -28,6 +30,7 @@ const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
 export default function ReservationPanel({ reservation: r, onClose, onCheckIn }: Props) {
   const [amending, setAmending] = useState(false)
+  const [moving, setMoving] = useState(false)
   const [cancelMode, setCancelMode] = useState<CancelMode | null>(null)
   const [showPhoto, setShowPhoto] = useState(false)
   const balance = r.total - r.paid
@@ -36,6 +39,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
 
   const rows: string[][] = [
     ['Booked via', r.source ? sourceLabel[r.source] : 'Not recorded'],
+    ...(r.upgrade ? [['Upgrade', `Free, from ${r.upgrade.from}`]] : []),
     ['Room', r.room ? `${r.room} (${r.roomType})` : `${r.roomType}, not assigned yet`],
     ['Arrival', dayMonth(r.arrival)],
     ['Departure', dayMonth(r.departure)],
@@ -195,6 +199,11 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         )}
       </div>
 
+      {isBooked && r.arrival <= TODAY && (
+        <div className="border-t border-warn/30 bg-warn/[0.07] p-4 empty:hidden">
+          <ArrivalRoomHelp reservation={r} />
+        </div>
+      )}
       {blocked && isBooked && onCheckIn && (
         <p className="border-t border-bad/20 bg-bad/10 px-4 py-2 text-xs font-medium text-bad">Check-in blocked: {blocked}</p>
       )}
@@ -218,6 +227,15 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
               className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-semibold"
             >
               Change stay
+            </button>
+          )}
+          {r.status === 'in-house' && r.room && (
+            <button
+              type="button"
+              onClick={() => setMoving(true)}
+              className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-semibold"
+            >
+              Move room
             </button>
           )}
           {isBooked && (
@@ -255,6 +273,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
     </div>
 
       {amending && <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />}
+      {moving && <MoveRoomPanel reservation={r} onClose={() => setMoving(false)} onDone={() => setMoving(false)} />}
       {cancelMode && (
         <CancelPanel reservation={r} mode={cancelMode} onClose={() => setCancelMode(null)} onDone={onClose} />
       )}
