@@ -398,7 +398,7 @@ export default function HotelSettingsPage() {
         <section className="rounded-xl border border-ink/10 bg-surface p-4">
           <h2 className="font-semibold text-ink">Room inspections</h2>
           <p className="mt-1 text-xs text-ink/60">
-            These are rules whhich decide which cleaned rooms a supervisor must check.
+            These are rules decide which cleaned rooms a supervisor must check.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">

@@ -1,9 +1,14 @@
 import type { Guest } from '../types'
 
 export const guests: Guest[] = [
-  { id: 'G-1', name: 'Amina Nakato', phone: '0772 100 201' },
+  {
+    id: 'G-1',
+    name: 'Amina Nakato',
+    phone: '0772 100 201',
+    preferences: { tags: ['Quiet room', 'High floor', 'Early breakfast'], other: 'Travels for work, always asks for a late check-out on Fridays.' },
+  },
   { id: 'G-2', name: 'Grace Namukasa', phone: '0772 100 202' },
-  { id: 'G-3', name: 'Moses Kato', phone: '0772 100 203' },
+  { id: 'G-3', name: 'Moses Kato', phone: '0772 100 203', preferences: { tags: ['Twin beds', 'Near the lift'] } },
   { id: 'G-4', name: 'David Okello', phone: '0772 100 204' },
   { id: 'G-5', name: 'Peter Mugisha', phone: '0772 100 205' },
   { id: 'G-6', name: 'Sarah Achieng', phone: '0772 100 206' },

@@ -141,7 +141,7 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
                   type="button"
                   onClick={() => setPlan(p.id)}
                   className={`rounded-xl border p-3 text-left transition-colors ${
-                    plan === p.id ? 'border-brand bg-brand/[0.08] ring-2 ring-brand/20' : 'border-ink/12 bg-canvas hover:border-brand/40'
+                    plan === p.id ? 'border-brand bg-brand/8 ring-2 ring-brand/20' : 'border-ink/12 bg-canvas hover:border-brand/40'
                   }`}
                 >
                   <p className="font-semibold text-ink">{p.label}</p>
@@ -181,7 +181,7 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
             </ul>
           )}
 
-          <p className="rounded-xl bg-brand/[0.06] p-3 text-xs text-ink/65">
+          <p className="rounded-xl bg-brand/6 p-3 text-xs text-ink/65">
             Prototype: this keeps the hotel in this browser only. In the real system it creates the hotel's own space, its
             first admin account and its subscription. <Badge tone="neutral">Nothing is billed here</Badge>
           </p>
