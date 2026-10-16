@@ -1,5 +1,6 @@
 import { TODAY } from '../data/sample'
 import { FEE_WINDOW_DAYS } from './amend'
+import type { RatesPolicy } from './rates'
 import { nightsOf } from './booking'
 import type { Reservation } from '../types'
 
@@ -18,7 +19,10 @@ export type CancelCheck = {
   chargeApplies: boolean
 }
 
-export function checkCancel(r: Reservation, mode: CancelMode, waive: boolean): CancelCheck {
+export function checkCancel(r: Reservation, mode: CancelMode, waive: boolean, rates?: RatesPolicy): CancelCheck {
+  const freeDays = rates?.cancelFreeDays ?? FEE_WINDOW_DAYS
+  const lateNights = rates?.cancelChargeNights ?? 1
+  const noShowNights = rates?.noShowNights ?? 1
   const perNight = Math.round(r.total / Math.max(1, nightsOf(r.arrival, r.departure)))
   const base: CancelCheck = { error: null, perNight, fullCharge: 0, charge: 0, refund: 0, owed: 0, chargeApplies: false }
 
@@ -27,13 +31,13 @@ export function checkCancel(r: Reservation, mode: CancelMode, waive: boolean): C
 
   let fullCharge = 0
   if (mode === 'cancel') {
-    // Free until FEE_WINDOW_DAYS before arrival, then one night
-    fullCharge = nightsOf(TODAY, r.arrival) < FEE_WINDOW_DAYS ? perNight : 0
+    // Free until the hotel's window, then the nights it charges
+    fullCharge = nightsOf(TODAY, r.arrival) < freeDays ? perNight * lateNights : 0
   } else {
     // No-show follows the guarantee on the booking (see data/rates.ts)
     const g = r.guarantee ?? (r.paid > 0 ? 'deposit' : 'none')
     if (g === 'deposit') fullCharge = r.paid
-    else if (g === 'card' || g === 'company') fullCharge = perNight
+    else if (g === 'card' || g === 'company') fullCharge = perNight * noShowNights
   }
 
   const charge = waive ? 0 : fullCharge

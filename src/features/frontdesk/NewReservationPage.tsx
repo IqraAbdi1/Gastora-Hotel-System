@@ -13,7 +13,7 @@ import { useFeatures } from '../platform/featuresContext'
 import GuestRecognition from '../guests/GuestRecognition'
 import ApprovalGate from '../approvals/ApprovalGate'
 import { useApprovals } from '../approvals/approvalsContext'
-import { guarantees, ratePlans, roomRate } from '../../data/rates'
+import { guarantees } from '../../data/rates'
 import type { GuaranteeType, Guest, Reservation, Room } from '../../types'
 import type { BookingPreset } from '../../lib/bookingContext'
 import { companyBookingRecord, planCompanyBooking } from '../../lib/corporateBooking'
@@ -51,7 +51,7 @@ export function NewReservationForm({
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
   const [type, setType] = useState<Room['type']>(presetRoom?.type ?? 'Standard')
-  const [planId, setPlanId] = useState(ratePlans[0].id)
+  const [planId, setPlanId] = useState('room-only')
   const [room, setRoom] = useState(presetRoom?.number ?? '')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -67,6 +67,7 @@ export function NewReservationForm({
   const [company, setCompany] = useState<CompanyInput | null>(null)
   const { options, tenant } = useFeatures()
   const loyalty = options.loyalty
+  const rates = options.rates
   const { record } = useApprovals()
 
   const from = walkin ? TODAY : arrival
@@ -95,18 +96,18 @@ export function NewReservationForm({
     [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights],
   )
 
-  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights)) : 0
+  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights, rates)) : 0
 
   // A returning guest's reward. The room only, never on top of a company price, and only on finished stays.
   const history = useMemo(() => (selectedGuest ? stayHistory(selectedGuest, reservations) : null), [selectedGuest, reservations])
   const tier = history ? tierFor(history, loyalty) : null
-  const roomOnly = datesOk ? stayTotal(type, 'room-only', nights) : 0
+  const roomOnly = datesOk ? stayTotal(type, 'room-only', nights, rates) : 0
   const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
   const [useLoyalty, setUseLoyalty] = useState(true)
   const [loyaltyApproved, setLoyaltyApproved] = useState('')
   const discountOn = earned > 0 && useLoyalty && (loyalty.autoApply || loyaltyApproved !== '')
   const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
-  const suggested = suggestedDeposit(total)
+  const suggested = suggestedDeposit(total, rates.depositPercent)
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
   const matches = useMemo(
@@ -301,7 +302,7 @@ export function NewReservationForm({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {roomTypes.map((t) => {
                 const f = datesOk ? free[t] : 0
-                const price = roomRate[t] + planFor(planId).extraPerNight
+                const price = rates.roomRates[t] + planFor(planId, rates).extraPerNight
                 return (
                   <button
                     key={t}
@@ -329,7 +330,7 @@ export function NewReservationForm({
             <label className="block text-sm font-medium">
               Rate plan
               <select value={planId} onChange={(e) => setPlanId(e.target.value)} className={`${field} mt-1`}>
-                {ratePlans.map((p) => (
+                {rates.plans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

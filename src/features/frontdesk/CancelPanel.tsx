@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { cancelReasons, checkCancel } from '../../lib/cancel'
 import type { CancelMode } from '../../lib/cancel'
 import { dayMonth, ugx } from '../../lib/format'
+import { useFeatures } from '../platform/featuresContext'
 import { useHotel } from '../../lib/hotelContext'
 import type { Reservation } from '../../types'
 
@@ -18,7 +19,9 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
   const [managerReason, setManagerReason] = useState('')
   const [done, setDone] = useState(false)
 
-  const check = useMemo(() => checkCancel(r, mode, waive), [r, mode, waive])
+  const { options } = useFeatures()
+  const rates = options.rates
+  const check = useMemo(() => checkCancel(r, mode, waive, rates), [r, mode, waive, rates])
   const managerOk = !waive || managerReason.trim().length >= 5
   const valid = !check.error && managerOk
 

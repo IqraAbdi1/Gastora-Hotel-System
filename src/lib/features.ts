@@ -184,6 +184,8 @@ export function featuresOf(t: Tenant): FeatureMap {
 
 import type { ApprovalLimits } from './approvals'
 import { DEFAULT_LIMITS } from './approvals'
+import type { RatesPolicy } from './rates'
+import { DEFAULT_RATES } from './rates'
 import type { LoyaltySettings } from './loyalty'
 import { DEFAULT_LOYALTY } from './loyalty'
 
@@ -202,6 +204,8 @@ export interface HotelOptions {
   nightAudit: boolean
   /** Tiers and rewards for guests who come back. Every hotel sets its own. */
   loyalty: LoyaltySettings
+  /** The hotel's own prices and booking rules. Company prices are separate, on each company account. */
+  rates: RatesPolicy
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -209,6 +213,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   keepFoundDays: 90,
   nightAudit: true,
   loyalty: DEFAULT_LOYALTY,
+  rates: DEFAULT_RATES,
   inspectionMode: 'spot',
   spotPercent: 20,
   alwaysInspectArrivals: true,

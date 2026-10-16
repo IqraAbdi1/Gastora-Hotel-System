@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { TODAY } from '../../data/sample'
 import { addDays } from '../../lib/availability'
-import { checkAmend, FEE_WINDOW_DAYS, reasons } from '../../lib/amend'
+import { checkAmend, reasons } from '../../lib/amend'
+import { useFeatures } from '../platform/featuresContext'
 import { nightsOf } from '../../lib/booking'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
@@ -16,6 +17,8 @@ const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
 export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   const { rooms, reservations, amendReservation } = useHotel()
+  const { options } = useFeatures()
+  const rates = options.rates
   const inHouse = r.status === 'in-house'
 
   const [arrival, setArrival] = useState(r.arrival)
@@ -27,8 +30,8 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   const [done, setDone] = useState(false)
 
   const check = useMemo(
-    () => checkAmend(r, arrival, departure, rooms, reservations),
-    [r, arrival, departure, rooms, reservations],
+    () => checkAmend(r, arrival, departure, rooms, reservations, rates),
+    [r, arrival, departure, rooms, reservations, rates],
   )
 
   const feeCharged = check.feeApplies && !waive ? check.fee : 0
@@ -227,7 +230,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
             )}
 
             <p className="text-xs text-ink/60">
-              Sample policy: free to change {FEE_WINDOW_DAYS} or more days before arrival. Closer than that, moving or shortening a booking costs one night. Extending is always free. The nightly rate and the deposit stay with the booking.
+              This hotel: free to change {rates.changeFreeDays} or more days before arrival. Closer than that, moving or shortening a booking costs {rates.changeFeeNights} night{rates.changeFeeNights === 1 ? '' : 's'}. Extending is always free. The nightly rate and the deposit stay with the booking.
             </p>
           </div>
 

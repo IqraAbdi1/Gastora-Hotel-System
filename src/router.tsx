@@ -6,6 +6,7 @@ import PagePlaceholder from './components/PagePlaceholder'
 import Root from './components/Root'
 import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
+import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
 import GuestDocumentsPage from './features/frontdesk/GuestDocumentsPage'
 import LostFoundPage from './features/lostfound/LostFoundPage'
@@ -213,8 +214,7 @@ export const router = createBrowserRouter([
           { path: 'admin', element: <HotelSettingsPage /> },
           { path: 'admin/taxes', element: <TaxSettingsPage /> },
           { path: 'admin/approvals', element: <ApprovalsPage /> },
-          { path: 'admin/staff', element: page('Admin: Staff and roles') },
-          { path: 'admin/policies', element: page('Admin: Rates and policies') },
+          { path: 'admin/policies', element: <RatesPoliciesPage /> },
 
           // Other apps
           { path: 'guest', element: page('Guest: Find a room') },

@@ -77,7 +77,6 @@ export const modules: NavModule[] = [
     { to: '/admin', label: 'Hotel settings', end: true },
     { to: '/admin/taxes', label: 'Taxes and EFRIS', feature: 'taxLines' },
     { to: '/admin/approvals', label: 'Approvals to review' },
-    { to: '/admin/staff', label: 'Staff and roles' },
     { to: '/admin/policies', label: 'Rates and policies' },
   ]),
 ]

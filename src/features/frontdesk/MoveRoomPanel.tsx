@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Badge, Button, Field, Input, Select, inputClass } from '../../components/ui'
-import { roomRate } from '../../data/rates'
+import { useFeatures } from '../platform/featuresContext'
 import { isRoomFree } from '../../lib/availability'
 import { nightsOf, roomTypes } from '../../lib/booking'
 import { dayMonth, ugx } from '../../lib/format'
@@ -24,6 +24,8 @@ const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 export default function MoveRoomPanel({ reservation: r, onClose, onDone }: Props) {
   const { rooms, reservations, moveRoom, addCharge } = useHotel()
   const { user } = useAuth()
+  const { options } = useFeatures()
+  const roomRate = options.rates.roomRates
 
   const [pick, setPick] = useState('')
   const [paidBy, setPaidBy] = useState<'hotel' | 'guest'>('hotel')

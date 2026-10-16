@@ -1,4 +1,5 @@
 import { DEPOSIT_RATE, ratePlans, roomRate } from '../data/rates'
+import type { RatesPolicy } from './rates'
 import { holdsRoom, isRoomFree } from './availability'
 import type { Reservation, Room } from '../types'
 
@@ -8,16 +9,19 @@ export function nightsOf(from: string, to: string) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000)
 }
 
-export function planFor(id: string) {
-  return ratePlans.find((p) => p.id === id) ?? ratePlans[0]
+export function planFor(id: string, rates?: RatesPolicy) {
+  const list = rates?.plans ?? ratePlans
+  return list.find((p) => p.id === id) ?? list[0]
 }
 
-export function stayTotal(type: Room['type'], planId: string, nights: number) {
-  return nights * (roomRate[type] + planFor(planId).extraPerNight)
+export function stayTotal(type: Room['type'], planId: string, nights: number, rates?: RatesPolicy) {
+  const rate = rates?.roomRates[type] ?? roomRate[type]
+  return nights * (rate + planFor(planId, rates).extraPerNight)
 }
 
-export function suggestedDeposit(total: number) {
-  return Math.round((total * DEPOSIT_RATE) / 1000) * 1000
+export function suggestedDeposit(total: number, percent?: number) {
+  const share = percent === undefined ? DEPOSIT_RATE : percent / 100
+  return Math.round((total * share) / 1000) * 1000
 }
 
 // Rooms of each type still free for every night of the stay: total minus booked minus blocked (FR-RMS-012).
