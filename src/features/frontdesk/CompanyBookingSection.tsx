@@ -70,7 +70,8 @@ export default function CompanyBookingSection({
                       onClick={() =>
                         onChange({
                           accountId: a.id,
-                          bookerContactId: '',
+                          // Most company bookings come from the person the company listed, so start there.
+                          bookerContactId: a.contacts.find((c) => c.active && c.canBook)?.id ?? '',
                           bookerName: '',
                           bookerPhone: '',
                           claimedLpo: '',
@@ -112,7 +113,7 @@ export default function CompanyBookingSection({
               <Badge tone={statusTone[account.status]} dot>
                 {STATUS_LABEL[account.status]}
               </Badge>
-              <Button size="sm" variant="ghost" onClick={() => onChange({ ...value, accountId: '' })}>
+              <Button size="sm" variant="ghost" onClick={() => onChange({ ...value, accountId: '', bookerContactId: '' })}>
                 Change
               </Button>
             </div>
@@ -126,7 +127,6 @@ export default function CompanyBookingSection({
                 onChange={(e) => set({ bookerContactId: e.target.value })}
                 className={`${field} mt-1`}
               >
-                <option value="">Someone not on the company's list</option>
                 {account.contacts
                   .filter((c) => c.active && c.canBook)
                   .map((c) => (
@@ -134,7 +134,18 @@ export default function CompanyBookingSection({
                       {c.name} · {c.jobTitle}
                     </option>
                   ))}
+                <option value="">Someone else, not on the company's list</option>
               </select>
+              {value.bookerContactId ? (
+                <span className="mt-1 block text-xs font-normal text-ink/60">
+                  {account.contacts.find((c) => c.id === value.bookerContactId)?.phone}. From the company's list, so nothing
+                  needs typing.
+                </span>
+              ) : (
+                <span className="mt-1 block text-xs font-normal text-warn">
+                  Not on the list. Their name and phone are needed, and they are checked at check-in.
+                </span>
+              )}
             </label>
             <label className="block text-sm font-medium">
               Who pays

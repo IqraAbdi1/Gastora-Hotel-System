@@ -238,39 +238,19 @@ export default function CompanyCheckIn({ reservation: r }: { reservation: Reserv
       </section>
 
       <section className="space-y-3">
-        <p className={heading}>2. Who approves the charges, and how?</p>
-        <Field label="Approved by" required hint="The company contact who can approve charges. Not the person who booked, and not the guest.">
-          {(id) => (
-            <Select id={id} value={approverId} onChange={(e) => setApproverId(e.target.value)}>
-              <option value="">Choose…</option>
-              {approvers.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name} · {x.jobTitle}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <Field label="How the company confirmed it">
-          {(id) => (
-            <Select id={id} value={via} onChange={(e) => setVia(e.target.value as LpoVia)}>
-              {(Object.keys(LPO_LABEL) as LpoVia[]).map((k) => (
-                <option key={k} value={k}>
-                  {LPO_LABEL[k]}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-
+        <p className={heading}>
+          {lpoRequired ? "2. The company's authority to charge" : '2. Who approves the charges, and how?'}
+        </p>
         {lpoRequired && (
-          <div className="space-y-3 rounded-lg border border-ink/10 bg-canvas/60 p-3">
-            <p className="text-sm font-semibold">Purchase order (LPO)</p>
-            {c.billing.claimedLpo ? (
-              <p className="text-xs text-ink/60">The booking has LPO {c.billing.claimedLpo}. Check it matches the document.</p>
-            ) : (
-              <p className="text-xs text-ink/60">No LPO number was given at booking. Enter the one on the document.</p>
-            )}
+          <p className="text-xs text-ink/60">
+            {c.billing.claimedLpo
+              ? `The booking has LPO ${c.billing.claimedLpo}. Check it matches the document in front of you.`
+              : 'No LPO number was given at booking. Take it from the document in front of you.'}{' '}
+            The LPO is the company's commitment; the name is who to call about it.
+          </p>
+        )}
+        <div className={lpoRequired ? 'space-y-3 rounded-lg border border-ink/10 bg-canvas/60 p-3' : 'space-y-3'}>
+          {lpoRequired && (
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="LPO number" required>
                 {(id) => <Input id={id} value={lpoNumber} onChange={(e) => setLpoNumber(e.target.value)} />}
@@ -282,8 +262,37 @@ export default function CompanyCheckIn({ reservation: r }: { reservation: Reserv
                 {(id) => <Input id={id} type="date" max={TODAY} value={lpoDate} onChange={(e) => setLpoDate(e.target.value)} />}
               </Field>
             </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label={lpoRequired ? 'Who signed it for the company' : 'Approved by'}
+              required
+              hint="A company contact who can approve charges. Not the person who booked, and not the guest."
+            >
+              {(id) => (
+                <Select id={id} value={approverId} onChange={(e) => setApproverId(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {approvers.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name} · {x.jobTitle}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label={lpoRequired ? 'How it reached us' : 'How the company confirmed it'}>
+              {(id) => (
+                <Select id={id} value={via} onChange={(e) => setVia(e.target.value as LpoVia)}>
+                  {(Object.keys(LPO_LABEL) as LpoVia[]).map((k) => (
+                    <option key={k} value={k}>
+                      {LPO_LABEL[k]}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
           </div>
-        )}
+        </div>
       </section>
 
       {overBy > 0 && (
