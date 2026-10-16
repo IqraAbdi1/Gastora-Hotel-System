@@ -165,8 +165,8 @@ export const ROLES: Role[] = [
     label: 'Storekeeper',
     blurb: 'Checks the store, issues items, receives goods and returns, and counts stock.',
     landing: '/inventory/requests',
-    allow: ['/inventory'],
-    actions: ['storeKeep', 'manageStock'],
+    allow: ['/inventory', '/procurement/requests'],
+    actions: ['storeKeep', 'manageStock', 'raiseRequest'],
   },
   {
     id: 'procurement',

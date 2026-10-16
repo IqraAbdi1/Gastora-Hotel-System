@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
 import { useRequests } from './requestsContext'
-import { departments, urgencies } from './requestsModel'
+import { departments, STORE_DEPARTMENT, urgencies } from './requestsModel'
 import type { Department, Urgency } from './requestsModel'
 
 interface Row {
@@ -24,7 +24,8 @@ export default function NewRequestDialog({
   const { features } = useFeatures()
   const { stock, raise } = useRequests()
   const chain = features.supplyChain
-  const [dept, setDept] = useState<Department>(department ?? 'Housekeeping')
+  const fromStore = role?.id === 'storekeeper'
+  const [dept, setDept] = useState<Department>(department ?? (fromStore ? STORE_DEPARTMENT : 'Housekeeping'))
   const [urgency, setUrgency] = useState<Urgency>('Normal')
   const [reason, setReason] = useState('')
   const [rows, setRows] = useState<Row[]>([emptyRow()])
@@ -46,9 +47,11 @@ export default function NewRequestDialog({
 
   const hint = !chain
     ? 'Management will reply.'
-    : role?.id === 'attendant'
-      ? 'Your department head endorses this first. Then the storekeeper checks the store.'
-      : 'The storekeeper checks the store first.'
+    : fromStore
+      ? 'The store is out, so this goes straight to purchasing and the budget check.'
+      : role?.id === 'attendant'
+        ? 'Your department head endorses this first. Then the storekeeper checks the store.'
+        : 'The storekeeper checks the store first.'
 
   const field = 'w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
 
@@ -67,10 +70,15 @@ export default function NewRequestDialog({
             <label className="text-xs font-medium text-ink/60">
               Department
               <select value={dept} onChange={(e) => setDept(e.target.value as Department)} className={`${field} mt-1`}>
-                {departments.map((d) => (
+                {(fromStore ? [STORE_DEPARTMENT, ...departments] : [...departments]).map((d) => (
                   <option key={d}>{d}</option>
                 ))}
               </select>
+              {fromStore && dept === STORE_DEPARTMENT && (
+                <span className="mt-1 block font-normal text-ink/55">
+                  Topping up the store itself. It is charged to the store's own budget line, not a department's.
+                </span>
+              )}
             </label>
           )}
           <label className="text-xs font-medium text-ink/60">

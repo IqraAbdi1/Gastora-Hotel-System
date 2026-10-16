@@ -475,8 +475,12 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
       const id = `SR-${seq.current++}`
       // In the full chain only an attendant needs the head to endorse first.
       const needsHead = chain && role?.id === 'attendant'
-      const status: RequestStatus = !chain ? 'Submitted' : needsHead ? 'With head' : 'Endorsed'
+      // The storekeeper raising a request means the store itself is out, so there is nothing for the
+      // store to check: it goes straight to purchasing and the budget, like any other requisition.
+      const fromStore = chain && role?.id === 'storekeeper'
+      const status: RequestStatus = !chain ? 'Submitted' : needsHead ? 'With head' : fromStore ? 'Requisition' : 'Endorsed'
       const history = [{ at, by: who, text: 'Raised' }]
+      if (fromStore) history.push({ at, by: who, text: 'Raised by the store, so no shelf check was needed' })
       if (chain && !needsHead) {
         history.push({ at, by: who, text: `Endorsement not needed (raised by ${role?.label ?? 'staff'})` })
       }
@@ -491,6 +495,7 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
           reason: input.reason,
           items: mergeItems(input.items),
           status,
+          ...(fromStore ? { requisitionAt: at } : {}),
           history,
           messages: [],
         },
