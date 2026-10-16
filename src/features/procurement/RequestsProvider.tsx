@@ -436,39 +436,123 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
     },
     countsDue,
 
+  
     consumeStockForSale: (lines, saleId, outlet) => {
-      if (!saleId.trim()) return fail('A unique sale reference is required for stock deduction.')
-      // Idempotency guard: a retry of the same checkout must never deduct stock twice.
-      const alreadyIssued = movements.some((movement) => movement.reason === `POS sale ${saleId}`)
-      if (alreadyIssued) return fail(`Sale ${saleId} has already deducted inventory. Refresh the order history before retrying.`)
-      if (!lines.length) return fail('No stock lines were supplied for this sale.')
+      const saleRef = saleId.trim()
+
+      if (!saleRef) {
+        return fail('A unique sale reference is required for stock deduction.')
+      }
+
+      if (!outlet.trim()) {
+        return fail('An outlet is required for stock deduction.')
+      }
+
+      // Prevent the same sale from deducting inventory twice.
+      const saleReason = `POS sale ${saleRef}`
+      const alreadyIssued = movements.some(
+        (movement) => movement.reason === saleReason,
+      )
+
+      if (alreadyIssued) {
+        return fail(
+          `Sale ${saleRef} has already deducted inventory. Refresh the order history before retrying.`,
+        )
+      }
+
+      if (!lines.length) {
+        return fail('No stock lines were supplied for this sale.')
+      }
+
+      // Merge duplicate ingredients before validating or deducting.
       const merged: { name: string; qty: number }[] = []
+
       for (const line of lines) {
+        const name = line.name.trim()
         const qty = Number(line.qty)
-        if (!line.name.trim() || !Number.isFinite(qty) || qty <= 0) return fail('Each stock deduction needs an item and a positive quantity.')
-        const existing = merged.find((x) => sameName(x.name, line.name))
-        if (existing) existing.qty += qty
-        else merged.push({ name: line.name.trim(), qty })
+
+        if (!name || !Number.isFinite(qty) || qty <= 0) {
+          return fail(
+            'Each stock deduction needs an item and a positive quantity.',
+          )
+        }
+
+        const existing = merged.find((item) =>
+          sameName(item.name, name),
+        )
+
+        if (existing) {
+          existing.qty += qty
+        } else {
+          merged.push({ name, qty })
+        }
       }
-      // Validate every line before changing any stock, so a failed sale never partially deducts inventory.
+
+      // Validate all ingredients before changing any stock.
+      const resolved: {
+        name: string
+        qty: number
+        unit: string
+        unitCost: number
+      }[] = []
+
       for (const line of merged) {
-        const item = stock.find((x) => sameName(x.name, line.name))
-        if (!item) return fail(`Inventory item “${line.name}” was not found. Configure the recipe to use an existing stock item.`)
+        const item = stock.find((entry) =>
+          sameName(entry.name, line.name),
+        )
+
+        if (!item) {
+          return fail(
+            `Inventory item "${line.name}" was not found. Configure the POS recipe to use an existing stock item.`,
+          )
+        }
+
         const available = stockOf(item.name)
-        if (available < line.qty) return fail(`Insufficient stock for ${item.name}: ${available} ${item.unit} available, ${line.qty} required.`)
+
+        if (available < line.qty) {
+          return fail(
+            `Insufficient stock for ${item.name}: ${available} ${item.unit} available, ${line.qty} required.`,
+          )
+        }
+
+        resolved.push({
+          name: item.name,
+          qty: line.qty,
+          unit: item.unit,
+          unitCost: item.unitCost,
+        })
       }
-      const at = new Date().toISOString()
-      const made: Movement[] = merged.map((line) => {
-        const item = stock.find((x) => sameName(x.name, line.name))!
-        return { id: `POS-${mvSeq.current++}`, at, by: who, kind: 'Issued', item: item.name, qty: line.qty, cost: item.unitCost, reason: `POS sale ${saleId}`, to: `${outlet} POS`, store: item.store ?? MAIN_STORE_ID }
-      })
-      setStock((current) => current.map((item) => {
-        const line = merged.find((x) => sameName(x.name, item.name))
-        return line ? { ...item, onHand: item.onHand - line.qty } : item
+
+      const receiptLines: ReceiptLine[] = resolved.map((line) => ({
+        name: line.name,
+        unit: line.unit,
+        qty: line.qty,
+        unitCost: line.unitCost,
+        store: storeStamp(line.name),
       }))
+
+      // Use the shared inventory deduction routine so expiry-tracked stock
+      // is deducted from batches using FEFO (first expiry, first out).
+      takeStock(
+        resolved.map(({ name, qty }) => ({ name, qty })),
+      )
+
+      // Record movements using the provider's standard movement format.
+      const made = makeMoves(
+        'Issued',
+        receiptLines,
+        saleReason,
+        {
+          from: 'Store',
+          to: `${outlet.trim()} POS`,
+        },
+      )
+
       setMovements((current) => [...made, ...current])
+
       return { ok: true, value: made }
     },
+
 
     raise: (input: NewRequest) => {
       const at = new Date().toISOString()
