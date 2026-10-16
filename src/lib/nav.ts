@@ -38,7 +38,7 @@ export const modules: NavModule[] = [
   module('housekeeping', 'Housekeeping', 'housekeeping', [
     { to: '/housekeeping', label: 'Rooms', end: true, badge: 'toClean' },
     { to: '/housekeeping/tasks', label: 'Tasks', badge: 'openTasks' },
-    { to: '/housekeeping/my-rooms', label: 'My rooms' },
+    { to: '/housekeeping/my-tasks', label: 'My tasks' },
     { to: '/housekeeping/roster', label: 'Roster and record' },
     { to: '/housekeeping/inspections', label: 'Inspections', badge: 'toInspect', feature: 'inspections' },
     { to: '/housekeeping/issues', label: 'Issues', badge: 'issues' },

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { TODAY, YESTERDAY } from '../../data/sample'
+import { PAST, TODAY, YESTERDAY } from '../../data/sample'
 import { useHotel } from '../../lib/hotelContext'
 import { floorOf } from '../../lib/rooms'
 import { useFeatures } from '../platform/featuresContext'
@@ -39,6 +39,39 @@ const SERVICE_NOTE = 'Daily service while the guest is still in the room.'
 const AREA_NOTE = 'Public area on the cleaning schedule.'
 const WELFARE_NOTE = 'Not serviced for days running. A supervisor must enter the room and see the guest.'
 
+/**
+ * A few days of cleaning already on the record. Without it the record is empty until someone cleans
+ * something in this session, and the question it exists to answer is always about a day that has passed.
+ */
+function seededHistory(): Record<string, RoomDetails> {
+  const past: { room: string; day: string; time: string; user: string; action: string; note: string }[] = [
+    { room: '203', day: PAST[0], time: '09:40', user: 'Grace', action: 'Cleaning completed', note: 'Ready for inspection.' },
+    { room: '203', day: PAST[0], time: '11:05', user: 'Supervisor', action: 'Inspection passed', note: 'Room accepted.' },
+    { room: '203', day: PAST[1], time: '10:12', user: 'Sarah', action: 'Daily service done', note: 'Took 24 minutes. Done: Bed made, Towels replaced, Bin emptied.' },
+    { room: '203', day: PAST[2], time: '09:55', user: 'Mary', action: 'Daily service done', note: 'Took 19 minutes. Sheets were due today. Done: Bed made, Bathroom wiped.' },
+    { room: '102', day: PAST[1], time: '13:20', user: 'John', action: 'Daily service done', note: 'Took 16 minutes. Done: Bed made, Towels replaced.' },
+    { room: '102', day: PAST[2], time: '10:40', user: 'Grace', action: 'Service declined', note: 'Do not disturb sign' },
+    { room: '301', day: PAST[1], time: '08:30', user: 'David', action: 'Cleaning completed', note: 'Room ready. Not picked for inspection (spot-check).' },
+    { room: 'Lobby and reception (morning)', day: PAST[1], time: '09:05', user: 'Peter', action: 'Public Area done', note: 'Took 31 minutes. Done: Floor mopped, Bins emptied.' },
+  ]
+  const out: Record<string, RoomDetails> = {}
+  for (const row of past) {
+    if (!out[row.room]) out[row.room] = defaultDetails()
+    out[row.room].history.push({
+      id: uid(),
+      day: row.day,
+      time: row.time,
+      action: row.action,
+      user: row.user,
+      note: row.note,
+    })
+  }
+  for (const d of Object.values(out)) {
+    d.history.sort((a, b) => b.day.localeCompare(a.day) || b.time.localeCompare(a.time))
+  }
+  return out
+}
+
 // Messages between the front desk and housekeeping, per room. The "ready by" time belongs to one cleaning task,
 // so it disappears by itself when that task is finished.
 type Thread = { messages: RoomMessage[]; readyBy?: { time: string; taskId: number } }
@@ -49,7 +82,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   const { rooms, reservations, setHousekeeping } = useHotel()
   const { inspectionMode, options, features } = useFeatures()
   const [tasks, setTasks] = useState<HkTask[]>([])
-  const [details, setDetails] = useState<Record<string, RoomDetails>>({})
+  const [details, setDetails] = useState<Record<string, RoomDetails>>(() => seededHistory())
   const [threads, setThreads] = useState<Record<string, Thread>>({})
   // Rooms the front desk rushed that are now clean. They stay until the room is used or the alert is dismissed.
   const [readyAlerts, setReadyAlerts] = useState<Record<string, string>>({})
@@ -287,7 +320,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   const allHistory = useMemo(() => {
     const out: HkValue['allHistory'] = []
     for (const [room, d] of Object.entries(details)) for (const entry of d.history) out.push({ room, entry })
-    return out.sort((a, b) => b.entry.time.localeCompare(a.entry.time))
+    return out.sort((a, b) => b.entry.day.localeCompare(a.entry.day) || b.entry.time.localeCompare(a.entry.time))
   }, [details])
 
   const counts = useMemo(() => {
@@ -321,7 +354,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   function log(room: string, action: string, note: string, user = 'Housekeeping') {
     patchDetails(room, (d) => ({
       ...d,
-      history: [{ id: uid(), time: clock(), action, user, note }, ...d.history],
+      history: [{ id: uid(), day: TODAY, time: clock(), action, user, note }, ...d.history],
     }))
   }
 
@@ -611,27 +644,6 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     log(task.room, 'Service declined', reason.trim() || 'The guest asked not to be disturbed.', who)
   }
 
-  /**
-   * An attendant picks work off the board. Taking it is starting it: she is standing at the door,
-   * and the head should see the room as being cleaned without anyone else pressing a button.
-   */
-  function takeTask(task: HkTask, attendant: string) {
-    const at = clock()
-    setTasks((current) =>
-      current.map((t) =>
-        t.id === task.id
-          ? { ...t, attendant, status: 'In Progress' as const, startedAt: t.startedAt ?? at }
-          : t,
-      ),
-    )
-    if (cleanTypes.includes(task.type)) {
-      setHousekeeping(task.room, 'cleaning')
-      log(task.room, 'Cleaning started', `Started the ${task.type.toLowerCase()}.`, attendant)
-    } else {
-      log(task.room, `${task.type} started`, 'Work started.', attendant)
-    }
-  }
-
   function assignTask(taskId: number, attendant: string) {
     setTasks((current) =>
       current.map((t) =>
@@ -793,7 +805,6 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     resetRoom,
     createTask,
     advanceTask,
-    takeTask,
     declineTask,
     areas: options.areas,
     assignTask,

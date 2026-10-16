@@ -50,8 +50,6 @@ export type HkValue = {
   createTask: (input: NewTask) => void
   /** Move the task on one step. On the finishing step, what the attendant recorded doing. */
   advanceTask: (task: HkTask, checklist?: string[]) => void
-  /** An attendant takes work off the board. Taking it starts it, and the time is recorded. */
-  takeTask: (task: HkTask, attendant: string) => void
   /** The guest refused today's service. Counted, so a room nobody enters is escalated. */
   declineTask: (task: HkTask, reason: string) => void
   /** The public areas this hotel cleans. */

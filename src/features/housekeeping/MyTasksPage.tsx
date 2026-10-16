@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useHousekeeping } from './hkContext'
-import { attendants, isActive, nextTaskStatus, priorityRank } from './hkModel'
+import { isActive, nextTaskStatus, priorityRank } from './hkModel'
 import type { HkTask } from './hkModel'
 import { PriorityChip, TaskChip, btnGhost, card } from './hkUi'
 import { useRoomOverlays } from './useRoomOverlays'
@@ -8,9 +8,6 @@ import { checklistChoices, matchChoices } from '../../lib/cleaning'
 import { useFeatures } from '../platform/featuresContext'
 import { useAuth } from '../auth/authContext'
 import LogItemDialog from '../lostfound/LogItemDialog'
-
-const staff = attendants.filter((a) => a !== 'Unassigned')
-const POOL = 8
 
 /** A room number or the name of a public area. */
 const placeName = (t: HkTask) => (t.area ? t.room : `Room ${t.room}`)
@@ -206,59 +203,50 @@ function DeclineSheet({ task, onClose, onDecline }: { task: HkTask; onClose: () 
   )
 }
 
-// Built for a phone in the corridor: one column, big buttons, only the person's own work.
-export default function MyRoomsPage() {
+// Built for a phone in the corridor: one column, big buttons, only this person's own work.
+export default function MyTasksPage() {
   const hk = useHousekeeping()
   const { user } = useAuth()
   const { overlays, openRoom, reportIssue } = useRoomOverlays()
-  const [me, setMe] = useState(user?.staffName && staff.includes(user.staffName) ? user.staffName : staff[0])
   const [finishing, setFinishing] = useState<HkTask | null>(null)
   const [declining, setDeclining] = useState<HkTask | null>(null)
   const [foundIn, setFoundIn] = useState<string | null>(null)
 
-  const { mine, now, done, pool, poolTotal } = useMemo(() => {
+  // Who is signed in is who this page is for. The work comes from the supervisor, not from a list
+  // the attendant picks off, so there is one person responsible for who is where.
+  const me = user?.staffName ?? ''
+
+  const { mine, now, done } = useMemo(() => {
     const sort = (a: HkTask, b: HkTask) =>
       priorityRank[a.priority] - priorityRank[b.priority] || a.dueTime.localeCompare(b.dueTime)
-    const open = hk.tasks.filter(isActive)
-    const waiting = open.filter((t) => t.attendant === 'Unassigned').sort(sort)
-    const mineAll = open.filter((t) => t.attendant === me).sort(sort)
+    const mineAll = hk.tasks.filter((t) => isActive(t) && t.attendant === me).sort(sort)
     return {
       mine: mineAll.filter((t) => t.status !== 'In Progress'),
       now: mineAll.find((t) => t.status === 'In Progress') ?? null,
       done: hk.tasks.filter((t) => t.attendant === me && t.status === 'Completed').length,
-      pool: waiting.slice(0, POOL),
-      poolTotal: waiting.length,
     }
   }, [hk.tasks, me])
 
-  const verb = (t: HkTask) =>
-    t.status === 'Assigned' ? 'Start' : t.status === 'In Progress' ? 'Finish' : 'Take this'
-
-  function act(t: HkTask) {
-    if (t.status === 'In Progress') setFinishing(t)
-    else hk.advanceTask(t)
+  if (!me) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <div className={`${card} p-6 text-center`}>
+          <p className="font-semibold">This page is for room attendants</p>
+          <p className="mt-1 text-sm text-ink/60">
+            It shows the work given to whoever is signed in. Your account is not on the housekeeping staff list.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="mx-auto max-w-xl space-y-5 pb-24">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-ink/50">Housekeeping</p>
-        <h1 className="text-2xl font-bold">My work today</h1>
-        <label htmlFor="me" className="mt-3 block text-sm font-medium">
-          I am
-        </label>
-        <select
-          id="me"
-          value={me}
-          onChange={(e) => setMe(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-3 text-base"
-        >
-          {staff.map((a) => (
-            <option key={a}>{a}</option>
-          ))}
-        </select>
-        <p className="mt-2 text-sm text-ink/60">
-          {mine.length + (now ? 1 : 0)} to do &middot; {done} done
+        <h1 className="text-2xl font-bold">My tasks</h1>
+        <p className="mt-1 text-sm text-ink/60">
+          {user?.name} &middot; {mine.length + (now ? 1 : 0)} to do &middot; {done} done
         </p>
       </div>
 
@@ -304,8 +292,10 @@ export default function MyRoomsPage() {
       <section className="space-y-3">
         {mine.length === 0 && !now && (
           <div className={`${card} p-6 text-center`}>
-            <p className="font-semibold">Nothing assigned to you</p>
-            <p className="text-sm text-ink/60">Take something from the list below.</p>
+            <p className="font-semibold">Nothing on your list</p>
+            <p className="mt-1 text-sm text-ink/60">
+              Your supervisor gives out the work. Anything handed to you shows up here.
+            </p>
           </div>
         )}
         {mine.map((t) => (
@@ -333,10 +323,10 @@ export default function MyRoomsPage() {
               {nextTaskStatus(t.status) && (
                 <button
                   type="button"
-                  onClick={() => act(t)}
+                  onClick={() => hk.advanceTask(t)}
                   className="w-full rounded-xl bg-brand px-4 py-4 text-base font-semibold text-white"
                 >
-                  {verb(t)}
+                  Start
                 </button>
               )}
               <div className="grid grid-cols-2 gap-2">
@@ -364,38 +354,6 @@ export default function MyRoomsPage() {
             </div>
           </div>
         ))}
-      </section>
-
-      <section>
-        <h2 className="mb-2 font-semibold">Waiting for someone ({poolTotal})</h2>
-        <div className="space-y-2">
-          {pool.map((t) => (
-            <div key={t.id} className={`${card} flex items-center justify-between gap-3 p-3`}>
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{placeName(t)}</p>
-                <p className="text-xs text-ink/60">
-                  {t.type} &middot; due {t.dueTime}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <PriorityChip priority={t.priority} />
-                <button
-                  type="button"
-                  onClick={() => hk.takeTask(t, me)}
-                  className="rounded-lg border border-brand px-3 py-3 text-xs font-semibold text-brand"
-                >
-                  Take and start
-                </button>
-              </div>
-            </div>
-          ))}
-          {poolTotal > POOL && (
-            <p className="text-center text-xs text-ink/60">
-              Showing the {POOL} most urgent of {poolTotal}.
-            </p>
-          )}
-          {poolTotal === 0 && <p className="text-sm text-ink/60">Every job has someone on it.</p>}
-        </div>
       </section>
 
       {finishing && (

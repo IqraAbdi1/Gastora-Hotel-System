@@ -148,8 +148,8 @@ export const ROLES: Role[] = [
     id: 'attendant',
     label: 'Room attendant',
     blurb: 'Cleans rooms, reports problems and asks for supplies.',
-    landing: '/housekeeping/my-rooms',
-    allow: ['/housekeeping/my-rooms', '/housekeeping/supplies'],
+    landing: '/housekeeping/my-tasks',
+    allow: ['/housekeeping/my-tasks', '/housekeeping/supplies'],
     actions: ['raiseRequest'],
   },
   {

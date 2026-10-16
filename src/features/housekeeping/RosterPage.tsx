@@ -29,6 +29,7 @@ export default function RosterPage() {
   const [view, setView] = useState<View>('roster')
   const [q, setQ] = useState('')
   const [who, setWho] = useState('all')
+  const [day, setDay] = useState('all')
   const [focus, setFocus] = useState('all')
 
   const canAssign = can('manageStock') || can('changeSettings') || can('endorseRequest')
@@ -76,9 +77,16 @@ export default function RosterPage() {
     return cleaning.filter(
       (h) =>
         (who === 'all' || h.entry.user === who) &&
+        (day === 'all' || h.entry.day === day) &&
         (!text || `${h.room} ${h.entry.user} ${h.entry.action} ${h.entry.note}`.toLowerCase().includes(text)),
     )
-  }, [cleaning, q, who])
+  }, [cleaning, q, who, day])
+
+  /** Days the record actually holds, newest first. */
+  const days = useMemo(
+    () => [...new Set(cleaning.map((h) => h.entry.day))].sort((a, b) => b.localeCompare(a)),
+    [cleaning],
+  )
 
   const unassigned = live.filter((t) => !t.attendant || t.attendant === 'Unassigned').length
   const done = tasks.filter((t) => t.status === 'Completed').length
@@ -247,12 +255,28 @@ export default function RosterPage() {
             <div className="min-w-60 flex-1">
               <FilterBar query={q} onQuery={setQ} placeholder="Search room, person or what was done" />
             </div>
+            <Select aria-label="Which day" className="w-44" value={day} onChange={(e) => setDay(e.target.value)}>
+              <option value="all">Any day</option>
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {d === TODAY ? `Today, ${d}` : d}
+                </option>
+              ))}
+            </Select>
             <Select aria-label="Who" className="w-44" value={who} onChange={(e) => setWho(e.target.value)}>
               <option value="all">Everyone</option>
               {[...new Set(cleaning.map((h) => h.entry.user))].map((u) => (
                 <option key={u}>{u}</option>
               ))}
             </Select>
+          </div>
+
+          <div className="rounded-xl border border-info/25 bg-info/[0.07] p-3 text-sm text-ink/80">
+            <p className="font-semibold text-ink">A guest comes back asking about something they left</p>
+            <p className="mt-0.5 text-xs">
+              Ask which room and roughly which day. Pick the room below and the day above, and the record names
+              whoever was in that room, with what they did and how long it took.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -272,7 +296,7 @@ export default function RosterPage() {
           >
             {record.length === 0 ? (
               <p className="text-sm text-ink/55">
-                Nothing recorded yet. An entry is written whenever a room is cleaned, inspected or marked ready.
+                Nothing matches. Try another day, or clear the room and the person.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -286,7 +310,9 @@ export default function RosterPage() {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-sm font-medium text-ink">{h.entry.user}</p>
-                      <p className="text-xs text-ink/55">{h.entry.time}</p>
+                      <p className="text-xs text-ink/55">
+                        {h.entry.day === TODAY ? 'Today' : h.entry.day} &middot; {h.entry.time}
+                      </p>
                     </div>
                   </li>
                 ))}

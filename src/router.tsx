@@ -23,7 +23,7 @@ import FoliosPage from './features/frontdesk/FoliosPage'
 import CompaniesPage from './features/corporate/CompaniesPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 import TasksPage from './features/housekeeping/TasksPage'
-import MyRoomsPage from './features/housekeeping/MyRoomsPage'
+import MyTasksPage from './features/housekeeping/MyTasksPage'
 import InspectionsPage from './features/housekeeping/InspectionsPage'
 import IssuesPage from './features/housekeeping/IssuesPage'
 import RoomsOutOfOrderPage from './features/maintenance/RoomsOutOfOrderPage'
@@ -73,7 +73,7 @@ export const router = createBrowserRouter([
           // Housekeeping
           { path: 'housekeeping', element: <HousekeepingPage /> },
           { path: 'housekeeping/tasks', element: <TasksPage /> },
-          { path: 'housekeeping/my-rooms', element: <MyRoomsPage /> },
+          { path: 'housekeeping/my-tasks', element: <MyTasksPage /> },
           { path: 'housekeeping/roster', element: <RosterPage /> },
           {
             path: 'housekeeping/inspections',

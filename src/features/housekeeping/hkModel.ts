@@ -77,7 +77,8 @@ export type RoomDefect = {
   note?: string
 }
 
-export type RoomHistory = { id: string; time: string; action: string; user: string; note: string }
+/** `day` is what makes the record answer a question asked a week later. */
+export type RoomHistory = { id: string; day: string; time: string; action: string; user: string; note: string }
 export type RoomMessage = { id: string; time: string; from: 'Front desk' | 'Housekeeping'; text: string }
 export type RoomThread = { messages: RoomMessage[]; readyBy?: string }
 
