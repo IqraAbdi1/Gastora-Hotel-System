@@ -6,7 +6,16 @@ import { TODAY } from '../../data/sample'
 import { chargeCategories, folioOf, paymentMethods } from '../../lib/folio'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import { nightsBetween } from '../../lib/format'
+import { lateCheckoutFee, nowTime } from '../../lib/stayTimes'
+import { isTaxCategory, vatInsideOf } from '../../lib/tax'
 import type { Reservation } from '../../types'
+import DocumentDialog from '../receipts/DocumentDialog'
+import { folioDoc } from '../receipts/documents'
+import { useAuth } from '../auth/authContext'
+import ApprovalGate from '../approvals/ApprovalGate'
+import { useApprovals } from '../approvals/approvalsContext'
+import { useFeatures } from '../platform/featuresContext'
 
 type Tab = 'folio' | 'charge' | 'payment' | 'out'
 type Props = { reservation: Reservation; onClose: () => void; startOn?: Tab }
@@ -18,8 +27,20 @@ const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0
 
 // One guest's folio. The parts sit on tabs, so each one fits on screen without scrolling.
 export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' }: Props) {
-  const { addCharge, addPayment, checkOut } = useHotel()
+  const { addCharge, addPayment, checkOut, reverseCharge } = useHotel()
   const f = folioOf(r)
+  const { tax, stayTimes, tenant, options } = useFeatures()
+  const { record } = useApprovals()
+  const { user } = useAuth()
+  const [printing, setPrinting] = useState(false)
+  // The charge being corrected, with the reason and the manager who approved it.
+  const [fixing, setFixing] = useState<string | null>(null)
+  const [fixReason, setFixReason] = useState('')
+  // The approval ladder opens once the reason is given.
+  const [asking, setAsking] = useState(false)
+  // VAT already inside the amounts. Tax and service lines are not VAT-able here, so they are left out of the base.
+  const taxLines = (r.charges ?? []).filter((c) => isTaxCategory(c.category)).reduce((n, c) => n + c.amount, 0)
+  const vatInside = tax && tax.vatOn && tax.vatMode === 'included' ? vatInsideOf(f.total - taxLines, tax.vatRate) : 0
   const live = r.status === 'in-house'
   const [picked, setTab] = useState<Tab>(startOn)
   // Once the guest has checked out only the folio and invoice remain.
@@ -38,6 +59,12 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
   const chargeValid = chargeAmount > 0 && description.trim() !== ''
   const payAmount = digits(payText)
   const payValid = payAmount > 0 && payAmount <= f.balance
+
+  // Late check-out, from the hotel's times and the clock now. The rate is one night's room charge.
+  const clock = nowTime()
+  const nights = Math.max(1, nightsBetween(r.arrival, r.departure))
+  const late = lateCheckoutFee(stayTimes, clock, f.roomCharge / nights)
+  const lateCharged = (r.charges ?? []).some((c) => c.category === 'Late check-out')
   const canOut = f.balance <= 0 || (authorise && authReason.trim().length >= 5)
 
   function postCharge() {
@@ -79,7 +106,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
       aria-modal="true"
       aria-label={`Folio for ${r.guest}`}
     >
-    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="border-b border-ink/10 bg-linear-to-r from-brand/[0.07] to-transparent p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -122,22 +149,127 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
               <p className={heading}>Charges</p>
               <dl className="mt-2 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-ink/60">Room charges for the stay</dt>
+                  <dt className="text-ink/60">
+                    Room charges for the stay
+                    {r.upgrade && <span className="block text-xs">{r.upgrade.to}, free upgrade from {r.upgrade.from}. Charged at the {r.upgrade.from} rate.</span>}
+                  </dt>
                   <dd className="font-medium tabular-nums">{ugx(f.roomCharge)}</dd>
                 </div>
                 {(r.charges ?? []).map((c) => (
-                  <div key={c.id} className="flex justify-between gap-4">
-                    <dt className="text-ink/60">
-                      {c.category}: {c.description}
-                      <span className="block text-xs">{c.at}</span>
-                    </dt>
-                    <dd className="font-medium tabular-nums">{ugx(c.amount)}</dd>
+                  <div key={c.id}>
+                    <div className="flex justify-between gap-4">
+                      <dt className={c.reversedBy ? 'text-ink/40 line-through' : 'text-ink/60'}>
+                        {c.category}: {c.description}
+                        <span className="block text-xs no-underline">
+                          {c.at}
+                          {c.reversedBy && ' · cancelled'}
+                          {c.reverses && c.approvedBy && ` · ${c.reason} · approved by ${c.approvedBy}`}
+                        </span>
+                      </dt>
+                      <dd
+                        className={`font-medium tabular-nums ${
+                          c.reversedBy ? 'text-ink/40 line-through' : c.amount < 0 ? 'text-good' : ''
+                        }`}
+                      >
+                        {c.amount < 0 ? `− ${ugx(Math.abs(c.amount))}` : ugx(c.amount)}
+                      </dd>
+                    </div>
+                    {live && !c.reversedBy && !c.reverses && (
+                      fixing === c.id ? (
+                        <div className="mt-1.5 space-y-2">
+                          <div className="space-y-2 rounded-lg border border-warn/30 bg-warn/10 p-2.5">
+                            <p className="text-xs font-semibold text-warn">Cancel this charge</p>
+                            <input
+                              value={fixReason}
+                              onChange={(e) => setFixReason(e.target.value)}
+                              placeholder="Why is it wrong?"
+                              aria-label="Reason"
+                              className={field}
+                            />
+                            {!asking && (
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="secondary" disabled={fixReason.trim() === ''} onClick={() => setAsking(true)}>
+                                  Ask for approval
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setFixing(null)
+                                    setAsking(false)
+                                  }}
+                                >
+                                  Keep it
+                                </Button>
+                              </div>
+                            )}
+                            <p className="text-xs text-ink/60">
+                              The charge stays on the folio with a matching line that cancels it, so the guest can see what
+                              happened. The amount decides who must approve.
+                            </p>
+                          </div>
+                          {asking && (
+                            <ApprovalGate
+                              amount={c.amount}
+                              limits={options.limits}
+                              plan={tenant.plan}
+                              kind="charge-reversal"
+                              what={`${c.category}: ${c.description}`}
+                              onCancel={() => setAsking(false)}
+                              onApproved={(approvers, photoSkipped) => {
+                                const names = approvers.map((a) => a.name).join(' and ')
+                                reverseCharge(r.id, c.id, fixReason.trim(), names)
+                                record({
+                                  kind: 'charge-reversal',
+                                  what: `${c.category}: ${c.description} · ${r.guest}`,
+                                  amount: c.amount,
+                                  requestedBy: user?.name ?? 'Front desk',
+                                  reason: fixReason.trim(),
+                                  approvers,
+                                  level: approvers.length > 1 ? 'executive' : 'manager',
+                                  photoSkipped,
+                                  reservationId: r.id,
+                                })
+                                setFixing(null)
+                                setAsking(false)
+                                setFixReason('')
+                              }}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setFixing(c.id)}
+                          className="text-xs font-semibold text-brand hover:underline"
+                        >
+                          Correct this charge
+                        </button>
+                      )
+                    )}
                   </div>
                 ))}
                 <div className="flex justify-between gap-4 border-t border-ink/10 pt-2">
                   <dt className="font-semibold">Total</dt>
                   <dd className="font-bold tabular-nums">{ugx(f.total)}</dd>
                 </div>
+                {tax && (vatInside > 0 || taxLines > 0) && (
+                  <div className="rounded-lg bg-brand/[0.06] p-2.5 text-xs text-ink/70">
+                    <p className="font-semibold text-ink/80">Tax summary</p>
+                    {vatInside > 0 && (
+                      <p className="mt-1 flex justify-between gap-4">
+                        <span>VAT {Math.round(tax.vatRate * 100)}% included in the amounts above</span>
+                        <span className="tabular-nums">{ugx(vatInside)}</span>
+                      </p>
+                    )}
+                    {taxLines > 0 && (
+                      <p className="mt-1 flex justify-between gap-4">
+                        <span>Taxes and service charge added at check-in</span>
+                        <span className="tabular-nums">{ugx(taxLines)}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </dl>
             </div>
 
@@ -168,6 +300,15 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
               </dl>
             </div>
 
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setPrinting(true)}>
+                {r.invoice ? 'Print tax invoice' : f.balance <= 0 ? 'Print receipt' : 'Print folio'}
+              </Button>
+              <span className="self-center text-xs text-ink/55">
+                {r.invoice ? 'The invoice as issued at check-out.' : 'A copy of the folio so far, for the guest.'}
+              </span>
+            </div>
+
             {r.invoice && (
               <div className="rounded-lg border border-good/40 bg-good/10 p-3 text-sm">
                 <p className="font-semibold text-good">Checked out {r.checkedOutAt}</p>
@@ -176,14 +317,52 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                     <dt className="text-ink/60">Invoice</dt>
                     <dd className="font-medium">{r.invoice.number}</dd>
                   </div>
+                  {r.invoice.roomNote && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-ink/60">Room</dt>
+                      <dd className="text-right font-medium">{r.invoice.roomNote}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between gap-4">
                     <dt className="text-ink/60">Amount</dt>
                     <dd className="font-medium tabular-nums">{ugx(r.invoice.amount)}</dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-ink/60">Fiscal code</dt>
-                    <dd className="font-medium">{r.invoice.fiscalCode}</dd>
-                  </div>
+                  {vatInside > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-ink/60">Includes VAT</dt>
+                      <dd className="font-medium tabular-nums">{ugx(vatInside)}</dd>
+                    </div>
+                  )}
+                  {r.invoice.fiscal === 'exempt' ? (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-ink/60">EFRIS</dt>
+                      <dd className="text-right font-medium">Exempt{r.invoice.exemptReason ? `: ${r.invoice.exemptReason}` : ''}</dd>
+                    </div>
+                  ) : r.invoice.fiscal === 'notSet' ? (
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-ink/60">EFRIS</dt>
+                      <dd className="font-medium text-warn">Not set up. Open Admin, Taxes and EFRIS.</dd>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-ink/60">Fiscal document no.</dt>
+                        <dd className="font-medium">{r.invoice.fiscalCode}</dd>
+                      </div>
+                      {r.invoice.verification && (
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-ink/60">Verification code</dt>
+                          <dd className="font-medium">{r.invoice.verification}</dd>
+                        </div>
+                      )}
+                      {r.invoice.tin && (
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-ink/60">Seller TIN</dt>
+                          <dd className="font-medium">{r.invoice.tin}</dd>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </dl>
                 {r.unpaidAtCheckout && (
                   <p className="mt-2 text-bad">
@@ -276,6 +455,25 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
         {tab === 'out' && live && (
           <div className="space-y-3">
             <p className={heading}>Check out</p>
+            {r.departure <= TODAY && late.kind !== 'none' && !lateCharged && (
+              <div className="rounded-lg border border-warn/30 bg-warn/10 p-3 text-sm">
+                <p className="font-semibold text-warn">Past check-out time ({stayTimes.checkOutTime})</p>
+                <p className="mt-0.5 text-xs text-ink/70">
+                  It is {clock}. Rule: free until {stayTimes.lateFreeUntil}, half a night until {stayTimes.lateHalfUntil}, then a
+                  full night. {late.label}: {ugx(late.amount)}.
+                </p>
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => addCharge(r.id, { category: 'Late check-out', description: late.label, amount: late.amount })}
+                  >
+                    Add late check-out charge {ugx(late.amount)}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {lateCharged && <p className="rounded-lg bg-good/10 p-2.5 text-xs font-semibold text-good">Late check-out charge is on the folio.</p>}
             {r.departure !== TODAY && (
               <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">
                 Departure is booked for {dayMonth(r.departure)}. If the guest is leaving on a different day, use Change stay first so the room charges are right.
@@ -315,6 +513,12 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
         )}
       </div>
     </div>
+    {printing && (
+      <DocumentDialog
+        doc={folioDoc(r, tenant.name, user?.name ?? 'Front desk', { vatInside, vatRate: tax?.vatRate })}
+        onClose={() => setPrinting(false)}
+      />
+    )}
     </div>
   )
 }
