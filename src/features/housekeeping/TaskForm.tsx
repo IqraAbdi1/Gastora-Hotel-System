@@ -1,90 +1,136 @@
 import { useMemo, useState } from 'react'
+import { Button, Field, Input, Modal, Select, Textarea } from '../../components/ui'
 import { useHotel } from '../../lib/hotelContext'
 import { useHousekeeping } from './hkContext'
-import { CHECKIN_TIME, attendants, taskTypes } from './hkModel'
-import { PUBLIC_AREA } from './hkModel'
+import { CHECKIN_TIME, PUBLIC_AREA, attendants, taskTypes } from './hkModel'
 import type { Priority, TaskType } from './hkModel'
-import { Modal, btnGhost, btnPrimary, field } from './hkUi'
 
+/**
+ * Work the hotel raises by hand. Dirty rooms, the daily service and the public areas on the schedule
+ * all appear by themselves; this is for everything else, including an extra clean of an area.
+ */
 export default function TaskForm({ presetRoom = '', onClose }: { presetRoom?: string; onClose: () => void }) {
   const { rooms } = useHotel()
   const hk = useHousekeeping()
   const [room, setRoom] = useState(presetRoom)
   const [type, setType] = useState<TaskType>('Stay Over')
+  const [areaId, setAreaId] = useState(hk.areas[0]?.id ?? '')
   const [priority, setPriority] = useState<Priority>('Normal')
   const [attendant, setAttendant] = useState('Unassigned')
   const [dueTime, setDueTime] = useState(CHECKIN_TIME)
   const [notes, setNotes] = useState('')
 
+  const isArea = type === PUBLIC_AREA
   // Type the room number instead of scrolling a list of every room.
   const byNumber = useMemo(() => new Map(rooms.map((r) => [r.number, r])), [rooms])
   const match = byNumber.get(room.trim())
+  const area = hk.areas.find((a) => a.id === areaId)
+  const ready = isArea ? !!area : !!match
 
   function save() {
-    if (!match) return
-    hk.createTask({ room: match.number, type, priority, attendant, dueTime, notes })
+    if (isArea) {
+      if (!area) return
+      hk.createTask({ room: area.name, area: area.id, zone: area.where, type, priority, attendant, dueTime, notes })
+    } else {
+      if (!match) return
+      hk.createTask({ room: match.number, type, priority, attendant, dueTime, notes })
+    }
     onClose()
   }
 
   return (
-    <Modal onClose={onClose} label="Create housekeeping task">
-      <div className="w-full max-w-xl rounded-2xl bg-surface shadow-2xl">
-        <div className="flex items-start justify-between border-b border-ink/10 px-6 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink/50">Housekeeping</p>
-            <h2 className="text-xl font-bold">New task</h2>
-            <p className="text-sm text-ink/60">Dirty rooms get a task automatically. Use this for anything else.</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg px-2 py-1 text-xl text-ink/50 hover:bg-canvas">×</button>
-        </div>
+    <Modal
+      title="New task"
+      description="Dirty rooms, the daily service and the public areas on the schedule appear by themselves. Use this for anything else."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={!ready}>
+            Create task
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Task type">
+          {(id) => (
+            <Select id={id} value={type} onChange={(e) => setType(e.target.value as TaskType)}>
+              {taskTypes.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </Select>
+          )}
+        </Field>
 
-        <div className="grid gap-4 p-6 sm:grid-cols-2">
-          <div>
-            <label htmlFor="task-room" className="mb-1 block text-sm font-medium">Room number</label>
-            <input id="task-room" inputMode="numeric" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="e.g. 102" className={field} autoFocus />
-            <p className={`mt-1 text-xs ${match ? 'text-good' : 'text-ink/50'}`}>
-              {match ? `${match.type} room` : room ? 'No room with that number' : 'Type the room number'}
-            </p>
-          </div>
-          <div>
-            <label htmlFor="task-type" className="mb-1 block text-sm font-medium">Task type</label>
-            <select id="task-type" value={type} onChange={(e) => setType(e.target.value as TaskType)} className={field}>
-              {taskTypes
-                .filter((t) => t !== PUBLIC_AREA)
-                .map((t) => (
-                  <option key={t}>{t}</option>
+        {isArea ? (
+          <Field label="Which area" hint={area ? area.where : 'No public areas are set up yet'}>
+            {(id) => (
+              <Select id={id} value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+                {hk.areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
                 ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="task-priority" className="mb-1 block text-sm font-medium">Priority</label>
-            <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} className={field}>
+              </Select>
+            )}
+          </Field>
+        ) : (
+          <Field
+            label="Room number"
+            hint={match ? `${match.type} room` : room ? 'No room with that number' : 'Type the room number'}
+          >
+            {(id) => (
+              <Input
+                id={id}
+                inputMode="numeric"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                placeholder="e.g. 102"
+                autoFocus
+              />
+            )}
+          </Field>
+        )}
+
+        <Field label="Priority">
+          {(id) => (
+            <Select id={id} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
               <option>Urgent</option>
               <option>High</option>
               <option>Normal</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="task-attendant" className="mb-1 block text-sm font-medium">Assign to</label>
-            <select id="task-attendant" value={attendant} onChange={(e) => setAttendant(e.target.value)} className={field}>
+            </Select>
+          )}
+        </Field>
+
+        <Field label="Assign to">
+          {(id) => (
+            <Select id={id} value={attendant} onChange={(e) => setAttendant(e.target.value)}>
               {attendants.map((a) => (
                 <option key={a}>{a}</option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="task-due" className="mb-1 block text-sm font-medium">Due time</label>
-            <input id="task-due" type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} className={field} />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="task-notes" className="mb-1 block text-sm font-medium">Notes</label>
-            <textarea id="task-notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Instructions for the attendant..." className={`${field} resize-none`} />
-          </div>
-        </div>
+            </Select>
+          )}
+        </Field>
 
-        <div className="flex justify-end gap-2 border-t border-ink/10 px-6 py-4">
-          <button type="button" onClick={onClose} className={btnGhost}>Cancel</button>
-          <button type="button" onClick={save} disabled={!match} className={btnPrimary}>Create task</button>
+        <Field label="Due time">
+          {(id) => <Input id={id} type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />}
+        </Field>
+
+        <div className="sm:col-span-2">
+          <Field label="Notes">
+            {(id) => (
+              <Textarea
+                id={id}
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Instructions for the attendant"
+              />
+            )}
+          </Field>
         </div>
       </div>
     </Modal>

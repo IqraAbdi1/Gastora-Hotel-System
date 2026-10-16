@@ -29,6 +29,7 @@ export default function RosterPage() {
   const [view, setView] = useState<View>('roster')
   const [q, setQ] = useState('')
   const [who, setWho] = useState('all')
+  const [focus, setFocus] = useState('all')
 
   const canAssign = can('manageStock') || can('changeSettings') || can('endorseRequest')
   const live = tasks.filter(isActive)
@@ -44,6 +45,20 @@ export default function RosterPage() {
     }
     return { byName, spare }
   }, [live])
+
+  // Finished work still belongs to the name that did it, even though it is no longer on the list.
+  const finishedBy = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of tasks) {
+      if (t.status !== 'Completed' || !t.attendant) continue
+      map.set(t.attendant, (map.get(t.attendant) ?? 0) + 1)
+    }
+    return map
+  }, [tasks])
+
+  const working = [...roster.byName.entries()].filter(([, list]) => list.length > 0)
+  const free = [...roster.byName.entries()].filter(([, list]) => list.length === 0).map(([name]) => name)
+  const shown = working.filter(([name]) => focus === 'all' || focus === name)
 
   // Only the lines about work on a place: cleaning, the daily service, a public area, an inspection,
   // or a service the guest refused. That is what a guest question is ever about.
@@ -97,18 +112,66 @@ export default function RosterPage() {
 
       {view === 'roster' ? (
         <>
-          {[...roster.byName.entries()].map(([name, list]) => (
+          <Card
+            title="Who is on today"
+            icon="guests"
+            padded
+            description="Every name at a glance. Tap one to see only their work."
+          >
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {[...roster.byName.entries()].map(([name, list]) => {
+                const busy = list.filter((t) => t.status === 'In Progress').length
+                const on = focus === name
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setFocus(on ? 'all' : name)}
+                    aria-pressed={on}
+                    className={`rounded-xl px-3 py-2.5 text-left ring-1 transition ${
+                      on
+                        ? 'bg-brand text-white ring-brand'
+                        : list.length
+                          ? 'bg-surface text-ink ring-ink/15 hover:ring-brand/40'
+                          : 'bg-canvas/60 text-ink/55 ring-ink/10 hover:ring-brand/30'
+                    }`}
+                  >
+                    <span className="block truncate text-base font-semibold">{name}</span>
+                    <span className={`block text-xs ${on ? 'text-white/80' : 'text-ink/60'}`}>
+                      {list.length === 0 ? 'Free' : `${list.length} to do`}
+                      {busy > 0 ? ' \u00b7 cleaning now' : ''}
+                      {finishedBy.get(name) ? ` \u00b7 ${finishedBy.get(name)} done` : ''}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {free.length > 0 && (
+              <p className="mt-3 text-sm text-ink/55">
+                Free to take something: <span className="font-medium text-ink/70">{free.join(', ')}</span>.
+              </p>
+            )}
+            {focus !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setFocus('all')}
+                className="mt-3 text-sm font-semibold text-brand hover:underline"
+              >
+                Show everyone
+              </button>
+            )}
+          </Card>
+
+          {shown.map(([name, list]) => (
             <Card
               key={name}
               title={name}
               icon="guests"
               count={list.length}
               padded
-              description={list.length === 0 ? 'Nothing on their list today.' : `${list.map((t) => placeLabel(t.room)).join(', ')}`}
+              description={`${list.map((t) => placeLabel(t.room)).join(', ')}`}
             >
-              {list.length === 0 ? (
-                <p className="text-sm text-ink/55">Nothing on their list. They are free to take a room.</p>
-              ) : (
+              {(
                 <ul className="space-y-2">
                   {list
                     .slice()
@@ -131,6 +194,14 @@ export default function RosterPage() {
               )}
             </Card>
           ))}
+
+          {working.length === 0 && (
+            <Card title="Nobody has anything yet" icon="alert" padded>
+              <p className="text-sm text-ink/55">
+                Hand out the work below and the names above will fill in.
+              </p>
+            </Card>
+          )}
 
           <Card title="Nobody assigned yet" icon="alert" count={roster.spare.length} padded>
             {roster.spare.length === 0 ? (

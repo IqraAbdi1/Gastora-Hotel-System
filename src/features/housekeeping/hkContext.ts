@@ -14,12 +14,17 @@ import type {
 } from './hkModel'
 
 export type NewTask = {
+  /** A room number, or the name of a public area when `area` is set. */
   room: string
   type: TaskType
   priority: Priority
   attendant: string
   dueTime: string
   notes: string
+  /** Set to raise work on a public area rather than a room. */
+  area?: string
+  /** Where the area is. Rooms work their own zone out from the floor. */
+  zone?: string
 }
 
 export type ExceptionKind = Extract<HkRequest, 'out-of-service' | 'out-of-order' | 'discrepancy'>
@@ -45,6 +50,8 @@ export type HkValue = {
   createTask: (input: NewTask) => void
   /** Move the task on one step. On the finishing step, what the attendant recorded doing. */
   advanceTask: (task: HkTask, checklist?: string[]) => void
+  /** An attendant takes work off the board. Taking it starts it, and the time is recorded. */
+  takeTask: (task: HkTask, attendant: string) => void
   /** The guest refused today's service. Counted, so a room nobody enters is escalated. */
   declineTask: (task: HkTask, reason: string) => void
   /** The public areas this hotel cleans. */

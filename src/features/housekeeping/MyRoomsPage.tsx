@@ -381,10 +381,10 @@ export default function MyRoomsPage() {
                 <PriorityChip priority={t.priority} />
                 <button
                   type="button"
-                  onClick={() => hk.assignTask(t.id, me)}
+                  onClick={() => hk.takeTask(t, me)}
                   className="rounded-lg border border-brand px-3 py-3 text-xs font-semibold text-brand"
                 >
-                  Take this
+                  Take and start
                 </button>
               </div>
             </div>

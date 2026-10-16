@@ -492,19 +492,22 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
 
   // ---- tasks ----
   function createTask(input: NewTask) {
-    const record = roomByNumber.get(input.room)
-    if (!record) return
+    const record = input.area ? undefined : roomByNumber.get(input.room)
+    // A room task needs a real room. An area task carries its own name and place.
+    if (!input.area && !record) return
     setTasks((current) => [
       {
         id: current.reduce((m, t) => Math.max(m, t.id), 0) + 1,
         room: input.room,
+        area: input.area,
         type: input.type,
-        zone: zoneOf(record),
+        zone: record ? zoneOf(record) : (input.zone ?? ''),
         priority: input.priority,
         attendant: input.attendant,
         dueTime: input.dueTime,
         status: input.attendant === 'Unassigned' ? 'Unassigned' : 'Assigned',
         notes: input.notes.trim(),
+        day: TODAY,
       },
       ...current,
     ])
@@ -606,6 +609,27 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     }
     const who = task.attendant && task.attendant !== 'Unassigned' ? task.attendant : 'Housekeeping'
     log(task.room, 'Service declined', reason.trim() || 'The guest asked not to be disturbed.', who)
+  }
+
+  /**
+   * An attendant picks work off the board. Taking it is starting it: she is standing at the door,
+   * and the head should see the room as being cleaned without anyone else pressing a button.
+   */
+  function takeTask(task: HkTask, attendant: string) {
+    const at = clock()
+    setTasks((current) =>
+      current.map((t) =>
+        t.id === task.id
+          ? { ...t, attendant, status: 'In Progress' as const, startedAt: t.startedAt ?? at }
+          : t,
+      ),
+    )
+    if (cleanTypes.includes(task.type)) {
+      setHousekeeping(task.room, 'cleaning')
+      log(task.room, 'Cleaning started', `Started the ${task.type.toLowerCase()}.`, attendant)
+    } else {
+      log(task.room, `${task.type} started`, 'Work started.', attendant)
+    }
   }
 
   function assignTask(taskId: number, attendant: string) {
@@ -769,6 +793,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     resetRoom,
     createTask,
     advanceTask,
+    takeTask,
     declineTask,
     areas: options.areas,
     assignTask,
