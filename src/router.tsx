@@ -9,6 +9,7 @@ import TaxSettingsPage from './features/admin/TaxSettingsPage'
 import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
 import WaitingPage from './features/dashboard/WaitingPage'
+import RosterPage from './features/housekeeping/RosterPage'
 import GuestDocumentsPage from './features/frontdesk/GuestDocumentsPage'
 import LostFoundPage from './features/lostfound/LostFoundPage'
 import ApprovalsPage from './features/approvals/ApprovalsPage'
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
           { path: 'housekeeping', element: <HousekeepingPage /> },
           { path: 'housekeeping/tasks', element: <TasksPage /> },
           { path: 'housekeeping/my-rooms', element: <MyRoomsPage /> },
+          { path: 'housekeeping/roster', element: <RosterPage /> },
           {
             path: 'housekeeping/inspections',
             element: (

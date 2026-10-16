@@ -6,6 +6,7 @@ import type {
   Priority,
   RoomDefect,
   RoomDetails,
+  RoomHistory,
   RoomMessage,
   RoomThread,
   TaskType,
@@ -29,6 +30,8 @@ export type HkValue = {
   allDefects: { room: string; defect: RoomDefect }[]
 
   detailsOf: (room: string) => RoomDetails
+  /** Everything that happened in every room, newest first. Used by the cleaning record. */
+  allHistory: { room: string; entry: RoomHistory }[]
   stayOf: (room: string) => Reservation | undefined
   threadOf: (room: string) => RoomThread
 

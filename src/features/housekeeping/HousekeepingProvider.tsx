@@ -176,6 +176,13 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     return out
   }, [details])
 
+  // Every room's history in one list, newest first, so the cleaning record does not have to open each room.
+  const allHistory = useMemo(() => {
+    const out: HkValue['allHistory'] = []
+    for (const [room, d] of Object.entries(details)) for (const entry of d.history) out.push({ room, entry })
+    return out.sort((a, b) => b.entry.time.localeCompare(a.entry.time))
+  }, [details])
+
   const counts = useMemo(() => {
     let toClean = 0
     let toInspect = 0
@@ -232,7 +239,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   }
 
   // One place for "the attendant finished this room", used by both the Rooms page and the Tasks page.
-  function completeCleaning(room: string, rushed: boolean) {
+  function completeCleaning(room: string, rushed: boolean, attendant?: string) {
     const inspect = needsInspection(room, rushed)
     setHousekeeping(room, inspect ? 'cleaned' : 'ready')
     patchDetails(room, (d) => ({ ...d, lastCleaned: `Today ${clock()}` }))
@@ -242,7 +249,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
       else if (rushed && options.skipRushed) note = 'Room ready. Rushed by the front desk, so inspection was skipped.'
       else note = 'Room ready. Not picked for inspection (spot-check).'
     }
-    log(room, 'Cleaning completed', note)
+    log(room, 'Cleaning completed', note, attendant && attendant !== 'Unassigned' ? attendant : 'Housekeeping')
     if (rushed) setReadyAlerts((current) => ({ ...current, [room]: clock() }))
   }
 
@@ -253,10 +260,15 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     if (next === 'Being Cleaned') {
       setHousekeeping(room.room, 'cleaning')
       setActiveTaskStatus(room.room, 'In Progress')
-      log(room.room, 'Cleaning started', room.attendant === 'Unassigned' ? 'Started cleaning.' : `${room.attendant} started cleaning.`)
+      log(
+        room.room,
+        'Cleaning started',
+        'Started cleaning.',
+        room.attendant && room.attendant !== 'Unassigned' ? room.attendant : 'Housekeeping',
+      )
     } else if (next === 'Clean') {
       setActiveTaskStatus(room.room, 'Completed')
-      completeCleaning(room.room, !!room.rushed)
+      completeCleaning(room.room, !!room.rushed, room.attendant)
     } else if (next === 'Inspected') {
       inspectRoom(room.room, true, '')
     }
@@ -398,13 +410,13 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     if (cleanTypes.includes(task.type)) {
       if (next === 'In Progress') {
         setHousekeeping(task.room, 'cleaning')
-        log(task.room, 'Cleaning started', `${task.attendant} started ${task.type.toLowerCase()}.`)
+        log(task.room, 'Cleaning started', `Started the ${task.type.toLowerCase()}.`, task.attendant)
       }
       if (next === 'Completed') {
-        completeCleaning(task.room, task.notes.startsWith(RUSH_NOTE))
+        completeCleaning(task.room, task.notes.startsWith(RUSH_NOTE), task.attendant)
       }
     } else if (next === 'Completed') {
-      log(task.room, `${task.type} done`, `${task.attendant} completed the task.`)
+      log(task.room, `${task.type} done`, 'Task completed.', task.attendant)
     }
   }
 
@@ -558,6 +570,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     tasks: liveTasks,
     counts,
     allDefects,
+    allHistory,
     detailsOf: (room) => details[room] ?? defaultDetails(),
     stayOf: (room) => stays.get(room),
     threadOf,
