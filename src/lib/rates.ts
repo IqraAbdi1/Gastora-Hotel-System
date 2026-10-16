@@ -30,6 +30,8 @@ export interface RatesPolicy {
   noShowNights: number
   /** A booking with no deposit or card is released at this time on the arrival day. */
   releaseTime: string
+  /** Printed on the registration card. Empty means use the wording built from the hotel's times. */
+  houseRules: string
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -46,6 +48,19 @@ export const DEFAULT_RATES: RatesPolicy = {
   cancelChargeNights: 1,
   noShowNights: 1,
   releaseTime: '18:00',
+  houseRules: '',
+}
+
+/** The wording a hotel starts with, built from its own check-in and check-out times. */
+export function defaultHouseRules(checkInTime: string, checkOutTime: string) {
+  return `Check-in from ${checkInTime}. Check-out by ${checkOutTime}. Smoking is not allowed in the rooms.`
+}
+
+/** A meal plan id that is not already taken. */
+export function newPlanId(plans: MealPlanSetting[]) {
+  let n = plans.length + 1
+  while (plans.some((p) => p.id === `plan-${n}`)) n += 1
+  return `plan-${n}`
 }
 
 export const roomTypeList: Room['type'][] = ['Standard', 'Deluxe', 'Suite']

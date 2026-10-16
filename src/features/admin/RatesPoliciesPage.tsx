@@ -1,9 +1,11 @@
-import { Badge, Card, Field, Input, PageHeader, Textarea } from '../../components/ui'
+import { useState } from 'react'
+import { Badge, Button, Card, Field, Input, PageHeader, Select, Textarea } from '../../components/ui'
 import { ugx } from '../../lib/format'
-import { guaranteeRules, roomTypeList } from '../../lib/rates'
+import { defaultHouseRules, guaranteeRules, newPlanId, roomTypeList } from '../../lib/rates'
 import type { MealPlanSetting, RatesPolicy } from '../../lib/rates'
 import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
+import { useHotel } from '../../lib/hotelContext'
 import { useFeatures } from '../platform/featuresContext'
 
 const num = (s: string) => Number(s.replace(/[^\d]/g, '')) || 0
@@ -16,12 +18,29 @@ export default function RatesPoliciesPage() {
   const { tenant, options, setOptions, stayTimes } = useFeatures()
   const { can } = useAuth()
   const { accounts } = useCorporate()
+  const { reservations } = useHotel()
+  const [previewPlan, setPreviewPlan] = useState('')
   const rates = options.rates
   const editable = can('changeSettings')
 
   const set = (patch: Partial<RatesPolicy>) => setOptions({ rates: { ...rates, ...patch } })
   const setPlan = (id: string, patch: Partial<MealPlanSetting>) =>
     set({ plans: rates.plans.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
+
+  const addPlan = () =>
+    set({ plans: [...rates.plans, { id: newPlanId(rates.plans), name: '', inclusions: '', extraPerNight: 0 }] })
+  const removePlan = (id: string) => {
+    set({ plans: rates.plans.filter((p) => p.id !== id) })
+    if (previewPlan === id) setPreviewPlan('')
+  }
+  // A plan a guest is already booked on cannot be removed: the price they were sold would lose its meaning.
+  const planInUse = (id: string) => reservations.some((r) => r.plan === id && r.status !== 'cancelled')
+
+  // The wording is the hotel's own once it has typed one; until then it follows the times in Hotel settings.
+  const houseRulesDefault = defaultHouseRules(stayTimes.checkInTime, stayTimes.checkOutTime)
+  const houseRules = rates.houseRules || houseRulesDefault
+
+  const shown = rates.plans.find((p) => p.id === previewPlan) ?? rates.plans[rates.plans.length - 1]
 
   const withAgreements = accounts.filter((a) => a.agreement && a.agreement.rules.length > 0)
   const guarantees = guaranteeRules(rates)
@@ -76,30 +95,69 @@ export default function RatesPoliciesPage() {
                 <Field label="What the guest gets">
                   {(id) => <Input id={id} value={p.inclusions} onChange={(e) => setPlan(p.id, { inclusions: e.target.value })} />}
                 </Field>
-                <Field label="Extra per night">
-                  {(id) => (
-                    <Input
-                      id={id}
-                      inputMode="numeric"
-                      className="w-32 tabular-nums"
-                      value={String(p.extraPerNight)}
-                      onChange={(e) => setPlan(p.id, { extraPerNight: num(e.target.value) })}
-                    />
-                  )}
-                </Field>
+                <div className="flex items-end gap-2">
+                  <Field label="Extra per night">
+                    {(id) => (
+                      <Input
+                        id={id}
+                        inputMode="numeric"
+                        className="w-32 tabular-nums"
+                        value={String(p.extraPerNight)}
+                        onChange={(e) => setPlan(p.id, { extraPerNight: num(e.target.value) })}
+                      />
+                    )}
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => removePlan(p.id)}
+                    disabled={rates.plans.length < 2 || planInUse(p.id)}
+                    title={
+                      planInUse(p.id)
+                        ? 'A guest is booked on this plan'
+                        : rates.plans.length < 2
+                          ? 'Keep at least one plan'
+                          : 'Remove this plan'
+                    }
+                    aria-label={`Remove ${p.name || 'this plan'}`}
+                    className="mb-1 rounded-lg px-2 py-2 text-sm text-ink/45 hover:bg-bad/10 hover:text-bad disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink/45"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={addPlan}
+            className="mt-3 text-sm font-semibold text-brand hover:underline"
+          >
+            + Add a meal plan
+          </button>
           <div className="mt-3 rounded-lg bg-brand/[0.06] p-3 text-sm">
-            <p className="font-semibold text-ink">What a guest pays tonight</p>
-            <ul className="mt-1 space-y-1 text-xs text-ink/70">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-ink">What a guest pays tonight</p>
+              <Select
+                aria-label="Meal plan to price"
+                className="w-auto"
+                value={shown?.id ?? ''}
+                onChange={(e) => setPreviewPlan(e.target.value)}
+              >
+                {rates.plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name || 'Unnamed plan'}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <ul className="mt-2 space-y-1 text-xs text-ink/70">
               {roomTypeList.map((t) => (
                 <li key={t} className="flex justify-between gap-4">
                   <span>
-                    {t} · {rates.plans[rates.plans.length - 1]?.name ?? 'top plan'}
+                    {t} · {shown?.name || 'Room only'}
                   </span>
                   <span className="font-semibold tabular-nums">
-                    {ugx(rates.roomRates[t] + (rates.plans[rates.plans.length - 1]?.extraPerNight ?? 0))}
+                    {ugx(rates.roomRates[t] + (shown?.extraPerNight ?? 0))}
                   </span>
                 </li>
               ))}
@@ -179,14 +237,29 @@ export default function RatesPoliciesPage() {
           </div>
         </Card>
 
-        <Card title="House rules shown to the guest" icon="list" padded description="Printed on the registration card at check-in.">
+        <Card
+          title="House rules shown to the guest"
+          icon="list"
+          padded
+          description="Printed on the registration card at check-in. Write whatever this hotel needs the guest to agree to."
+          actions={
+            rates.houseRules ? (
+              <Button size="sm" variant="secondary" onClick={() => set({ houseRules: '' })}>
+                Reset to the standard wording
+              </Button>
+            ) : undefined
+          }
+        >
           <Textarea
-            rows={3}
-            defaultValue={`Check-in from ${stayTimes.checkInTime}. Check-out by ${stayTimes.checkOutTime}. Smoking is not allowed in the rooms.`}
-            readOnly
+            rows={4}
+            aria-label="House rules"
+            value={houseRules}
+            onChange={(e) => set({ houseRules: e.target.value })}
           />
           <p className="mt-2 text-xs text-ink/55">
-            Times come from Hotel settings, so there is one place to change them.{' '}
+            {rates.houseRules
+              ? 'This hotel has written its own rules. Resetting brings back the wording built from your check-in and check-out times.'
+              : 'The times come from Hotel settings, so there is one place to change them. Start typing to write the hotel\u2019s own rules.'}{' '}
             <a href="/admin" className="font-semibold text-brand hover:underline">Open hotel settings</a>
           </p>
         </Card>
