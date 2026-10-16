@@ -11,13 +11,14 @@ const PLACES = ['Restaurant', 'Bar', 'Reception', 'Pool', 'Gym', 'Car park', 'Co
 
 // Housekeeping logs something they picked up. Where and when it was found is what lets the front desk
 // check a guest's claim later, so both are required.
-export default function LogItemDialog({ onClose }: { onClose: () => void }) {
+export default function LogItemDialog({ room: fixedRoom, onClose }: { room?: string; onClose: () => void }) {
   const { addItem } = useLostFound()
   const { rooms } = useHotel()
   const { user } = useAuth()
 
+  // Opened from the room she is cleaning: the room is already known and cannot be mistyped.
   const [inRoom, setInRoom] = useState(true)
-  const [room, setRoom] = useState('')
+  const [room, setRoom] = useState(fixedRoom ?? '')
   const [place, setPlace] = useState(PLACES[0])
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState(LOST_CATEGORIES[0])

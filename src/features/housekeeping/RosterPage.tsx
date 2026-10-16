@@ -4,12 +4,25 @@ import { Badge, Card, Chip, PageHeader, Segmented, Select, StatCard } from '../.
 import { TODAY } from '../../data/sample'
 import { useAuth } from '../auth/authContext'
 import { useHousekeeping } from './hkContext'
-import { attendants, isActive } from './hkModel'
+import { attendants, isActive, placeLabel } from './hkModel'
 import type { HkTask } from './hkModel'
 
 type View = 'roster' | 'record'
 
 /** Who is on which room today, and what was actually done. */
+// Words that mark a history line as work done on a room or an area.
+const WORK_WORDS = [
+  'clean',
+  'inspect',
+  'ready',
+  'service',
+  'declined',
+  'work recorded',
+  'public area',
+  'stay over',
+  'turndown',
+]
+
 export default function RosterPage() {
   const { tasks, rooms, allHistory, assignTask } = useHousekeeping()
   const { can } = useAuth()
@@ -32,12 +45,13 @@ export default function RosterPage() {
     return { byName, spare }
   }, [live])
 
-  // Only the lines that say a room was cleaned or checked, which is what a guest question is about.
+  // Only the lines about work on a place: cleaning, the daily service, a public area, an inspection,
+  // or a service the guest refused. That is what a guest question is ever about.
   const cleaning = useMemo(
     () =>
       allHistory.filter((h) => {
         const text = `${h.entry.action} ${h.entry.note}`.toLowerCase()
-        return text.includes('clean') || text.includes('inspect') || text.includes('ready')
+        return WORK_WORDS.some((w) => text.includes(w))
       }),
     [allHistory],
   )
@@ -90,7 +104,7 @@ export default function RosterPage() {
               icon="guests"
               count={list.length}
               padded
-              description={list.length === 0 ? 'No rooms today.' : `${list.map((t) => `Room ${t.room}`).join(', ')}`}
+              description={list.length === 0 ? 'Nothing on their list today.' : `${list.map((t) => placeLabel(t.room)).join(', ')}`}
             >
               {list.length === 0 ? (
                 <p className="text-sm text-ink/55">Nothing on their list. They are free to take a room.</p>
@@ -103,7 +117,7 @@ export default function RosterPage() {
                       <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-2.5">
                         <div className="min-w-0">
                           <p className="font-semibold text-ink">
-                            Room {t.room} <span className="font-normal text-ink/55">· {t.zone}</span>
+                            {placeLabel(t.room)} <span className="font-normal text-ink/55">· {t.zone}</span>
                           </p>
                           <p className="text-xs text-ink/60">
                             {t.type} · due {t.dueTime}
@@ -127,7 +141,7 @@ export default function RosterPage() {
                   <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warn/30 bg-warn/[0.07] p-2.5">
                     <div className="min-w-0">
                       <p className="font-semibold text-ink">
-                        Room {t.room} <span className="font-normal text-ink/55">· {t.zone}</span>
+                        {placeLabel(t.room)} <span className="font-normal text-ink/55">· {t.zone}</span>
                       </p>
                       <p className="text-xs text-ink/60">
                         {t.type} · due {t.dueTime}
@@ -173,7 +187,7 @@ export default function RosterPage() {
           <div className="flex flex-wrap gap-2">
             {['all', ...new Set(cleaning.map((h) => h.room))].slice(0, 12).map((r) => (
               <Chip key={r} active={q === (r === 'all' ? '' : r)} onClick={() => setQ(r === 'all' ? '' : r)}>
-                {r === 'all' ? 'All rooms' : `Room ${r}`}
+                {r === 'all' ? 'Everywhere' : placeLabel(r)}
               </Chip>
             ))}
           </div>
@@ -195,7 +209,7 @@ export default function RosterPage() {
                   <li key={h.entry.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-2.5">
                     <div className="min-w-0">
                       <p className="font-semibold text-ink">
-                        Room {h.room} <span className="font-normal text-ink/60">· {h.entry.action}</span>
+                        {placeLabel(h.room)} <span className="font-normal text-ink/60">· {h.entry.action}</span>
                       </p>
                       <p className="text-xs text-ink/60">{h.entry.note}</p>
                     </div>

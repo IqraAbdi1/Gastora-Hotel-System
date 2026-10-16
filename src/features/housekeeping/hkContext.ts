@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { HkRequest, Reservation } from '../../types'
+import type { CleaningArea } from '../../lib/cleaning'
 import type {
   HkRoom,
   HkTask,
@@ -42,7 +43,12 @@ export type HkValue = {
   resetRoom: (room: string) => void
 
   createTask: (input: NewTask) => void
-  advanceTask: (task: HkTask) => void
+  /** Move the task on one step. On the finishing step, what the attendant recorded doing. */
+  advanceTask: (task: HkTask, checklist?: string[]) => void
+  /** The guest refused today's service. Counted, so a room nobody enters is escalated. */
+  declineTask: (task: HkTask, reason: string) => void
+  /** The public areas this hotel cleans. */
+  areas: CleaningArea[]
   assignTask: (taskId: number, attendant: string) => void
   cancelTask: (taskId: number) => void
 

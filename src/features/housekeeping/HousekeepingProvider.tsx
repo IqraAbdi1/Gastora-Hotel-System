@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { TODAY } from '../../data/sample'
+import { TODAY, YESTERDAY } from '../../data/sample'
 import { useHotel } from '../../lib/hotelContext'
 import { floorOf } from '../../lib/rooms'
 import { useFeatures } from '../platform/featuresContext'
@@ -8,6 +8,7 @@ import { HkContext } from './hkContext'
 import type { BlockKind, ExceptionKind, HkValue, NewTask } from './hkContext'
 import {
   CHECKIN_TIME,
+  PUBLIC_AREA,
   RUSH_NOTE,
   clock,
   cleanTypes,
@@ -21,7 +22,8 @@ import {
   uid,
   zoneOf,
 } from './hkModel'
-import type { DefectStatus, HkRoom, HkTask, RoomDefect, RoomDetails, RoomMessage } from './hkModel'
+import type { DefectStatus, HkRoom, HkTask, RoomDefect, RoomDetails, RoomMessage, TaskType } from './hkModel'
+import { AREA_TIMES, areaDueOn, declinedRun, linenDue, minutesBetween, needsWelfareCheck, tooQuick } from '../../lib/cleaning'
 
 const exceptionLabel: Record<ExceptionKind, string> = {
   'out-of-service': 'Out of Service',
@@ -32,6 +34,10 @@ const exceptionLabel: Record<ExceptionKind, string> = {
 // Automatic cleaning tasks carry this note. Their priority is worked out live (see liveTasks).
 // A task whose note changes (a rush, a failed inspection, a hand-made task) keeps its own priority.
 const AUTO_NOTE = 'Room needs cleaning.'
+// The day's other work, built once each morning.
+const SERVICE_NOTE = 'Daily service while the guest is still in the room.'
+const AREA_NOTE = 'Public area on the cleaning schedule.'
+const WELFARE_NOTE = 'Not serviced for days running. A supervisor must enter the room and see the guest.'
 
 // Messages between the front desk and housekeeping, per room. The "ready by" time belongs to one cleaning task,
 // so it disappears by itself when that task is finished.
@@ -48,6 +54,9 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   // Rooms the front desk rushed that are now clean. They stay until the room is used or the alert is dismissed.
   const [readyAlerts, setReadyAlerts] = useState<Record<string, string>>({})
   const [syncKey, setSyncKey] = useState<string | null>(null)
+  const [daySync, setDaySync] = useState<string | null>(null)
+  // Days a guest refused the service, by room. Room 102 refused yesterday, so one more refusal escalates.
+  const [declinedDays, setDeclinedDays] = useState<Record<string, string[]>>(() => ({ '102': [YESTERDAY] }))
   // Counts rooms considered for a spot-check, so "1 in N" is steady and easy to demonstrate.
   const spotCounter = useRef(0)
 
@@ -75,8 +84,16 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   if (dirtyKey !== syncKey) {
     setSyncKey(dirtyKey)
     setTasks((current) => {
-      const busy = new Set(current.filter(isActive).map((t) => t.room))
-      let nextId = current.reduce((m, t) => Math.max(m, t.id), 0)
+      // A guest who checks out mid-service ends the service: the room now needs a full departure clean.
+      const dirtyRooms = new Set(rooms.filter((r) => r.status === 'dirty').map((r) => r.number))
+      const cleared = current.map((t) =>
+        t.type === 'Stay Over' && isActive(t) && dirtyRooms.has(t.room)
+          ? { ...t, status: 'Cancelled' as const, notes: 'The guest checked out before the service.' }
+          : t,
+      )
+      // Public area work never blocks a room, and a cancelled service no longer counts as busy.
+      const busy = new Set(cleared.filter((t) => isActive(t) && !t.area).map((t) => t.room))
+      let nextId = cleared.reduce((m, t) => Math.max(m, t.id), 0)
       const added: HkTask[] = []
       for (const room of rooms) {
         if (room.status !== 'dirty' || busy.has(room.number)) continue
@@ -90,8 +107,98 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
           dueTime: CHECKIN_TIME,
           status: room.hk === 'cleaning' ? 'In Progress' : 'Unassigned',
           notes: AUTO_NOTE,
+          day: TODAY,
         })
       }
+      return added.length ? [...added, ...cleared] : cleared
+    })
+  }
+
+  // Rooms with a guest still in them are serviced every day, and the public areas are on their own
+  // schedule. Both are built once a day, so the head of housekeeping only has to hand the work out.
+  const stayoverRooms = useMemo(
+    () =>
+      [...stays.values()]
+        .filter((r) => r.room && r.departure !== TODAY)
+        .map((r) => r.room as string)
+        .sort(),
+    [stays],
+  )
+  // The name and how often it is cleaned are both in the key, so an area that is renamed or
+  // re-scheduled is picked up rather than waiting for tomorrow.
+  const dayKey = `${TODAY}|${stayoverRooms.join(',')}|${options.areas
+    .map((a) => `${a.id}:${a.name}:${a.frequency}:${a.weekday ?? ''}`)
+    .join(',')}`
+  if (dayKey !== daySync) {
+    setDaySync(dayKey)
+    setTasks((current) => {
+      let nextId = current.reduce((m, t) => Math.max(m, t.id), 0)
+      const doneToday = (room: string, type: TaskType) =>
+        current.some((t) => t.room === room && t.type === type && t.day === TODAY)
+      const added: HkTask[] = []
+
+      for (const number of stayoverRooms) {
+        const record = roomByNumber.get(number)
+        const stay = stays.get(number)
+        if (!record || !stay) continue
+        if (!doneToday(number, 'Stay Over')) {
+          added.push({
+            id: ++nextId,
+            room: number,
+            type: 'Stay Over',
+            zone: zoneOf(record),
+            priority: 'Normal',
+            attendant: 'Unassigned',
+            dueTime: '12:00',
+            status: 'Unassigned',
+            notes: SERVICE_NOTE,
+            day: TODAY,
+            linen: linenDue(stay.arrival, TODAY, options.service),
+          })
+        }
+        // Nobody has been inside for days. This is about the guest, not the cleaning.
+        if (
+          needsWelfareCheck(declinedDays[number] ?? [], TODAY, options.service) &&
+          !doneToday(number, 'Inspection')
+        ) {
+          added.push({
+            id: ++nextId,
+            room: number,
+            type: 'Inspection',
+            zone: zoneOf(record),
+            priority: 'Urgent',
+            attendant: 'Unassigned',
+            dueTime: '12:00',
+            status: 'Unassigned',
+            notes: WELFARE_NOTE,
+            day: TODAY,
+          })
+        }
+      }
+
+      for (const area of options.areas) {
+        // An area still being typed has no name yet. Nobody can be sent to clean a blank.
+        if (!area.name.trim()) continue
+        if (!areaDueOn(area, TODAY)) continue
+        const times = AREA_TIMES[area.frequency] ?? ['10:00']
+        times.forEach((time, index) => {
+          if (current.some((t) => t.area === area.id && t.dueTime === time && t.day === TODAY)) return
+          added.push({
+            id: ++nextId,
+            room: times.length > 1 ? `${area.name} (${index === 0 ? 'morning' : 'afternoon'})` : area.name,
+            area: area.id,
+            type: PUBLIC_AREA,
+            zone: area.where,
+            priority: 'Normal',
+            attendant: 'Unassigned',
+            dueTime: time,
+            status: 'Unassigned',
+            notes: AREA_NOTE,
+            day: TODAY,
+          })
+        })
+      }
+
       return added.length ? [...added, ...current] : current
     })
   }
@@ -135,7 +242,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
 
   const activeByRoom = useMemo(() => {
     const map = new Map<string, HkTask>()
-    for (const t of liveTasks) if (isActive(t) && !map.has(t.room)) map.set(t.room, t)
+    for (const t of liveTasks) if (isActive(t) && !t.area && !map.has(t.room)) map.set(t.room, t)
     return map
   }, [liveTasks])
 
@@ -220,7 +327,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
 
   function setActiveTaskStatus(room: string, status: HkTask['status']) {
     setTasks((current) => {
-      const target = current.find((t) => t.room === room && isActive(t))
+      const target = current.find((t) => t.room === room && isActive(t) && !t.area)
       return target ? current.map((t) => (t.id === target.id ? { ...t, status } : t)) : current
     })
   }
@@ -403,21 +510,102 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     ])
   }
 
-  function advanceTask(task: HkTask) {
+  /** What the attendant recorded, written into the room's own record so a supervisor can read it later. */
+  function workNote(task: HkTask, checklist: string[], finishedAt: string): string {
+    const parts: string[] = []
+    if (task.startedAt) {
+      const minutes = minutesBetween(task.startedAt, finishedAt)
+      if (minutes >= 0) {
+        parts.push(`Took ${minutes} minute${minutes === 1 ? '' : 's'}.`)
+        if (tooQuick(task.type, minutes)) parts.push('Faster than this work usually takes. Worth a check.')
+      }
+    }
+    if (task.linen) parts.push('Sheets were due today.')
+    if (checklist.length) parts.push(`Done: ${checklist.join(', ')}.`)
+    return parts.join(' ') || 'Task completed.'
+  }
+
+  function advanceTask(task: HkTask, checklist: string[] = []) {
     const next = nextTaskStatus(task.status)
     if (!next) return
-    setTasks((current) => current.map((t) => (t.id === task.id ? { ...t, status: next } : t)))
+    const at = clock()
+    setTasks((current) =>
+      current.map((t) =>
+        t.id === task.id
+          ? {
+              ...t,
+              status: next,
+              startedAt: next === 'In Progress' ? at : t.startedAt,
+              finishedAt: next === 'Completed' ? at : t.finishedAt,
+              checklist: next === 'Completed' && checklist.length ? checklist : t.checklist,
+            }
+          : t,
+      ),
+    )
+    const who = task.attendant && task.attendant !== 'Unassigned' ? task.attendant : 'Housekeeping'
     if (cleanTypes.includes(task.type)) {
       if (next === 'In Progress') {
         setHousekeeping(task.room, 'cleaning')
-        log(task.room, 'Cleaning started', `Started the ${task.type.toLowerCase()}.`, task.attendant)
+        log(task.room, 'Cleaning started', `Started the ${task.type.toLowerCase()}.`, who)
       }
       if (next === 'Completed') {
         completeCleaning(task.room, task.notes.startsWith(RUSH_NOTE), task.attendant)
+        if (checklist.length || task.startedAt) {
+          log(task.room, 'Work recorded', workNote(task, checklist, at), who)
+        }
       }
-    } else if (next === 'Completed') {
-      log(task.room, `${task.type} done`, 'Task completed.', task.attendant)
+      return
     }
+    if (next === 'In Progress') {
+      log(task.room, `${task.type} started`, 'Work started.', who)
+      return
+    }
+    if (next === 'Completed') {
+      const title = task.type === 'Stay Over' ? 'Daily service done' : `${task.type} done`
+      log(task.room, title, workNote(task, checklist, at), who)
+    }
+  }
+
+  /** The guest refused the service. That is an answer, not work nobody did, and it is counted. */
+  function declineTask(task: HkTask, reason: string) {
+    const days = declinedDays[task.room] ?? []
+    const withToday = days.includes(TODAY) ? days : [...days, TODAY]
+    // Checked here rather than once a morning, so the supervisor is raised the moment the run is reached.
+    const escalate = !task.area && needsWelfareCheck(withToday, TODAY, options.service)
+    const record = roomByNumber.get(task.room)
+    setTasks((current) => {
+      const marked = current.map((t) =>
+        t.id === task.id ? { ...t, status: 'Cancelled' as const, declined: true } : t,
+      )
+      if (!escalate || !record) return marked
+      const already = marked.some((t) => t.room === task.room && t.type === 'Inspection' && t.day === TODAY)
+      if (already) return marked
+      return [
+        {
+          id: marked.reduce((m, t) => Math.max(m, t.id), 0) + 1,
+          room: task.room,
+          type: 'Inspection' as const,
+          zone: zoneOf(record),
+          priority: 'Urgent' as const,
+          attendant: 'Unassigned',
+          dueTime: clock(),
+          status: 'Unassigned' as const,
+          notes: WELFARE_NOTE,
+          day: TODAY,
+        },
+        ...marked,
+      ]
+    })
+    setDeclinedDays((current) => ({ ...current, [task.room]: withToday }))
+    if (escalate) {
+      log(
+        task.room,
+        'Welfare check raised',
+        `No service for ${declinedRun(withToday, TODAY)} days running. A supervisor must enter the room.`,
+      )
+    }
+    const who = task.attendant && task.attendant !== 'Unassigned' ? task.attendant : 'Housekeeping'
+    log(task.room, 'Service declined', reason.trim() || 'The guest asked not to be disturbed.', who)
   }
 
   function assignTask(taskId: number, attendant: string) {
@@ -581,6 +769,8 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     resetRoom,
     createTask,
     advanceTask,
+    declineTask,
+    areas: options.areas,
     assignTask,
     cancelTask,
     rushRoom,

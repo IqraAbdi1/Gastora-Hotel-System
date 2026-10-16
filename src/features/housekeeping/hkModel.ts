@@ -11,7 +11,12 @@ import type {
 export type HkStatus = HousekeepingRoomStatus | 'Occupied'
 export type Priority = HousekeepingPriority
 export type TaskStatus = HousekeepingTaskStatus
-export type TaskType = HousekeepingTaskType
+/**
+ * A corridor or the lobby is cleaned too, and it is not a room. The API contract covers rooms only,
+ * so this one is added here; the mapper to the API has to handle it when the backend learns about areas.
+ */
+export const PUBLIC_AREA = 'Public Area'
+export type TaskType = HousekeepingTaskType | typeof PUBLIC_AREA
 
 export type HkRoom = {
   room: string
@@ -29,6 +34,7 @@ export type HkRoom = {
 
 export type HkTask = {
   id: number
+  /** A room number, or the name of a public area. `area` says which. */
   room: string
   type: TaskType
   zone: string
@@ -37,6 +43,19 @@ export type HkTask = {
   dueTime: string
   status: TaskStatus
   notes: string
+  /** Set on a public area task: the area it belongs to. Room tasks leave it empty. */
+  area?: string
+  /** The day this work belongs to, so the list is built once a day and not again. */
+  day?: string
+  /** Clock times, used to show how long the work took. */
+  startedAt?: string
+  finishedAt?: string
+  /** What the attendant recorded doing. */
+  checklist?: string[]
+  /** A stayover the guest refused. Not the same as work nobody did. */
+  declined?: boolean
+  /** Stayover only: the sheets are due today, not just the towels. */
+  linen?: boolean
 }
 
 export type MinibarItem = { name: string; quantity: number; used: number }
@@ -92,6 +111,7 @@ export const taskTypes: TaskType[] = [
   'Arrival Preparation',
   'Deep Clean',
   'Turndown',
+  PUBLIC_AREA,
   'Inspection',
 ]
 export const taskStatuses: TaskStatus[] = ['Unassigned', 'Assigned', 'In Progress', 'Completed', 'Cancelled']
@@ -175,6 +195,12 @@ export function hkStatusOf(room: Room): HkStatus {
 }
 
 export const zoneOf = (room: Room) => floorLabel(floorOf(room))
+
+/**
+ * What to call a place in a list. Rooms are numbered and read as "Room 102"; a public area already
+ * has a name of its own and must not be called a room.
+ */
+export const placeLabel = (name: string) => (/^\d/.test(name) ? `Room ${name}` : name)
 
 export function defaultDetails(): RoomDetails {
   return {

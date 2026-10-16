@@ -1,9 +1,18 @@
 import Switch from '../../components/Switch'
 import { FEATURES } from '../../lib/features'
+import { AREA_FREQUENCY_LABEL, newAreaId } from '../../lib/cleaning'
+import type { AreaFrequency, CleaningArea } from '../../lib/cleaning'
 import { useFeatures } from '../platform/featuresContext'
+
+const box =
+  'mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm font-normal tabular-nums'
+const cell = 'min-w-0 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
 
 export default function HotelSettingsPage() {
   const { tenant, features, options, setOptions, stayTimes, setStayTimes } = useFeatures()
+
+  const patchArea = (id: string, patch: Partial<CleaningArea>) =>
+    setOptions({ areas: options.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
@@ -53,7 +62,7 @@ export default function HotelSettingsPage() {
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Returning guests</h2>
             <p className="mt-1 text-xs text-ink/60">
-              Rule, not AI: a guest reaches a tier on finished stays or nights, whichever comes first. The discount is on the
+               When a guest reaches a tier on finished stays or nights, whichever comes first. The discount is on the
               room only, and never on top of a company price.
             </p>
           </div>
@@ -222,6 +231,116 @@ export default function HotelSettingsPage() {
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-surface p-4">
+        <h2 className="font-semibold text-ink">Servicing a room with a guest in it</h2>
+        <p className="mt-1 text-xs text-ink/60">
+          Rule: every occupied room is serviced each day. These two numbers decide what that means here.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium text-ink">
+            Change the sheets every (nights)
+            <input
+              inputMode="numeric"
+              value={String(options.service.linenDays)}
+              onChange={(e) =>
+                setOptions({
+                  service: { ...options.service, linenDays: Number(e.target.value.replace(/\D/g, '')) || 1 },
+                })
+              }
+              className={box}
+            />
+            <span className="mt-1 block text-xs font-normal text-ink/55">
+              Towels are changed whenever the guest asks. Sheets on this cycle.
+            </span>
+          </label>
+          <label className="block text-sm font-medium text-ink">
+            Send a supervisor after (days with no service)
+            <input
+              inputMode="numeric"
+              value={String(options.service.dndEscalateDays)}
+              onChange={(e) =>
+                setOptions({
+                  service: { ...options.service, dndEscalateDays: Number(e.target.value.replace(/\D/g, '')) || 1 },
+                })
+              }
+              className={box}
+            />
+            <span className="mt-1 block text-xs font-normal text-ink/55">
+              A room nobody has entered for days is a welfare question, not a cleaning one.
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-ink">Public areas</h2>
+            <p className="mt-1 text-xs text-ink/60">
+              Corridors, the lobby, the pool. They go on the roster with the rooms and into the cleaning record.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-brand/10 px-2 py-1 text-xs font-semibold text-brand-deep">
+            {options.areas.length}
+          </span>
+        </div>
+        <div className="mt-3 space-y-2">
+          {options.areas.map((a) => (
+            <div
+              key={a.id}
+              className="grid items-center gap-2 rounded-lg border border-ink/10 bg-canvas/60 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem_auto]"
+            >
+              <input
+                aria-label="Area name"
+                value={a.name}
+                onChange={(e) => patchArea(a.id, { name: e.target.value })}
+                className={cell}
+              />
+              <input
+                aria-label="Where it is"
+                value={a.where}
+                onChange={(e) => patchArea(a.id, { where: e.target.value })}
+                className={cell}
+              />
+              <select
+                aria-label="How often"
+                value={a.frequency}
+                onChange={(e) => patchArea(a.id, { frequency: e.target.value as AreaFrequency })}
+                className={cell}
+              >
+                {(['twice', 'daily', 'weekly'] as AreaFrequency[]).map((f) => (
+                  <option key={f} value={f}>
+                    {AREA_FREQUENCY_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setOptions({ areas: options.areas.filter((x) => x.id !== a.id) })}
+                aria-label={`Remove ${a.name || 'this area'}`}
+                className="rounded-lg px-2 py-2 text-sm text-ink/45 hover:bg-bad/10 hover:text-bad"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          {options.areas.length === 0 && (
+            <p className="text-sm text-ink/60">No public areas. Only rooms will be scheduled.</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            setOptions({
+              areas: [...options.areas, { id: newAreaId(options.areas), name: '', where: '', frequency: 'daily' }],
+            })
+          }
+          className="mt-3 text-sm font-semibold text-brand hover:underline"
+        >
+          + Add an area
+        </button>
+      </section>
+
+      <section className="rounded-xl border border-ink/10 bg-surface p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Night audit</h2>
@@ -279,7 +398,7 @@ export default function HotelSettingsPage() {
         <section className="rounded-xl border border-ink/10 bg-surface p-4">
           <h2 className="font-semibold text-ink">Room inspections</h2>
           <p className="mt-1 text-xs text-ink/60">
-            These are rules, not AI. They decide which cleaned rooms a supervisor must check.
+            These are rules whhich decide which cleaned rooms a supervisor must check.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">

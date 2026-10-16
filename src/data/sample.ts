@@ -7,6 +7,7 @@ const now = new Date()
 export const TODAY = ymd(now)
 // Sample dates are written as "days from today" so they move with the clock
 const day = (offset: number) => ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset))
+export const YESTERDAY = day(-1)
 
 export const rooms: Room[] = [
   { number: '101', type: 'Standard', status: 'clean' },

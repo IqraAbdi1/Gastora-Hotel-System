@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useHotel } from '../../lib/hotelContext'
 import { useHousekeeping } from './hkContext'
 import { CHECKIN_TIME, attendants, taskTypes } from './hkModel'
+import { PUBLIC_AREA } from './hkModel'
 import type { Priority, TaskType } from './hkModel'
 import { Modal, btnGhost, btnPrimary, field } from './hkUi'
 
@@ -48,9 +49,11 @@ export default function TaskForm({ presetRoom = '', onClose }: { presetRoom?: st
           <div>
             <label htmlFor="task-type" className="mb-1 block text-sm font-medium">Task type</label>
             <select id="task-type" value={type} onChange={(e) => setType(e.target.value as TaskType)} className={field}>
-              {taskTypes.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
+              {taskTypes
+                .filter((t) => t !== PUBLIC_AREA)
+                .map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
             </select>
           </div>
           <div>

@@ -213,6 +213,8 @@ import type { RatesPolicy } from './rates'
 import { DEFAULT_RATES } from './rates'
 import type { LoyaltySettings } from './loyalty'
 import { DEFAULT_LOYALTY } from './loyalty'
+import { DEFAULT_AREAS, DEFAULT_SERVICE } from './cleaning'
+import type { CleaningArea, ServiceRules } from './cleaning'
 
 export interface HotelOptions {
   inspectionMode: 'spot' | 'every'
@@ -231,6 +233,12 @@ export interface HotelOptions {
   loyalty: LoyaltySettings
   /** The hotel's own prices and booking rules. Company prices are separate, on each company account. */
   rates: RatesPolicy
+  /** Corridors, the lobby, the pool: everything cleaned that is not a room. */
+  areas: CleaningArea[]
+  /** How a room with a guest still in it is serviced. */
+  service: ServiceRules
+  /** Checklist items the hotel has added itself, offered to the attendant from then on. */
+  extraChecks: string[]
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -243,6 +251,9 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   spotPercent: 20,
   alwaysInspectArrivals: true,
   skipRushed: true,
+  areas: DEFAULT_AREAS,
+  service: DEFAULT_SERVICE,
+  extraChecks: [],
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [
