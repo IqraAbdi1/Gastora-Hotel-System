@@ -227,6 +227,11 @@ export interface HotelOptions {
   limits: ApprovalLimits
   /** How long lost property is kept before it may be disposed of. */
   keepFoundDays: number
+  /**
+   * How long a guest's profile is kept after their last stay. The stays, the ID record and the
+   * invoices are kept far longer because the law requires it; this is only the profile.
+   */
+  keepGuestMonths: number
   /** The hotel can switch the night audit off if it does not close the day that way. */
   nightAudit: boolean
   /** Tiers and rewards for guests who come back. Every hotel sets its own. */
@@ -244,6 +249,7 @@ export interface HotelOptions {
 export const DEFAULT_OPTIONS: HotelOptions = {
   limits: DEFAULT_LIMITS,
   keepFoundDays: 90,
+  keepGuestMonths: 24,
   nightAudit: true,
   loyalty: DEFAULT_LOYALTY,
   rates: DEFAULT_RATES,

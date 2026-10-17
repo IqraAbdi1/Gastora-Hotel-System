@@ -106,11 +106,25 @@ export const PREFERENCE_TAGS = [
   'Double bed',
   'Extra pillows',
   'Early breakfast',
-  'No pork',
-  'Vegetarian',
-  'Halal',
   'Airport pickup',
 ]
+
+/**
+ * What someone eats can say what they believe or what is wrong with their health, and the law treats
+ * that as sensitive. The hotel still needs it to feed them, so it is kept only if the guest says yes
+ * to this on its own, separately from everything else.
+ */
+export const SENSITIVE_TAGS = ['No pork', 'Vegetarian', 'Halal', 'Kosher', 'Nut allergy', 'Wheelchair access']
+
+export const isSensitiveTag = (t: string) => SENSITIVE_TAGS.includes(t)
+
+/**
+ * A guest who has not joined the programme is not profiled: the stays still exist because the hotel
+ * must keep them, but nothing is counted, recognised or discounted.
+ */
+export function loyaltyKnown(guest: { loyaltyConsent?: boolean } | null | undefined): boolean {
+  return !!guest?.loyaltyConsent
+}
 
 export const benefitList = (t: LoyaltyTier): string[] =>
   [

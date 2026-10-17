@@ -59,7 +59,12 @@ export const DEFAULT_RATES: RatesPolicy = {
 
 /** The wording a hotel starts with, built from its own check-in and check-out times. */
 export function defaultHouseRules(checkInTime: string, checkOutTime: string) {
-  return `Check-in from ${checkInTime}. Check-out by ${checkOutTime}. Smoking is not allowed in the rooms.`
+  return (
+    `Check-in from ${checkInTime}. Check-out by ${checkOutTime}. Smoking is not allowed in the rooms. ` +
+    'Your booking, the identification shown at check-in and your bill are kept because the law and your stay ' +
+    'require it. Being remembered between stays, and hearing from us afterwards, are your choice and you can ' +
+    'change your mind at any time.'
+  )
 }
 
 /** A meal plan id that is not already taken. */

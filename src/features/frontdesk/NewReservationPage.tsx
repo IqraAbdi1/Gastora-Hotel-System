@@ -9,7 +9,7 @@ import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { depositForStay, freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal } from '../../lib/booking'
 import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
-import { benefitList, loyaltyDiscount, stayHistory, tierFor } from '../../lib/loyalty'
+import { benefitList, loyaltyDiscount, loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
 import { useFeatures } from '../platform/featuresContext'
 import GuestRecognition from '../guests/GuestRecognition'
 import ApprovalGate from '../approvals/ApprovalGate'
@@ -101,7 +101,8 @@ export function NewReservationForm({
 
   // A returning guest's reward. The room only, never on top of a company price, and only on finished stays.
   const history = useMemo(() => (selectedGuest ? stayHistory(selectedGuest, reservations) : null), [selectedGuest, reservations])
-  const tier = history ? tierFor(history, loyalty) : null
+  // No programme, no profile: a guest who has not joined earns nothing and is not recognised.
+  const tier = history && loyaltyKnown(selectedGuest) ? tierFor(history, loyalty) : null
   const roomOnly = datesOk ? stayTotal(type, 'room-only', nights, rates) : 0
   const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
   const [useLoyalty, setUseLoyalty] = useState(true)

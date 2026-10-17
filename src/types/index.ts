@@ -95,6 +95,12 @@ export type Guest = {
   idNumber?: string
   vip?: boolean
   marketingConsent?: boolean
+  /** The guest agreed to be remembered between stays. Without it there is no tier and no profile. */
+  loyaltyConsent?: boolean
+  /** The guest agreed to the hotel keeping dietary or access needs, which the law treats as sensitive. */
+  sensitiveConsent?: boolean
+  /** When the guest last answered those questions, so the hotel can show what was agreed and when. */
+  consentAt?: string
   preferences?: GuestPreferences
   notes?: GuestNote[]
 }

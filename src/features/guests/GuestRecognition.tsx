@@ -1,5 +1,5 @@
 import { Badge } from '../../components/ui'
-import { benefitList, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
+import { benefitList, loyaltyKnown, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
 import type { StayHistory } from '../../lib/loyalty'
 import { dayMonth } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
@@ -26,6 +26,21 @@ export default function GuestRecognition({
   const loyalty = options.loyalty
 
   if (!guest) return null
+
+  /**
+   * A guest who has not joined the programme is not profiled. Their stays still exist, because the
+   * hotel must keep them, but nothing here is counted, recognised or rewarded.
+   */
+  if (!loyaltyKnown(guest)) {
+    if (compact) return null
+    return (
+      <div className="rounded-lg border border-ink/10 bg-canvas/60 p-2.5 text-xs text-ink/60">
+        Not in the returning-guest programme, so no history is kept or shown. Ask at check-in whether they would
+        like the hotel to remember them.
+      </div>
+    )
+  }
+
   const history: StayHistory = stayHistory(guest, reservations, reservation?.id)
   const tier = tierFor(history, loyalty)
   const next = nextTier(history, loyalty)

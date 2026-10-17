@@ -15,6 +15,8 @@ import { stayTaxes } from '../../lib/tax'
 import type { IdType, Reservation } from '../../types'
 import { useCorporate } from '../corporate/corporateContext'
 import { useFeatures } from '../platform/featuresContext'
+import { isSensitiveTag } from '../../lib/loyalty'
+import { stamp } from '../../lib/folio'
 import GuestRecognition from '../guests/GuestRecognition'
 import PreferenceChips from '../guests/PreferenceChips'
 import CheckInRoomStep from './CheckInRoomStep'
@@ -111,6 +113,9 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const [signature, setSignature] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [marketingConsent, setMarketingConsent] = useState(false)
+  // Remembering a guest between stays is a programme they join, not something done to them quietly.
+  const [loyaltyConsent, setLoyaltyConsent] = useState(known?.loyaltyConsent ?? false)
+  const [sensitiveConsent, setSensitiveConsent] = useState(known?.sensitiveConsent ?? false)
   const [method, setMethod] = useState(paymentMethods[0])
   const [payText, setPayText] = useState('')
   const [reference, setReference] = useState('')
@@ -171,14 +176,24 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
       termsAccepted,
       signature: signature ?? undefined,
     })
-    // What the guest likes goes on their profile, not just this booking.
-    if (known && (prefTags.length > 0 || prefNote.trim() !== '')) {
+    // What the guest agreed to is recorded with the answer, so the hotel can show what was asked and when.
+    if (known) {
+      // Dietary and access needs are only kept while the guest allows it.
+      const keptTags = sensitiveConsent ? prefTags : prefTags.filter((t) => !isSensitiveTag(t))
+      const previous = (known.preferences?.tags ?? []).filter((t) => sensitiveConsent || !isSensitiveTag(t))
       updateGuest(known.id, {
-        preferences: {
-          ...known.preferences,
-          tags: [...new Set([...(known.preferences?.tags ?? []), ...prefTags])],
-          other: prefNote.trim() || known.preferences?.other,
-        },
+        loyaltyConsent,
+        sensitiveConsent,
+        marketingConsent,
+        consentAt: stamp(),
+        // Nothing is carried between stays unless the guest joined the programme.
+        preferences: loyaltyConsent
+          ? {
+              ...known.preferences,
+              tags: [...new Set([...previous, ...keptTags])],
+              other: prefNote.trim() || known.preferences?.other,
+            }
+          : undefined,
       })
     }
     // Taxes are posted first, so the balance the payment is taken against is the full one.
@@ -354,7 +369,14 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       <div className="sm:col-span-2">
                         <div className="sm:col-span-2">
                           <p className="mb-1.5 text-sm font-medium text-ink/80">What this guest likes</p>
-                          <PreferenceChips tags={prefTags} onTags={setPrefTags} note={prefNote} onNote={setPrefNote} />
+                          <PreferenceChips
+                            tags={prefTags}
+                            onTags={setPrefTags}
+                            note={prefNote}
+                            onNote={setPrefNote}
+                            sensitiveOk={sensitiveConsent}
+                            onSensitiveOk={setSensitiveConsent}
+                          />
                         </div>
                         <Field label="Special requests for this stay">
                           {(id) => (
@@ -463,9 +485,32 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       <span>The guest has read and accepted the hotel terms and conditions (required).</span>
                     </label>
                     <label className="mt-2 flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={loyaltyConsent}
+                        onChange={(e) => setLoyaltyConsent(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-medium">Remember me for next time.</span> The guest joins the hotel's
+                        returning-guest programme: their stays are counted, their preferences kept, and any reward
+                        offered on the next visit (optional).
+                      </span>
+                    </label>
+                    <label className="mt-2 flex items-start gap-2 text-sm">
                       <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} className="mt-1" />
                       <span>The guest agrees to receive offers and news from the hotel (optional).</span>
                     </label>
+
+                    <div className="mt-3 rounded-lg border border-ink/10 bg-canvas/60 p-2.5 text-xs text-ink/70">
+                      <p className="font-semibold text-ink">What the hotel keeps, and why</p>
+                      <p className="mt-0.5">
+                        The booking, the ID shown at check-in and the bill are kept because the law and this stay
+                        require them, whatever the guest answers above. The two optional ticks are the only parts the
+                        guest chooses, and either can be withdrawn later.
+                      </p>
+                    </div>
+
                     <p className="mt-3 text-xs text-ink/55">
                       The signature is personal data. In this prototype it is kept in memory only. In the real system it is stored securely and shown only to authorised staff.
                     </p>

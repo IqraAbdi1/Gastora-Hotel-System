@@ -231,6 +231,28 @@ export default function HotelSettingsPage() {
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-surface p-4">
+        <h2 className="font-semibold text-ink">Guest records</h2>
+        <p className="mt-1 text-xs text-ink/60">
+          Rule: a guest's booking, the identification taken at check-in and their invoices are kept because the stay and
+          the law require them. The profile — what they like, how often they come, what they earn — is kept only while
+          the guest allows it.
+        </p>
+        <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
+          Keep a guest profile for (months after their last stay)
+          <input
+            inputMode="numeric"
+            value={String(options.keepGuestMonths)}
+            onChange={(e) => setOptions({ keepGuestMonths: Number(e.target.value.replace(/\D/g, '')) || 0 })}
+            className={box}
+          />
+        </label>
+        <p className="mt-1 text-xs text-ink/55">
+          After this the profile is cleared and the guest is no longer recognised. Their stays and invoices stay, because
+          they must. Estimate: tax records are kept far longer than this; confirm the period with your accountant.
+        </p>
+      </section>
+
+      <section className="rounded-xl border border-ink/10 bg-surface p-4">
         <h2 className="font-semibold text-ink">Servicing a room with a guest in it</h2>
         <p className="mt-1 text-xs text-ink/60">
           Rule: every occupied room is serviced each day. These two numbers decide what that means here.
