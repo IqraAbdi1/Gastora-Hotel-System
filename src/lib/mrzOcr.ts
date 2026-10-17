@@ -17,6 +17,13 @@ const SCRIPT = `https://cdn.jsdelivr.net/npm/tesseract.js@${VERSION}/dist/tesser
 /** Only the characters the strip is allowed to contain. Narrowing this is most of the accuracy. */
 const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
 
+// A strip is not printed in an ordinary typeface. It is set in OCR-B, a face drawn in the 1960s so that
+// a machine could tell O from 0 and the filler character from a letter. A reader trained on English
+// prose does not know that face: it reads the filler as K or L and turns a name into a different name.
+// This is a reader trained on the strip itself, which is the difference between a demonstration and a
+// feature. If it cannot be fetched, English is used and the check digits catch what it gets wrong.
+const MRZ_MODEL = 'https://raw.githubusercontent.com/DoubangoTelecom/tesseractMRZ/master/tessdata_fast'
+
 interface OcrWorker {
   setParameters(p: Record<string, string>): Promise<unknown>
   recognize(image: HTMLCanvasElement): Promise<{ data: { text: string } }>
@@ -24,7 +31,17 @@ interface OcrWorker {
 }
 
 interface TesseractGlobal {
-  createWorker(lang: string, oem: number, options?: { logger?: (m: { status: string; progress: number }) => void }): Promise<OcrWorker>
+  createWorker(
+    lang: string,
+    oem: number,
+    options?: {
+      logger?: (m: { status: string; progress: number }) => void
+      /** Where to fetch the character model from, when it is not the one bundled with the reader. */
+      langPath?: string
+      /** The model here is served as it is, not compressed. */
+      gzip?: boolean
+    },
+  ): Promise<OcrWorker>
 }
 
 type Note = (text: string) => void
@@ -63,12 +80,13 @@ export async function loadReader(note?: Note): Promise<OcrWorker> {
   workerLoad = (async () => {
     note?.('Getting the reader ready')
     const Tesseract = await loadScript()
-    const worker = await Tesseract.createWorker('eng', 1, {
-      logger: (m) => {
-        if (m.status === 'loading tesseract core') note?.('Getting the reader ready')
-        else if (m.status.startsWith('loading language')) note?.('Getting the reader ready')
-        else if (m.status === 'recognizing text') note?.(`Reading the strip, ${Math.round(m.progress * 100)}%`)
-      },
+    const logger = (m: { status: string; progress: number }) => {
+      if (m.status === 'recognizing text') note?.(`Reading the strip, ${Math.round(m.progress * 100)}%`)
+      else note?.('Getting the reader ready')
+    }
+    const worker = await Tesseract.createWorker('mrz', 1, { logger, langPath: MRZ_MODEL, gzip: false }).catch(async () => {
+      note?.('Getting the reader ready')
+      return Tesseract.createWorker('eng', 1, { logger })
     })
     await worker.setParameters({
       tessedit_char_whitelist: CHARSET,
