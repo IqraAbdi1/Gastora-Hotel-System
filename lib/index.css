@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --brand: #1F5C45;
+  --accent: #D99A2B;
+}
+
+@theme inline {
+  --color-sidebar: #1F5C45;
+
+  --color-brand: var(--brand);
+  --color-accent: var(--accent);
+  --color-surface: #FFFFFF;
+  --color-canvas: #EEF3F2;
+  --color-ink: #11302C;
+  --color-good: #1B7F4B;
+  --color-warn: #A35F00;
+  --color-bad: #B3382C;
+  --color-info: #2563A8;
+}
+
+/* When printing from POS, print only the selected receipt. */
+@media print {
+  body * { visibility: hidden !important; }
+  .pos-receipt-overlay, .pos-receipt-overlay * { visibility: visible !important; }
+  .pos-receipt-overlay { position: fixed !important; inset: 0 !important; display: block !important; overflow: visible !important; padding: 0 !important; background: white !important; }
+  .pos-receipt-overlay > section { width: 100% !important; max-width: 100% !important; border: 0 !important; box-shadow: none !important; }
+  .pos-receipt-overlay .print\:hidden { display: none !important; }
+}

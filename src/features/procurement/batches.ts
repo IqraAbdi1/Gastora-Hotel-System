@@ -99,4 +99,56 @@ export const SAMPLE_BATCHES: Batch[] = [
     id: 'BAT-9003', itemId: 's5', item: 'Guest soap box (100)', qty: 1, received: 4, unitCost: 80_000,
     expiry: dayStr(-3), batchNo: 'GS-0311', at: new Date(Date.now() - 120 * DAY).toISOString(),
   },
+  {
+    id: 'BAT-FNB-CHICKEN', itemId: 'fnb-chicken', item: 'Chicken breast', qty: 12000, received: 12000, unitCost: 18,
+    expiry: dayStr(4), batchNo: 'CHK-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-POTATO', itemId: 'fnb-potato', item: 'Potatoes', qty: 18000, received: 18000, unitCost: 3.5,
+    expiry: dayStr(21), batchNo: 'POT-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-BEEF', itemId: 'fnb-beef', item: 'Beef mince', qty: 8000, received: 8000, unitCost: 24,
+    expiry: dayStr(3), batchNo: 'BEEF-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-BUN', itemId: 'fnb-bun', item: 'Burger bun', qty: 40, received: 40, unitCost: 1200,
+    expiry: dayStr(5), batchNo: 'BUN-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-FISH', itemId: 'fnb-fish', item: 'Fish fillet', qty: 6000, received: 6000, unitCost: 28,
+    expiry: dayStr(2), batchNo: 'FISH-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-VEG', itemId: 'fnb-vegetables', item: 'Mixed vegetables', qty: 5000, received: 5000, unitCost: 8,
+    expiry: dayStr(6), batchNo: 'VEG-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-LETTUCE', itemId: 'fnb-lettuce', item: 'Lettuce', qty: 2500, received: 2500, unitCost: 12,
+    expiry: dayStr(3), batchNo: 'LET-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-TOMATO', itemId: 'fnb-tomato', item: 'Tomatoes', qty: 4000, received: 4000, unitCost: 7,
+    expiry: dayStr(5), batchNo: 'TOM-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-CUCUMBER', itemId: 'fnb-cucumber', item: 'Cucumber', qty: 2000, received: 2000, unitCost: 6,
+    expiry: dayStr(5), batchNo: 'CUC-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-LEMON', itemId: 'fnb-lemon', item: 'Lemon', qty: 60, received: 60, unitCost: 500,
+    expiry: dayStr(14), batchNo: 'LEM-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-ORANGE', itemId: 'fnb-orange', item: 'Orange', qty: 90, received: 90, unitCost: 600,
+    expiry: dayStr(10), batchNo: 'ORG-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-JUICE', itemId: 'fnb-juice-base', item: 'Juice base', qty: 5000, received: 5000, unitCost: 6,
+    expiry: dayStr(8), batchNo: 'JUI-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
+  {
+    id: 'BAT-FNB-MILK', itemId: 'fnb-milk', item: 'Milk', qty: 5000, received: 5000, unitCost: 5,
+    expiry: dayStr(4), batchNo: 'MILK-OPEN-01', at: new Date(Date.now() - DAY).toISOString(),
+  },
 ]

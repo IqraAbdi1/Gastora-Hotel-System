@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth/authContext'
@@ -123,10 +123,41 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
   const batSeq = useRef(1001)
   // What the last issue or write-off took from which batches. The movement and receipt read it, then clear it.
   const drawn = useRef<Record<string, Draw[]>>({})
+  const posDeductionClaims = useRef<Set<string>>(new Set())
   const [batches, setBatches] = useBrowserSyncedState<Batch[]>('gastora.inventory.batches.v1', SAMPLE_BATCHES)
   const [expiryWarn, setExpiryWarnState] = useBrowserSyncedState('gastora.inventory.expiryWarn.v1', DEFAULT_EXPIRY_WARN_DAYS)
   const [countDays, setCountDaysState] = useBrowserSyncedState<Record<CountClass, number>>('gastora.inventory.countDays.v1', CLASS_DAYS)
   const [returns, setReturns] = useBrowserSyncedState<ReturnRequest[]>('gastora.inventory.returns.v1', [])
+
+
+  // Add F&B opening stock to existing demo data exactly once; preserve every user-created row.
+  useEffect(() => {
+    const marker = 'gastora.inventory.fnbSeed.v1'
+    try {
+      if (window.localStorage.getItem(marker) === '1') return
+      const fnbStock = SAMPLE_STOCK.filter((item) => item.id.startsWith('fnb-'))
+      const fnbBatches = SAMPLE_BATCHES.filter((batch) => batch.id.startsWith('BAT-FNB-'))
+      setStock((current) => {
+        const known = new Set(current.map((item) => item.id))
+        return [...current, ...fnbStock.filter((item) => !known.has(item.id))]
+      })
+      setStores((current) => {
+        const known = new Set(current.map((store) => store.id))
+        return [...current, ...SAMPLE_STORES.filter((store) => ['kitchen', 'bar'].includes(store.id) && !known.has(store.id))]
+      })
+      setBudgets((current) => {
+        const known = new Set(current.map((budget) => budget.id))
+        return [...current, ...SAMPLE_BUDGETS.filter((budget) => budget.id === 'Bar' && !known.has(budget.id))]
+      })
+      setBatches((current) => {
+        const known = new Set(current.map((batch) => batch.id))
+        return [...current, ...fnbBatches.filter((batch) => !known.has(batch.id))]
+      })
+      window.localStorage.setItem(marker, '1')
+    } catch {
+      // Leave the marker unset so a later mount can retry if browser storage is unavailable.
+    }
+  }, [setStock, setStores, setBudgets, setBatches])
 
   const who = user?.name ?? 'Someone'
   // A hotel only sees requests of its own way of working.
@@ -438,8 +469,9 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
     countsDue,
 
   
-    consumeStockForSale: (lines, saleId, outlet) => {
+    consumeStockForSale: (lines, saleId, outlet, deductionRef) => {
       const saleRef = saleId.trim()
+      const movementReason = deductionRef ? `POS line ${deductionRef}` : `POS sale ${saleRef}`
 
       if (!saleRef) {
         return fail('A unique sale reference is required for stock deduction.')
@@ -450,14 +482,15 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
       }
 
       // Prevent the same sale from deducting inventory twice.
-      const saleReason = `POS sale ${saleRef}`
       const alreadyIssued = movements.some(
-        (movement) => movement.reason === saleReason,
+        (movement) => movement.reason === movementReason,
       )
 
-      if (alreadyIssued) {
+      if (alreadyIssued || (deductionRef ? posDeductionClaims.current.has(deductionRef) : posDeductionClaims.current.has(saleRef))) {
         return fail(
-          `Sale ${saleRef} has already deducted inventory. Refresh the order history before retrying.`,
+          deductionRef
+            ? `Order line ${deductionRef} has already deducted inventory.`
+            : `Sale ${saleRef} has already deducted inventory. Refresh the order history before retrying.`,
         )
       }
 
@@ -508,6 +541,13 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
           )
         }
 
+        // ASSUMPTION: Restaurant production issues from Kitchen store and Bar sales issue from Bar store.
+        // Items deliberately assigned to the main store remain usable; items assigned to the other outlet are rejected.
+        const expectedStoreId = outlet.trim() === 'Bar' ? 'bar' : 'kitchen'
+        if (features.stores && item.store && item.store !== 'main' && item.store !== expectedStoreId) {
+          return fail(`${item.name} is assigned to ${storeName(item.store)}, not the ${outlet.trim()} outlet store. Transfer or remap the ingredient before selling.`)
+        }
+
         const available = stockOf(item.name)
 
         if (available < line.qty) {
@@ -532,6 +572,11 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
         store: storeStamp(line.name),
       }))
 
+      // Claim synchronously after validation and before state updates. This prevents two calls
+      // in the same event/render from both passing the stale movements check.
+      const claimKey = deductionRef ?? saleRef
+      posDeductionClaims.current.add(claimKey)
+
       // Use the shared inventory deduction routine so expiry-tracked stock
       // is deducted from batches using FEFO (first expiry, first out).
       takeStock(
@@ -542,7 +587,7 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
       const made = makeMoves(
         'Issued',
         receiptLines,
-        saleReason,
+        movementReason,
         {
           from: 'Store',
           to: `${outlet.trim()} POS`,

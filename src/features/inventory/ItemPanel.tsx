@@ -2,6 +2,9 @@ import { useFeatures } from '../platform/featuresContext'
 import { useRequests } from '../procurement/requestsContext'
 import { daysLeft, expiryState, formatExpiry } from '../procurement/batches'
 import { formatUGX, sameName } from '../procurement/requestsModel'
+import { readBrowserValue } from '../../hooks/useBrowserSyncedState'
+import { POS_STORAGE_KEYS } from '../pos/posTypes'
+import type { Product, Recipes } from '../pos/posTypes'
 import type { StockItem } from '../procurement/requestsModel'
 
 const time = (iso: string) =>
@@ -26,6 +29,9 @@ export default function ItemPanel({
 }) {
   const { features } = useFeatures()
   const { movements, onOrderOf, storeName, batches, tracksExpiry, expiryWarn } = useRequests()
+  const recipes = readBrowserValue<Recipes>(POS_STORAGE_KEYS.recipes, {})
+  const products = readBrowserValue<Product[]>(POS_STORAGE_KEYS.products, [])
+  const usedInRecipes = Object.entries(recipes).filter(([, ingredients]) => ingredients.some((ingredient) => ingredient.stockId === item.id)).map(([productId]) => products.find((product) => product.id === productId)?.name ?? productId)
 
   const onOrder = onOrderOf(item.name)
   const recent = movements.filter((m) => sameName(m.item, item.name)).slice(0, 6)
@@ -83,6 +89,14 @@ export default function ItemPanel({
                 <p className="text-xs text-ink/60">{f.label}</p>
               </div>
             ))}
+          </div>
+
+          <div className="rounded-lg border border-ink/10 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Used in recipes</p>
+            {usedInRecipes.length === 0
+              ? <p className="mt-1 text-sm text-ink/60">This inventory item is not currently mapped to a menu recipe.</p>
+              : <ul className="mt-2 list-inside list-disc space-y-1 text-sm">{usedInRecipes.map((name) => <li key={name}>{name}</li>)}</ul>}
+            {usedInRecipes.length > 0 && <p className="mt-2 text-xs text-amber-800">Replace these recipe mappings before archiving or removing this stock item.</p>}
           </div>
 
           {tracked && (
