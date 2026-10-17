@@ -206,6 +206,12 @@ export type GuestDetails = {
   marketingConsent?: boolean
   termsAccepted?: boolean
   signature?: string
+  /** How the ID details reached the form: read from the card by camera, from a photograph, or typed. */
+  idReadFrom?: 'camera' | 'photo' | 'typed'
+  /** The strip exactly as it was read, so a dispute can be settled against the card itself. */
+  idMrz?: string
+  /** The name printed on the ID, kept when it differs from the name the booking was made in. */
+  idName?: string
 }
 
 // ---- Company bookings ----

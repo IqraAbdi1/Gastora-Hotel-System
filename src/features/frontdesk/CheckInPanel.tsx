@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import IdPhotoInput from '../../components/IdPhotoInput'
+import IdScanSheet from '../../components/IdScanSheet'
+import type { ScanSource } from '../../components/IdScanSheet'
 import SignaturePad from '../../components/SignaturePad'
 import { Badge, Button, Card, Field, Input, Select, Stepper, Textarea } from '../../components/ui'
 import type { Step } from '../../components/ui'
@@ -11,6 +13,8 @@ import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { folioOf, paymentMethods } from '../../lib/folio'
 import { suggestedDeposit } from '../../lib/booking'
 import { useHotel } from '../../lib/hotelContext'
+import { idTypeFor } from '../../lib/mrz'
+import type { MrzRead } from '../../lib/mrz'
 import { stayTaxes } from '../../lib/tax'
 import type { IdType, Reservation } from '../../types'
 import { useCorporate } from '../corporate/corporateContext'
@@ -27,6 +31,25 @@ type Props = { reservation: Reservation; room?: string; onClose: () => void }
 const idTypes: IdType[] = ['NIN', 'Passport', 'Driving permit']
 const purposes = ['Leisure', 'Business', 'Conference', 'Transit', 'Other']
 const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0
+
+const sourceLabel: Record<ScanSource, string> = {
+  camera: 'Read from the card by camera',
+  photo: 'Read from the photograph of the ID',
+  typed: 'Typed from the strip on the card',
+}
+
+/** The same person, written in a different order. A booking says Amina Nakato; an ID says NAKATO AMINA. */
+const sameName = (a: string, b: string) => {
+  const parts = (n: string) =>
+    n
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .sort()
+      .join(' ')
+  return parts(a) === parts(b)
+}
 
 const initials = (name: string) =>
   name
@@ -51,7 +74,7 @@ function Row({ label, value, strong, tone }: { label: string; value: ReactNode; 
 // A stay billed to a company starts with the company check, because nothing else matters until it clears.
 export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
   const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest } = useHotel()
-  const { tax } = useFeatures()
+  const { tax, features } = useFeatures()
   // Always read the latest booking, so the company checks show what was just confirmed.
   const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
@@ -110,6 +133,9 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const [prefTags, setPrefTags] = useState<string[]>([])
   const [prefNote, setPrefNote] = useState('')
   const [idPhoto, setIdPhoto] = useState<string | undefined>()
+  // Reading the ID instead of typing it. What was read is kept, because it says how the details got here.
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanned, setScanned] = useState<{ source: ScanSource; lines: string; idName: string } | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [marketingConsent, setMarketingConsent] = useState(false)
@@ -151,6 +177,20 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
     confirm: 'Add the signature and accept the terms.',
   }
 
+  // The strip fills the form; it does not save anything. Every field stays editable and the receptionist
+  // is the one who decides the details are right.
+  function applyScan(read: MrzRead, source: ScanSource, photo?: string) {
+    setIdType(idTypeFor(read))
+    if (read.documentNumber.value) setIdNumber(read.documentNumber.value)
+    if (read.dateOfBirth.value) setDateOfBirth(read.dateOfBirth.value)
+    if (read.expiry.value) setIdExpiry(read.expiry.value)
+    if (read.sex) setGender(read.sex)
+    if (read.nationalityLabel) setNationality(read.nationalityLabel)
+    if (!idPhoto && photo) setIdPhoto(photo)
+    setScanned({ source, lines: read.lines.join('\n'), idName: read.fullName })
+    setScanOpen(false)
+  }
+
   function confirm() {
     checkIn(r.id, room, {
       idType,
@@ -175,6 +215,9 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
       marketingConsent,
       termsAccepted,
       signature: signature ?? undefined,
+      idReadFrom: scanned?.source,
+      idMrz: scanned?.lines,
+      idName: scanned && !sameName(scanned.idName, r.guest) ? scanned.idName : undefined,
     })
     // What the guest agreed to is recorded with the answer, so the hotel can show what was asked and when.
     if (known) {
@@ -390,6 +433,37 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
 
                 {current === 'id' && (
                   <Card title="ID verification" description="Check the ID against the guest, then record it." padded>
+                    {features.idScan && (
+                      <div className="mb-4 rounded-xl bg-brand/[0.06] p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Show the ID to the camera</p>
+                            <p className="text-xs text-ink/60">
+                              A national ID or passport fills these fields by itself. A driving permit is typed.
+                            </p>
+                          </div>
+                          <Button variant={scanned ? 'ghost' : 'primary'} onClick={() => setScanOpen(true)}>
+                            {scanned ? 'Read it again' : 'Read the ID'}
+                          </Button>
+                        </div>
+                        {scanned && (
+                          <div className="mt-3 space-y-2 border-t border-brand/15 pt-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge tone="good" dot>
+                                Filled from the ID
+                              </Badge>
+                              <span className="text-xs text-ink/60">{sourceLabel[scanned.source]}. Check it against the card and correct anything wrong.</span>
+                            </div>
+                            {!sameName(scanned.idName, r.guest) && (
+                              <p className="rounded-lg bg-warn/[0.1] p-2.5 text-sm text-ink/80">
+                                The ID is in the name <strong>{scanned.idName}</strong> and the booking is in the name <strong>{r.guest}</strong>. That is
+                                normal when somebody else booked the room, but the person in front of you is the one whose ID this is.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="ID type">
                         {(id) => (
@@ -424,6 +498,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                         The ID photo is personal data. In this prototype it is kept in memory only and disappears on refresh.
                       </p>
                     </div>
+                    {scanOpen && <IdScanSheet photo={idPhoto} onUse={applyScan} onClose={() => setScanOpen(false)} />}
                   </Card>
                 )}
 

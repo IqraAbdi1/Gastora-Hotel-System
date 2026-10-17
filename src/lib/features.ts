@@ -15,6 +15,7 @@ export type FeatureKey =
   | 'supplyChain'
   | 'budgetApproval'
   | 'taxLines'
+  | 'idScan'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -84,6 +85,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     blurb: 'Department budgets, costed requisitions and Finance approval when over budget.',
   },
   {
+    key: 'idScan',
+    label: 'Read the ID',
+    blurb:
+      "The front desk shows a national ID or passport to the camera and the check-in form fills itself from the strip on the card. Every field is checked against the card's own check digits and the receptionist confirms it. A driving permit has no strip and is still typed.",
+  },
+  {
     key: 'taxLines',
     label: 'Tax lines',
     blurb: 'VAT, Local Hotel Tax, service charge and the hotel\'s own taxes are itemised at check-in and on the folio. The hotel admin or owner sets the rates and the EFRIS choice.',
@@ -117,6 +124,7 @@ export const PLANS: {
       'lossReversal',
       'supplyChain',
       'taxLines',
+      'idScan',
     ],
   },
   {
@@ -137,6 +145,7 @@ export const PLANS: {
       'supplyChain',
       'budgetApproval',
       'taxLines',
+      'idScan',
     ],
   },
 ]

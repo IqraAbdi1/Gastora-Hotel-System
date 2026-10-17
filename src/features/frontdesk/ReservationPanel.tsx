@@ -53,10 +53,11 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const guestRows: string[][] = []
   if (d) {
     guestRows.push(
-      ['ID', `${d.idType} ending ${d.idNumber.slice(-4)}`],
+      ['ID', `${d.idType} ending ${d.idNumber.slice(-4)}${d.idReadFrom ? d.idReadFrom === 'typed' ? ', typed from the strip' : ', read from the card' : ''}`],
       ['Nationality', d.nationality],
       ['Phone', d.phone],
     )
+    if (d.idName) guestRows.push(['Name on the ID', d.idName])
     if (d.idExpiry) guestRows.push(['ID expiry', d.idExpiry])
     if (d.dateOfBirth) guestRows.push(['Date of birth', d.dateOfBirth])
     if (d.purpose) guestRows.push(['Purpose', d.purpose])
