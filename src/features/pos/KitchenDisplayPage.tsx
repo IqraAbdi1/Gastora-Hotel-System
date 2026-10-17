@@ -24,16 +24,6 @@ export default function KitchenDisplayPage() {
   const activeOrders = orders.filter(order => (order.kitchenStatus ?? 'New') !== 'Served' && (order.kitchenStatus ?? 'New') !== 'Cancelled')
   const visible = activeOrders.filter(order => (outlet === 'All outlets' || order.outlet === outlet) && (station === 'All stations' || order.items.some(line => { const product = products.find(item => item.id === line.productId); return product?.category === station })))
 
-  function updateOrder(id: string, status: 'New' | 'Preparing') {
-    const at = new Date().toISOString()
-    setOrders(old => old.map(order => order.id === id ? {
-      ...order,
-      kitchenStatus: status,
-      ...(status === 'Preparing' ? { preparingAt: order.preparingAt ?? at } : {}),
-      updatedAt: at,
-    } : order))
-  }
-
   function markLinePreparing(order: HeldOrder, lineIndex: number) {
     const at = new Date().toISOString()
     const items = order.items.map((line, index) => index === lineIndex ? { ...line, status: 'Preparing' as LineStatus, preparingAt: line.preparingAt ?? at } : line)
