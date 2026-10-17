@@ -1,7 +1,7 @@
 import type { RoleId } from '../../lib/roles'
 
 /** The departments staff can pick when they ask for supplies. */
-export const departments = ['Housekeeping', 'Maintenance', 'Front desk', 'Kitchen', 'Admin'] as const
+export const departments = ['Housekeeping', 'Maintenance', 'Front desk', 'Kitchen', 'Bar', 'Admin'] as const
 /** The store itself. Reorder top-ups are charged to its own budget line, not to a department. */
 export const STORE_DEPARTMENT = 'Store'
 export type Department = (typeof departments)[number] | typeof STORE_DEPARTMENT
@@ -160,6 +160,8 @@ export const SAMPLE_STORES: Store[] = [
   { id: 'main', name: 'Main store' },
   { id: 'housekeeping', name: 'Housekeeping store' },
   { id: 'engineering', name: 'Engineering store' },
+  { id: 'kitchen', name: 'Kitchen store' },
+  { id: 'bar', name: 'Bar store' },
 ]
 export type ReceiptKind = 'GRN' | 'DIRECT' | 'ISSUE' | 'RETURN'
 
@@ -464,6 +466,7 @@ export const SAMPLE_BUDGETS: BudgetLine[] = [
   { id: 'Maintenance', name: 'Maintenance', monthly: 2_000_000 },
   { id: 'Front desk', name: 'Front desk', monthly: 500_000 },
   { id: 'Kitchen', name: 'Kitchen', monthly: 1_000_000 },
+  { id: 'Bar', name: 'Bar', monthly: 750_000 },
   { id: 'Admin', name: 'Admin', monthly: 500_000 },
   { id: 'Store', name: 'Store', monthly: 1_500_000 },
 ]
@@ -476,6 +479,29 @@ export const SAMPLE_STOCK: StockItem[] = [
   { id: 's7', name: 'Basin mixer tap', unit: 'piece', category: 'Maintenance', store: 'engineering', onHand: 0, reorderAt: 2, par: 8, unitCost: 350_000 },
   { id: 's8', name: 'Light bulb (LED)', unit: 'piece', category: 'Maintenance', store: 'engineering', onHand: 40, reorderAt: 20, par: 80, unitCost: 6_000 },
   { id: 's9', name: 'Toilet paper (case)', unit: 'case', category: 'Paper', store: 'main', onHand: 9, reorderAt: 6, par: 24, unitCost: 70_000 },
+  // Food & beverage opening balances for a fresh demo install. Unit costs are UGX per stock unit.
+  { id: 'fnb-chicken', name: 'Chicken breast', unit: 'g', category: 'Food', store: 'kitchen', onHand: 12000, reorderAt: 4000, par: 20000, unitCost: 18, tracksExpiry: true },
+  { id: 'fnb-potato', name: 'Potatoes', unit: 'g', category: 'Food', store: 'kitchen', onHand: 18000, reorderAt: 5000, par: 25000, unitCost: 3.5, tracksExpiry: true },
+  { id: 'fnb-beef', name: 'Beef mince', unit: 'g', category: 'Food', store: 'kitchen', onHand: 8000, reorderAt: 2500, par: 14000, unitCost: 24, tracksExpiry: true },
+  { id: 'fnb-bun', name: 'Burger bun', unit: 'piece', category: 'Food', store: 'kitchen', onHand: 40, reorderAt: 12, par: 60, unitCost: 1200, tracksExpiry: true },
+  { id: 'fnb-fish', name: 'Fish fillet', unit: 'g', category: 'Food', store: 'kitchen', onHand: 6000, reorderAt: 1800, par: 10000, unitCost: 28, tracksExpiry: true },
+  { id: 'fnb-rice', name: 'Rice', unit: 'g', category: 'Food', store: 'kitchen', onHand: 15000, reorderAt: 5000, par: 25000, unitCost: 4.5 },
+  { id: 'fnb-vegetables', name: 'Mixed vegetables', unit: 'g', category: 'Food', store: 'kitchen', onHand: 5000, reorderAt: 1800, par: 9000, unitCost: 8, tracksExpiry: true },
+  { id: 'fnb-lettuce', name: 'Lettuce', unit: 'g', category: 'Food', store: 'kitchen', onHand: 2500, reorderAt: 800, par: 5000, unitCost: 12, tracksExpiry: true },
+  { id: 'fnb-tomato', name: 'Tomatoes', unit: 'g', category: 'Food', store: 'kitchen', onHand: 4000, reorderAt: 1200, par: 7000, unitCost: 7, tracksExpiry: true },
+  { id: 'fnb-cucumber', name: 'Cucumber', unit: 'g', category: 'Food', store: 'kitchen', onHand: 2000, reorderAt: 600, par: 4000, unitCost: 6, tracksExpiry: true },
+  { id: 'fnb-oil', name: 'Cooking oil', unit: 'ml', category: 'Food', store: 'kitchen', onHand: 10000, reorderAt: 2500, par: 15000, unitCost: 8 },
+  { id: 'fnb-salt', name: 'Salt', unit: 'g', category: 'Food', store: 'kitchen', onHand: 2000, reorderAt: 500, par: 4000, unitCost: 2 },
+  { id: 'fnb-lemon', name: 'Lemon', unit: 'piece', category: 'Food', store: 'kitchen', onHand: 60, reorderAt: 15, par: 100, unitCost: 500, tracksExpiry: true },
+  { id: 'fnb-orange', name: 'Orange', unit: 'piece', category: 'Food', store: 'kitchen', onHand: 90, reorderAt: 24, par: 140, unitCost: 600, tracksExpiry: true },
+  { id: 'fnb-juice-base', name: 'Juice base', unit: 'ml', category: 'Beverage', store: 'bar', onHand: 5000, reorderAt: 1200, par: 8000, unitCost: 6, tracksExpiry: true },
+  { id: 'fnb-syrup', name: 'Mocktail syrup', unit: 'ml', category: 'Beverage', store: 'bar', onHand: 3000, reorderAt: 800, par: 5000, unitCost: 10 },
+  { id: 'fnb-coffee', name: 'Coffee beans', unit: 'g', category: 'Beverage', store: 'kitchen', onHand: 2000, reorderAt: 500, par: 3500, unitCost: 35 },
+  { id: 'fnb-milk', name: 'Milk', unit: 'ml', category: 'Beverage', store: 'kitchen', onHand: 5000, reorderAt: 1500, par: 8000, unitCost: 5, tracksExpiry: true },
+  { id: 'fnb-soda', name: 'Soda bottle', unit: 'bottle', category: 'Beverage', store: 'bar', onHand: 48, reorderAt: 12, par: 72, unitCost: 1800 },
+  { id: 'fnb-water', name: 'Mineral water bottle', unit: 'bottle', category: 'Beverage', store: 'bar', onHand: 60, reorderAt: 15, par: 90, unitCost: 900 },
+  { id: 'fnb-beer', name: 'House beer bottle', unit: 'bottle', category: 'Beverage', store: 'bar', onHand: 36, reorderAt: 12, par: 60, unitCost: 3500 },
+  { id: 'fnb-wine', name: 'House wine', unit: 'ml', category: 'Beverage', store: 'bar', onHand: 3000, reorderAt: 750, par: 5000, unitCost: 20 },
 ]
 
 const iso = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString()

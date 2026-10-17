@@ -3,32 +3,37 @@ import { useMemo, useState } from 'react'
 import { readBrowserValue, useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import PageHeader from '../../components/ui/PageHeader'
+import { useHotel } from '../../lib/hotelContext'
 import { useRequests } from '../procurement/requestsContext'
+import { claimLineDeduction, finishLineDeduction, isLineDeducted, migratePosStorage } from './posStore'
+import { POS_STORAGE_KEYS } from './posTypes'
+import { calculateAvailability, calculateRecipeCost, convertQuantity, getRecipeMappingIssues, validateRecipe } from './recipeEngine'
+import type { HeldOrder, Line, OrderType, Outlet, Payment, Product, RecipeIngredient, Recipes, Sale } from './posTypes'
 
-type Outlet = 'Restaurant' | 'Bar'
-type Payment = 'Cash' | 'Mobile money' | 'Card' | 'Room charge'
-type OrderType = 'Dine-in' | 'Takeaway' | 'Delivery'
-type Product = { id: string; name: string; category: string; outlet: Outlet; price: number; stock: number; unit: string; emoji: string; available?: boolean }
-type Sale = { id: string; createdAt: string; outlet: Outlet; payment: Payment; total: number; subtotal?: number; discount?: number; orderType?: OrderType; table?: string; customer?: string; notes?: string; paymentReference?: string; amountTendered?: number; changeDue?: number; items: { name: string; qty: number; price: number }[]; room?: string }
-type Line = { productId: string; qty: number }
-type HeldOrder = { id: string; createdAt: string; outlet: Outlet; orderType: OrderType; table: string; room: string; customer: string; notes: string; discountPercent: number; items: Line[]; kitchenStatus?: 'New' | 'Preparing' | 'Ready'; course?: string; allergy?: string; vip?: boolean }
-type RecipeIngredient = { stockId: string; qty: number }
-type Recipes = Record<string, RecipeIngredient[]>
+// POS and KDS share these contracts; legacy storage shapes remain compatible.
+
+migratePosStorage()
 
 const seed: Product[] = [
-  { id: 'm1', name: 'Chicken & chips', category: 'Main dishes', outlet: 'Restaurant', price: 22000, stock: 24, unit: 'plate', emoji: '🍗' },
-  { id: 'm2', name: 'Beef burger', category: 'Main dishes', outlet: 'Restaurant', price: 18000, stock: 18, unit: 'plate', emoji: '🍔' },
-  { id: 'm3', name: 'Fish fillet', category: 'Main dishes', outlet: 'Restaurant', price: 28000, stock: 12, unit: 'plate', emoji: '🐟' },
-  { id: 'm4', name: 'Vegetable rice', category: 'Main dishes', outlet: 'Restaurant', price: 14000, stock: 20, unit: 'plate', emoji: '🍚' },
-  { id: 'm5', name: 'Garden salad', category: 'Starters', outlet: 'Restaurant', price: 10000, stock: 16, unit: 'bowl', emoji: '🥗' },
-  { id: 'd1', name: 'Fresh juice', category: 'Soft drinks', outlet: 'Restaurant', price: 7000, stock: 30, unit: 'glass', emoji: '🧃' },
-  { id: 'd2', name: 'Soda', category: 'Soft drinks', outlet: 'Bar', price: 4000, stock: 48, unit: 'bottle', emoji: '🥤' },
-  { id: 'd3', name: 'Mineral water', category: 'Soft drinks', outlet: 'Bar', price: 3000, stock: 60, unit: 'bottle', emoji: '💧' },
-  { id: 'd4', name: 'House mocktail', category: 'Mocktails', outlet: 'Bar', price: 12000, stock: 15, unit: 'glass', emoji: '🍹' },
-  { id: 'd5', name: 'Espresso', category: 'Hot drinks', outlet: 'Restaurant', price: 8000, stock: 25, unit: 'cup', emoji: '☕' },
-  { id: 'd6', name: 'House beer', category: 'Beer', outlet: 'Bar', price: 9000, stock: 36, unit: 'bottle', emoji: '🍺' },
-  { id: 'd7', name: 'House wine (glass)', category: 'Wine', outlet: 'Bar', price: 15000, stock: 20, unit: 'glass', emoji: '🍷' },
+  { id: 'm1', name: 'Chicken & chips', category: 'Main dishes', outlet: 'Restaurant', price: 22000, unit: 'plate', emoji: '🍗' },
+  { id: 'm2', name: 'Beef burger', category: 'Main dishes', outlet: 'Restaurant', price: 18000, unit: 'plate', emoji: '🍔' },
+  { id: 'm3', name: 'Fish fillet', category: 'Main dishes', outlet: 'Restaurant', price: 28000, unit: 'plate', emoji: '🐟' },
+  { id: 'm4', name: 'Vegetable rice', category: 'Main dishes', outlet: 'Restaurant', price: 14000, unit: 'plate', emoji: '🍚' },
+  { id: 'm5', name: 'Garden salad', category: 'Starters', outlet: 'Restaurant', price: 10000, unit: 'bowl', emoji: '🥗' },
+  { id: 'd1', name: 'Fresh juice', category: 'Soft drinks', outlet: 'Restaurant', price: 7000, unit: 'glass', emoji: '🧃' },
+  { id: 'd2', name: 'Soda', category: 'Soft drinks', outlet: 'Bar', price: 4000, unit: 'bottle', emoji: '🥤' },
+  { id: 'd3', name: 'Mineral water', category: 'Soft drinks', outlet: 'Bar', price: 3000, unit: 'bottle', emoji: '💧' },
+  { id: 'd4', name: 'House mocktail', category: 'Mocktails', outlet: 'Bar', price: 12000, unit: 'glass', emoji: '🍹' },
+  { id: 'd5', name: 'Espresso', category: 'Hot drinks', outlet: 'Restaurant', price: 8000, unit: 'cup', emoji: '☕' },
+  { id: 'd6', name: 'House beer', category: 'Beer', outlet: 'Bar', price: 9000, unit: 'bottle', emoji: '🍺' },
+  { id: 'd7', name: 'House wine (glass)', category: 'Wine', outlet: 'Bar', price: 15000, unit: 'glass', emoji: '🍷' },
 ]
+
+function selectedGuestAlert(guestId: string, guests: ReturnType<typeof useHotel>['guests']): string {
+  const guest = guests.find(item => item.id === guestId)
+  if (!guest) return ''
+  return [guest.preferences?.diet, ...(guest.notes ?? []).map(note => note.text)].filter(Boolean).join(' · ')
+}
 
 const cash = (n: number) =>
   new Intl.NumberFormat('en-UG', {
@@ -48,17 +53,22 @@ export default function PosPage() {
   const isSale = !isOrders && !isTables && !isMenu && !isPayments && !isRecipes
 
   const inventory = useRequests()
+  const hotel = useHotel()
 
   const [outlet, setOutlet] = useState<Outlet>('Restaurant')
   const [category, setCategory] = useState('All items')
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<Line[]>([])
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null)
   const [payment, setPayment] = useState<Payment>('Cash')
   const [room, setRoom] = useState('')
   const [orderType, setOrderType] = useState<OrderType>('Dine-in')
   const [table, setTable] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [customer, setCustomer] = useState('')
+  const [guestId, setGuestId] = useState('')
+  const [roomFloor, setRoomFloor] = useState('')
+  const [deliverySetup, setDeliverySetup] = useState<'Tray' | 'Rolling table' | 'Silver service'>('Tray')
   const [orderNotes, setOrderNotes] = useState('')
   const [discountPercent, setDiscountPercent] = useState('0')
   const [cashTendered, setCashTendered] = useState('')
@@ -67,10 +77,10 @@ export default function PosPage() {
   const [salesSearch, setSalesSearch] = useState('')
   const [salesPaymentFilter, setSalesPaymentFilter] = useState('All payments')
 
-  const [products, setProducts] = useBrowserSyncedState<Product[]>('gastora.pos.products.v1', seed)
-  const [heldOrders, setHeldOrders] = useBrowserSyncedState<HeldOrder[]>('gastora.pos.heldOrders.v1', [])
+  const [products, setProducts] = useBrowserSyncedState<Product[]>(POS_STORAGE_KEYS.products, seed)
+  const [heldOrders, setHeldOrders] = useBrowserSyncedState<HeldOrder[]>(POS_STORAGE_KEYS.heldOrders, [])
   const [tables, setTables] = useBrowserSyncedState<string[]>(
-    'gastora.pos.tables.v1',
+    POS_STORAGE_KEYS.tables,
     Array.from({ length: 12 }, (_, index) => `T${String(index + 1).padStart(2, '0')}`),
   )
 
@@ -83,11 +93,13 @@ export default function PosPage() {
   const [newMenuPrice, setNewMenuPrice] = useState('')
   const [newMenuUnit, setNewMenuUnit] = useState('portion')
   const [newMenuEmoji, setNewMenuEmoji] = useState('🍽️')
-  const [sales, setSales] = useBrowserSyncedState<Sale[]>('gastora.pos.sales.v1', [])
+  const [sales, setSales] = useBrowserSyncedState<Sale[]>(POS_STORAGE_KEYS.sales, [])
   const [paying, setPaying] = useState(false)
   const [currentOrderOpen, setCurrentOrderOpen] = useState(true)
   const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null)
-  const [recipes, setRecipes] = useBrowserSyncedState<Recipes>('gastora.pos.recipes.v1', {})
+  const [recipes, setRecipes] = useBrowserSyncedState<Recipes>(POS_STORAGE_KEYS.recipes, {})
+  const [foodCostThreshold, setFoodCostThreshold] = useBrowserSyncedState<number>('gastora.pos.foodCostThreshold.v1', 35)
+  const [lowPortionThreshold, setLowPortionThreshold] = useBrowserSyncedState<number>('gastora.pos.lowPortionThreshold.v1', 5)
   const [recipeProduct, setRecipeProduct] = useState(seed[0].id)
 
   const categories = useMemo(
@@ -95,19 +107,22 @@ export default function PosPage() {
     [products, outlet],
   )
 
-  // Available portions are calculated from the configured inventory recipe.
+  // Availability and recipe costing are pure calculations over the shared inventory state.
+  function availability(product: Product) {
+    return calculateAvailability(product, recipes, inventory.stock, inventory.stockOf)
+  }
+
   function availableServings(product: Product): number {
-    const recipe = recipes[product.id] ?? []
-    if (!recipe.length) return 0
+    return availability(product).portions
+  }
 
-    const quantities = recipe.map(ingredient => {
-      const stockItem = inventory.stock.find(item => item.id === ingredient.stockId)
-      if (!stockItem || !Number.isFinite(ingredient.qty) || ingredient.qty <= 0) return 0
-
-      return Math.floor(Math.max(0, inventory.stockOf(stockItem.name)) / ingredient.qty)
-    })
-
-    return quantities.length ? Math.min(...quantities) : 0
+  function requestRestock(product: Product) {
+    const limitingName = availability(product).limitingIngredient
+    const item = limitingName ? inventory.stock.find((entry) => entry.name === limitingName) : undefined
+    if (!item) return setNotice(`Cannot determine a limiting stock item for ${product.name}. Check its recipe mapping.`)
+    const target = item.par ?? Math.max(item.reorderAt, item.onHand + 1)
+    const result = inventory.topUp([{ itemId: item.id, qty: Math.max(1, Math.ceil(target - item.onHand)) }])
+    setNotice(result.ok ? `Restock request ${result.value} raised for ${item.name}.` : result.error)
   }
 
   const shown = products.filter(
@@ -156,33 +171,39 @@ export default function PosPage() {
 
   function add(product: Product) {
     setNotice('')
+    if (product.available === false) return setNotice(`${product.name} is manually marked unavailable (86).`)
+    const currentQty = cart.find((line) => line.productId === product.id)?.qty ?? 0
+    if (product.trackStock !== false) {
+      const available = availableServings(product)
+      if (available <= currentQty) return setNotice(available === 0 ? `${product.name} is sold out (86).${availability(product).limitingIngredient ? ` Limiting ingredient: ${availability(product).limitingIngredient}.` : ''}` : `Only ${available} portion(s) of ${product.name} are available.`)
+    }
     setCart(old =>
       old.some(line => line.productId === product.id)
-        ? old.map(line =>
-            line.productId === product.id ? { ...line, qty: line.qty + 1 } : line,
-          )
-        : [...old, { productId: product.id, qty: 1 }],
+        ? old.map(line => line.productId === product.id ? { ...line, qty: line.qty + 1 } : line)
+        : [...old, { productId: product.id, lineId: `LINE-${Date.now()}-${product.id}`, qty: 1 }],
     )
   }
 
   function qty(id: string, delta: number) {
-    setCart(old =>
-      old
-        .map(line =>
-          line.productId === id
-            ? { ...line, qty: Math.max(0, line.qty + delta) }
-            : line,
-        )
-        .filter(line => line.qty > 0),
-    )
+    const product = products.find((entry) => entry.id === id)
+    const currentQty = cart.find((line) => line.productId === id)?.qty ?? 0
+    if (delta > 0 && product && product.trackStock !== false && currentQty >= availableServings(product)) {
+      setNotice(`Cannot add more ${product.name}; only ${availableServings(product)} portion(s) are available.`)
+      return
+    }
+    setCart(old => old.map(line => line.productId === id ? { ...line, qty: Math.max(0, line.qty + delta) } : line).filter(line => line.qty > 0))
   }
 
   function resetCurrentOrder() {
     setCart([])
+    setActiveOrderId(null)
     setRoom('')
     setTable('')
     setDeliveryAddress('')
     setCustomer('')
+    setGuestId('')
+    setRoomFloor('')
+    setDeliverySetup('Tray')
     setOrderNotes('')
     setDiscountPercent('0')
     setCashTendered('')
@@ -205,14 +226,20 @@ export default function PosPage() {
       orderType,
       table: orderType === 'Dine-in' ? table : orderType === 'Delivery' ? deliveryAddress.trim() : '',
       room,
+      roomFloor,
+      deliverySetup: orderType === 'Room service' ? deliverySetup : undefined,
       customer,
+      guestId: guestId || undefined,
+      allergy: selectedGuestAlert(guestId, hotel.guests),
+      severeAllergy: /anaphylaxis|severe allergy|epipen|epinephrine/i.test(selectedGuestAlert(guestId, hotel.guests)),
+      vip: hotel.guests.find(guest => guest.id === guestId)?.vip ?? false,
       notes: orderNotes,
       discountPercent: Math.min(100, Math.max(0, Number(discountPercent) || 0)),
-      items: cart,
+      items: cart.map((line, index) => ({ ...line, lineId: line.lineId ?? `ORD-${Date.now()}-line-${index + 1}`, status: line.status ?? 'New' })),
       kitchenStatus: 'New',
     }
 
-    const latest = readBrowserValue<HeldOrder[]>('gastora.pos.heldOrders.v1', heldOrders)
+    const latest = readBrowserValue<HeldOrder[]>(POS_STORAGE_KEYS.heldOrders, heldOrders)
     setHeldOrders([held, ...latest.filter(order => order.id !== held.id)])
     resetCurrentOrder()
     setNotice(`Order ${held.id} sent to the kitchen/bar queue. No payment recorded and no inventory deducted.`)
@@ -220,12 +247,16 @@ export default function PosPage() {
 
   function resumeHeldOrder(held: HeldOrder) {
     setOutlet(held.outlet)
-    setCart(held.items)
+    setActiveOrderId(held.id)
+    setCart(held.items.map((line, index) => ({ ...line, lineId: line.lineId ?? `${held.id}-line-${index + 1}` })))
     setOrderType(held.orderType)
     setTable(held.orderType === 'Dine-in' ? held.table : '')
     setDeliveryAddress(held.orderType === 'Delivery' ? held.table : '')
     setRoom(held.room)
     setCustomer(held.customer)
+    setGuestId(held.guestId ?? '')
+    setRoomFloor(held.roomFloor ?? '')
+    setDeliverySetup(held.deliverySetup ?? 'Tray')
     setOrderNotes(held.notes)
     setDiscountPercent(String(held.discountPercent))
     setHeldOrders(old => old.filter(order => order.id !== held.id))
@@ -233,6 +264,10 @@ export default function PosPage() {
     setCurrentOrderOpen(true)
     navigate('/pos')
     setNotice(`Order ${held.id} restored. Inventory has not been changed.`)
+  }
+
+  function updateCartLine(productId: string, patch: Partial<Line>) {
+    setCart(old => old.map(line => line.productId === productId ? { ...line, ...patch } : line))
   }
 
   function addMenuItem() {
@@ -249,7 +284,7 @@ export default function PosPage() {
       category: newMenuCategory.trim(),
       outlet: newMenuOutlet,
       price,
-      stock: 0,
+      trackStock: true,
       unit: newMenuUnit.trim() || 'portion',
       emoji: newMenuEmoji.trim() || '🍽️',
       available: true,
@@ -308,8 +343,8 @@ export default function PosPage() {
     if (lines.some(line => line.product.available === false)) {
       return setNotice('One or more items in the current order are unavailable. Remove them before checkout.')
     }
-    if (payment === 'Room charge' && !room.trim()) {
-      return setNotice('Enter the guest room number for a room charge.')
+    if ((payment === 'Room charge' || orderType === 'Room service') && !room.trim()) {
+      return setNotice('Enter the guest room number for a room charge or room-service order.')
     }
     if (orderType === 'Dine-in' && outlet === 'Restaurant' && !table.trim()) {
       return setNotice('Select a table for dine-in orders.')
@@ -325,28 +360,54 @@ export default function PosPage() {
     }
 
     const saleId = `POS-${Date.now().toString().slice(-7)}`
-    const deductions: { name: string; qty: number }[] = []
+    const deductionOrderRef = activeOrderId ?? `CART-${cart.map(line => line.lineId ?? line.productId).join('-')}`
+    const deductionRefs: string[] = []
+    let deductedIngredientCount = 0
 
+    // Validate all recipes before any stock changes. The actual issue is then idempotent per order line.
     for (const line of lines) {
+      if (line.product.trackStock === false || line.stockDeducted || isLineDeducted(`${deductionOrderRef}:${line.lineId ?? line.productId}`)) continue
       const recipe = recipes[line.product.id] ?? []
-
-      if (!recipe.length) {
-        return setNotice(`Configure an inventory recipe for ${line.product.name} before completing this sale.`)
-      }
-
+      if (!recipe.length) return setNotice(`Configure an inventory recipe for ${line.product.name} before completing this sale.`)
+      const recipeIssues = validateRecipe(recipe, inventory.stock)
+      if (recipeIssues.length) return setNotice(`${line.product.name}: ${recipeIssues[0]}`)
       for (const ingredient of recipe) {
         const stockItem = inventory.stock.find(item => item.id === ingredient.stockId)
-
-        if (!stockItem) {
-          return setNotice(`A recipe ingredient for ${line.product.name} is no longer in inventory. Please update the recipe.`)
-        }
-
-        deductions.push({ name: stockItem.name, qty: ingredient.qty * line.qty })
+        if (!stockItem) return setNotice(`A recipe ingredient for ${line.product.name} is no longer in inventory. Please update the recipe.`)
+        const converted = convertQuantity(ingredient.qty, ingredient.unit || stockItem.unit, stockItem.unit)
+        if (converted === null || converted <= 0) return setNotice(`Invalid or incompatible recipe unit for ${stockItem.name}.`)
+        if ((ingredient.wastePercent ?? 0) >= 100) return setNotice(`Waste percentage for ${stockItem.name} must be less than 100%.`)
       }
     }
 
-    const stockResult = inventory.consumeStockForSale(deductions, saleId, outlet)
-    if (stockResult.ok === false) return setNotice(stockResult.error)
+    for (const line of lines) {
+      if (line.product.trackStock === false) continue
+      const ref = `${deductionOrderRef}:${line.lineId ?? line.productId}`
+      if (line.stockDeducted || isLineDeducted(ref)) continue
+      const recipe = recipes[line.product.id] ?? []
+      const deductions: { name: string; qty: number }[] = []
+      for (const ingredient of recipe) {
+        const stockItem = inventory.stock.find(item => item.id === ingredient.stockId)
+        if (!stockItem) return setNotice(`A recipe ingredient for ${line.product.name} is no longer in inventory. Please update the recipe.`)
+        const converted = convertQuantity(ingredient.qty, ingredient.unit || stockItem.unit, stockItem.unit)
+        if (converted === null || converted <= 0) return setNotice(`Invalid or incompatible recipe unit for ${stockItem.name}.`)
+        const wastePercent = ingredient.wastePercent ?? 0
+        deductions.push({ name: stockItem.name, qty: (converted / (1 - wastePercent / 100)) * line.qty })
+      }
+      if (!deductions.length) continue
+      if (!claimLineDeduction(ref)) {
+        if (isLineDeducted(ref)) continue
+        return setNotice(`Stock deduction for ${line.product.name} is already in progress. Refresh and verify inventory before retrying.`)
+      }
+      const stockResult = inventory.consumeStockForSale(deductions, saleId, outlet, ref)
+      if (stockResult.ok === false) {
+        finishLineDeduction(ref, stockResult.error)
+        return setNotice(stockResult.error)
+      }
+      finishLineDeduction(ref)
+      deductionRefs.push(ref)
+      deductedIngredientCount += stockResult.value.length
+    }
 
     const sale: Sale = {
       id: saleId,
@@ -370,15 +431,24 @@ export default function PosPage() {
         qty: line.qty,
         price: line.product.price,
       })),
-      ...(payment === 'Room charge' ? { room: room.trim() } : {}),
+      ...(payment === 'Room charge' || orderType === 'Room service' ? { room: room.trim() } : {}),
+      ...(guestId ? { guestId } : {}),
     }
 
     const latestSales = readBrowserValue<Sale[]>('gastora.pos.sales.v1', sales)
     const nextSales = [sale, ...latestSales.filter(existing => existing.id !== sale.id)]
 
     setSales(nextSales)
+    if (activeOrderId) {
+      const active = heldOrders.find(order => order.id === activeOrderId)
+      if (active) {
+        const paidAt = new Date().toISOString()
+        const paidOrder = { ...active, paidAt, updatedAt: paidAt, items: active.items.map(line => ({ ...line, stockDeducted: line.stockDeducted || isLineDeducted(`${deductionOrderRef}:${line.lineId ?? line.productId}`) })) }
+        window.localStorage.setItem(POS_STORAGE_KEYS.orderHistory, JSON.stringify([paidOrder, ...readBrowserValue<HeldOrder[]>(POS_STORAGE_KEYS.orderHistory, []).filter(order => order.id !== paidOrder.id)]))
+      }
+    }
     resetCurrentOrder()
-    setNotice(`Sale ${sale.id} recorded: ${cash(sale.total)} via ${sale.payment}. Inventory deducted from ${stockResult.value.length} stock item(s).`)
+    setNotice(`Sale ${sale.id} recorded: ${cash(sale.total)} via ${sale.payment}. Inventory deduction ledger recorded ${deductionRefs.length} line(s) and ${deductedIngredientCount} ingredient movement(s); lines already deducted by Kitchen were skipped.`)
   }
 
   return (
@@ -396,7 +466,7 @@ export default function PosPage() {
                   ? 'Payment Processing'
                   : isRecipes
                     ? 'Recipe & Inventory Mapping'
-                    : 'Order Management'
+                    : 'Menus & new order'
         }
         description={
           isOrders
@@ -428,7 +498,7 @@ export default function PosPage() {
                 onChange={e => navigate(e.target.value)}
                 className="ml-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-ink"
               >
-                <option value="/pos">Order Management · New order</option>
+                <option value="/pos">Menus · New order</option>
                 <option value="/pos/orders">Order Management · Orders</option>
                 <option value="/pos/tables">Table Management</option>
                 <option value="/pos/menu">Menu Management</option>
@@ -484,7 +554,7 @@ export default function PosPage() {
 
           <div className="overflow-x-auto rounded-lg border border-black/5">
             <table className="w-full text-left text-sm">
-              <thead className="bg-canvas/70"><tr><th className="px-3 py-2">Item</th><th className="px-3 py-2">Outlet</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">Price (UGX)</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2">Availability</th><th className="px-3 py-2">Action</th></tr></thead>
+              <thead className="bg-canvas/70"><tr><th className="px-3 py-2">Item</th><th className="px-3 py-2">Outlet</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">Price (UGX)</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2">Live portions</th><th className="px-3 py-2">Availability</th><th className="px-3 py-2">Stock tracking</th><th className="px-3 py-2">Action</th></tr></thead>
               <tbody>
                 {products.map(item => (
                   <tr key={`${item.id}-${item.price}`} className="border-t border-black/5">
@@ -494,9 +564,18 @@ export default function PosPage() {
                     <td className="px-3 py-2"><input type="number" min="1" defaultValue={item.price} onBlur={e => updateMenuPrice(item.id, e.target.value)} aria-label={`Price for ${item.name}`} className="w-28 rounded-md border border-black/10 px-2 py-1" /></td>
                     <td className="px-3 py-2">{item.unit}</td>
                     <td className="px-3 py-2">
+                      {item.trackStock === false ? 'Untracked' : (recipes[item.id]?.length ?? 0) === 0 ? 'Recipe needed' : availableServings(item) <= 0 ? <span className="font-semibold text-red-700">Sold out (86)</span> : <span>{availableServings(item)} available{availability(item).limitingIngredient ? ` · ${availability(item).limitingIngredient}` : ''}</span>}
+                    </td>
+                    <td className="px-3 py-2">
                       <button onClick={() => { setProducts(old => old.map(product => product.id === item.id ? { ...product, available: product.available === false } : product)); setNotice(`${item.name} marked ${item.available === false ? 'available' : 'unavailable'}.`) }} className={`rounded-md px-2 py-1 text-xs font-semibold ${item.available === false ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}>
                         {item.available === false ? 'Unavailable · Enable' : 'Available · Disable'}
                       </button>
+                    </td>
+                    <td className="px-3 py-2">
+                      <button onClick={() => {
+                        setProducts(old => old.map(product => product.id === item.id ? { ...product, trackStock: product.trackStock === false } : product))
+                        setNotice(`${item.name}: inventory tracking ${item.trackStock === false ? 'enabled' : 'disabled'}. ${item.trackStock === false ? 'Configure a valid recipe before selling.' : 'This item will not deduct inventory.'}`)
+                      }} className="rounded-md border border-black/10 px-2 py-1 text-xs">{item.trackStock === false ? 'Untracked · Enable' : 'Tracked · Disable'}</button>
                     </td>
                     <td className="px-3 py-2">
                       <button onClick={() => {
@@ -540,10 +619,10 @@ export default function PosPage() {
 
           <div className="space-y-3">
             {(recipes[recipeProduct] ?? []).map((ingredient, index) => (
-              <div key={`${recipeProduct}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px_auto]">
+              <div key={`${recipeProduct}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_100px_100px_100px_auto]">
                 <label className="text-xs font-semibold text-ink/60">
                   Inventory item
-                  <select value={ingredient.stockId} onChange={e => saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).map((x, i) => i === index ? { ...x, stockId: e.target.value } : x))} className="mt-1 block w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-normal">
+                  <select value={ingredient.stockId} onChange={e => { const selected = inventory.stock.find(item => item.id === e.target.value); saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).map((x, i) => i === index ? { ...x, stockId: e.target.value, unit: selected?.unit ?? x.unit } : x)) }} className="mt-1 block w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-normal">
                     <option value="">Choose stock item…</option>
                     {inventory.stock.map(item => <option key={item.id} value={item.id}>{item.name} · {item.onHand} {item.unit} available</option>)}
                   </select>
@@ -551,6 +630,16 @@ export default function PosPage() {
                 <label className="text-xs font-semibold text-ink/60">
                   Qty per menu item
                   <input type="number" min="0.001" step="0.001" value={ingredient.qty} onChange={e => saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).map((x, i) => i === index ? { ...x, qty: Number(e.target.value) } : x))} className="mt-1 block w-full rounded-lg border border-black/10 px-3 py-2 text-sm font-normal" />
+                </label>
+                <label className="text-xs font-semibold text-ink/60">
+                  Unit
+                  <select value={ingredient.unit || inventory.stock.find(item => item.id === ingredient.stockId)?.unit || 'piece'} onChange={e => saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).map((x, i) => i === index ? { ...x, unit: e.target.value } : x))} className="mt-1 block w-full rounded-lg border border-black/10 bg-white px-2 py-2 text-sm font-normal">
+                    {['g', 'kg', 'ml', 'l', 'piece', 'bottle', 'can'].map(unit => <option key={unit}>{unit}</option>)}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-ink/60">
+                  Waste %
+                  <input type="number" min="0" max="99.99" step="0.1" value={ingredient.wastePercent ?? 0} onChange={e => saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).map((x, i) => i === index ? { ...x, wastePercent: Number(e.target.value) } : x))} className="mt-1 block w-full rounded-lg border border-black/10 px-2 py-2 text-sm font-normal" />
                 </label>
                 <button onClick={() => saveRecipe(recipeProduct, (recipes[recipeProduct] ?? []).filter((_, i) => i !== index))} className="self-end rounded-lg border border-black/10 px-3 py-2 text-sm">Remove</button>
               </div>
@@ -560,14 +649,42 @@ export default function PosPage() {
           {!inventory.stock.length && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">There are no inventory items yet. Add ingredients in Inventory → Stock before configuring recipes.</p>}
 
           <div className="flex flex-wrap gap-2">
-            <button disabled={!inventory.stock.length || !products.length} onClick={() => saveRecipe(recipeProduct, [...(recipes[recipeProduct] ?? []), { stockId: inventory.stock[0].id, qty: 1 }])} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">+ Add ingredient</button>
+            <button disabled={!inventory.stock.length || !products.length} onClick={() => saveRecipe(recipeProduct, [...(recipes[recipeProduct] ?? []), { stockId: inventory.stock[0].id, qty: 1, unit: inventory.stock[0].unit }])} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">+ Add ingredient</button>
             <button disabled={!products.length} onClick={() => { saveRecipe(recipeProduct, []); setNotice('Recipe cleared. Sales of this item are blocked until a new recipe is configured.') }} className="rounded-lg border border-black/10 px-3 py-2 text-sm font-semibold disabled:opacity-40">Clear recipe</button>
           </div>
 
           <div className="rounded-lg bg-canvas p-3 text-sm">
             <p className="font-semibold">Recipe status</p>
             <p className="mt-1 text-ink/60">{(recipes[recipeProduct] ?? []).length ? `${(recipes[recipeProduct] ?? []).length} ingredient line(s) configured for ${products.find(p => p.id === recipeProduct)?.name ?? 'this item'}.` : 'No recipe configured. Checkout will be blocked for this menu item until ingredients are added.'}</p>
-            <p className="mt-2 text-xs text-ink/50">Recipe quantities must use the exact unit configured for each stock item. Available portions are calculated from the limiting ingredient; unit conversion (for example kg to g) is not automatic yet.</p>
+            {validateRecipe(recipes[recipeProduct] ?? [], inventory.stock).map((issue, index) => <p key={`${recipeProduct}-validation-${index}`} className="mt-1 text-sm text-red-700">{issue}</p>)}
+            <p className="mt-2 text-xs text-ink/50">Ingredient quantities support compatible mass (kg/g), volume (l/ml), and count units. Waste % is interpreted as a share of gross input; required issue quantity is net quantity divided by (1 − waste%). Invalid or incompatible mappings block checkout.</p>
+            {(() => {
+              const product = products.find(p => p.id === recipeProduct)
+              const cost = product ? calculateRecipeCost(product, recipes, inventory.stock) : null
+              if (!product || !cost) return <p className="mt-3 text-sm text-amber-800">Recipe costing unavailable until every ingredient is mapped to a valid stock item.</p>
+              return <div className="mt-3 grid gap-2 border-t border-black/5 pt-3 sm:grid-cols-2">
+                <p>Cost per portion: <strong>{cash(cost.costPerPortion)}</strong></p>
+                <p>Gross profit: <strong className={cost.grossProfit < 0 ? 'text-red-700' : ''}>{cash(cost.grossProfit)}</strong></p>
+                <p>Margin: <strong>{cost.marginPercent.toFixed(1)}%</strong></p>
+                <p>Food cost: <strong>{cost.foodCostPercent.toFixed(1)}%</strong></p>
+                <label className="text-sm sm:col-span-2">Food-cost warning threshold (%)
+                  <input type="number" min="1" max="100" value={foodCostThreshold} onChange={e => setFoodCostThreshold(Math.min(100, Math.max(1, Number(e.target.value) || 35)))} className="ml-2 w-24 rounded-lg border border-black/10 px-2 py-1" />
+                </label>
+                <label className="text-sm sm:col-span-2">Low-portion alert threshold
+                  <input type="number" min="1" max="100" value={lowPortionThreshold} onChange={e => setLowPortionThreshold(Math.min(100, Math.max(1, Number(e.target.value) || 5)))} className="ml-2 w-24 rounded-lg border border-black/10 px-2 py-1" /> portions
+                </label>
+                {cost.foodCostPercent > foodCostThreshold && <p className="sm:col-span-2 rounded-lg bg-amber-50 p-2 text-amber-900">Food cost exceeds the configured {foodCostThreshold}% threshold.</p>}
+              </div>
+            })()}
+          </div>
+          <div className="rounded-xl border border-black/5 bg-white p-4">
+            <h3 className="font-bold">Recipe mapping health</h3>
+            <p className="mt-1 text-sm text-ink/60">Items with missing recipes, missing stock links, invalid units, or negative gross profit.</p>
+            <div className="mt-3 space-y-2">
+              {getRecipeMappingIssues(products, recipes, inventory.stock).length === 0
+                ? <p className="text-sm text-emerald-700">All tracked menu items have valid recipes and non-negative gross profit.</p>
+                : getRecipeMappingIssues(products, recipes, inventory.stock).map((issue, index) => <p key={`${issue.productId}-${index}`} className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900"><strong>{issue.productName}:</strong> {issue.issue}</p>)}
+            </div>
           </div>
         </section>
       )}
@@ -807,17 +924,34 @@ export default function PosPage() {
               </select>
             </div>
 
+            <div className="rounded-xl border border-black/5 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Low-portion alerts</p>
+                <label className="text-xs text-ink/60">Warn at or below <input type="number" min="1" max="100" value={lowPortionThreshold} onChange={e => setLowPortionThreshold(Math.min(100, Math.max(1, Number(e.target.value) || 5)))} className="ml-1 w-16 rounded-md border border-black/10 px-2 py-1" /> portions</label>
+              </div>
+              <div className="mt-2 space-y-2">
+                {products.filter(product => product.outlet === outlet && product.available !== false && product.trackStock !== false && availableServings(product) > 0 && availableServings(product) <= lowPortionThreshold).map(product => (
+                  <div key={product.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">
+                    <span><strong>{product.name}</strong>: {availableServings(product)} portion(s) left; limiting ingredient {availability(product).limitingIngredient ?? 'not identified'}.</span>
+                    <button onClick={() => requestRestock(product)} className="rounded-md border border-amber-900/20 bg-white px-2 py-1 text-xs font-semibold">Request restock</button>
+                  </div>
+                ))}
+                {!products.some(product => product.outlet === outlet && product.available !== false && product.trackStock !== false && availableServings(product) > 0 && availableServings(product) <= lowPortionThreshold) && <p className="text-xs text-ink/50">No items are below the configured portion threshold.</p>}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {shown.map(product => (
-                <button key={product.id} onClick={() => add(product)} className="group rounded-xl border border-black/5 bg-white p-4 text-left transition hover:border-brand/40 hover:shadow-sm">
-                  <div className="flex items-start justify-between">
+                <button key={product.id} disabled={product.trackStock !== false && availableServings(product) <= 0} onClick={() => add(product)} className="group rounded-xl border border-black/5 bg-white p-4 text-left transition hover:border-brand/40 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-60">
+                  <div className="flex items-start justify-between gap-2">
                     <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-canvas text-2xl">{product.emoji}</span>
-                    <span className={`rounded-full px-2 py-1 text-xs ${(recipes[product.id]?.length ?? 0) === 0 ? 'bg-amber-50 text-amber-800' : availableServings(product) <= 5 ? 'bg-amber-50 text-amber-800' : 'bg-canvas text-ink/60'}`}>
-                      {(recipes[product.id]?.length ?? 0) === 0 ? 'Recipe needed' : `${availableServings(product)} portions available`}
+                    <span className={`rounded-full px-2 py-1 text-xs ${(recipes[product.id]?.length ?? 0) === 0 && product.trackStock !== false ? 'bg-amber-50 text-amber-800' : product.trackStock !== false && availableServings(product) <= 5 ? 'bg-amber-50 text-amber-800' : 'bg-canvas text-ink/60'}`}>
+                      {product.trackStock === false ? 'Stock not tracked' : (recipes[product.id]?.length ?? 0) === 0 ? 'Recipe needed' : availableServings(product) <= 0 ? 'Sold out (86)' : `${availableServings(product)} portions available`}
                     </span>
                   </div>
                   <p className="mt-4 font-semibold">{product.name}</p>
                   <p className="mt-1 text-xs text-ink/50">{product.category} · per {product.unit}</p>
+                  {product.trackStock !== false && availableServings(product) <= 0 && availability(product).limitingIngredient && <p className="mt-1 text-xs text-red-700">Limiting ingredient: {availability(product).limitingIngredient}</p>}
                   <div className="mt-3 flex items-center justify-between">
                     <span className="font-bold text-brand">{cash(product.price)}</span>
                     <span className="rounded-md bg-brand px-2.5 py-1 text-xs font-semibold text-white">+ Add</span>
@@ -863,6 +997,10 @@ export default function PosPage() {
                             <button onClick={() => qty(line.productId, -1)} aria-label="Decrease quantity" className="h-7 w-7 rounded-md border border-black/10">−</button>
                             <span className="w-5 text-center text-sm font-semibold">{line.qty}</span>
                             <button onClick={() => qty(line.productId, 1)} aria-label="Increase quantity" className="h-7 w-7 rounded-md border border-black/10">+</button>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <select aria-label={`${line.product.name} course`} value={line.course ?? 'Main'} onChange={event => updateCartLine(line.productId, { course: event.target.value })} className="min-w-0 rounded-md border border-black/10 px-2 py-1 text-xs"><option>Drinks</option><option>Starter</option><option>Main</option><option>Dessert</option></select>
+                            <input aria-label={`${line.product.name} preparation note`} value={line.note ?? ''} onChange={event => updateCartLine(line.productId, { note: event.target.value })} placeholder="Item note (no onions)" className="min-w-0 rounded-md border border-black/10 px-2 py-1 text-xs" />
                           </div>
                         </div>
                         <span className="whitespace-nowrap text-sm font-semibold">{cash(line.product.price * line.qty)}</span>
@@ -928,9 +1066,30 @@ export default function PosPage() {
                     )}
 
                     <label className="block text-sm font-semibold">
+                      Guest profile (optional)
+                      <select value={guestId} onChange={event => {
+                        const id = event.target.value
+                        const guest = hotel.guests.find(item => item.id === id)
+                        setGuestId(id)
+                        if (guest) {
+                          setCustomer(guest.name)
+                          const alertText = [guest.preferences?.diet, ...(guest.notes ?? []).map(note => note.text)].filter(Boolean).join(' · ')
+                          if (alertText) setOrderNotes(previous => previous ? `${previous} · ${alertText}` : alertText)
+                        }
+                      }} className="mt-1 block w-full rounded-lg border border-black/10 bg-white px-3 py-2 font-normal">
+                        <option value="">Walk-in / unlinked guest</option>
+                        {hotel.guests.map(guest => <option key={guest.id} value={guest.id}>{guest.name}{guest.vip ? ' · VIP' : ''}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm font-semibold">
                       Customer / guest name
                       <input value={customer} onChange={e => setCustomer(e.target.value)} placeholder="Walk-in customer" className="mt-1 block w-full rounded-lg border border-black/10 px-3 py-2 font-normal" />
                     </label>
+                    {orderType === 'Room service' && <div className="grid grid-cols-2 gap-3">
+                      <label className="block text-sm font-semibold">Room number<input value={room} onChange={event => setRoom(event.target.value)} placeholder="204" className="mt-1 block w-full rounded-lg border border-black/10 px-3 py-2 font-normal" /></label>
+                      <label className="block text-sm font-semibold">Floor<input value={roomFloor} onChange={event => setRoomFloor(event.target.value)} placeholder="2" className="mt-1 block w-full rounded-lg border border-black/10 px-3 py-2 font-normal" /></label>
+                      <label className="col-span-2 block text-sm font-semibold">Delivery setup<select value={deliverySetup} onChange={event => setDeliverySetup(event.target.value as 'Tray' | 'Rolling table' | 'Silver service')} className="mt-1 block w-full rounded-lg border border-black/10 bg-white px-3 py-2 font-normal"><option>Tray</option><option>Rolling table</option><option>Silver service</option></select></label>
+                    </div>}
 
                     <label className="block text-sm font-semibold">
                       Order notes / special instructions

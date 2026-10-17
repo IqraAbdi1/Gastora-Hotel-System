@@ -43,7 +43,7 @@ export const modules: NavModule[] = [
     { to: '/maintenance/supplies', label: 'Supplies', feature: 'requests' },
   ]),
   module('pos', 'POS', 'pos', [
-    { to: '/pos', label: 'Tables', end: true },
+    { to: '/pos', label: 'Menus', end: true },
     { to: '/pos/orders', label: 'Orders' },
     { to: '/kitchen', label: 'Kitchen display' },
     { to: '/pos/menu', label: 'Menu management' },
