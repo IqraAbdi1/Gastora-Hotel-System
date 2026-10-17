@@ -19,6 +19,7 @@ export type FeatureKey =
   | 'taxLines'
   | 'idScan'
   | 'guestMessages'
+  | 'preRegistration'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -94,6 +95,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'The system writes the messages a stay needs \u2014 booking confirmed, deposit reminder, room ready, before checkout \u2014 in the hotel\u2019s own wording, and the desk sends them. The hotel can let them go by themselves.',
   },
   {
+    key: 'preRegistration',
+    label: 'Fill in before arrival',
+    blurb:
+      'The guest is sent a link the day before and fills in their own details from their phone. The desk checks what they sent against the ID instead of typing it. Needs guest messages.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -135,6 +142,7 @@ export const PLANS: {
       'taxLines',
       'idScan',
       'guestMessages',
+      'preRegistration',
     ],
   },
   {
@@ -157,6 +165,7 @@ export const PLANS: {
       'taxLines',
       'idScan',
       'guestMessages',
+      'preRegistration',
     ],
   },
 ]

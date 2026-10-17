@@ -114,9 +114,9 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
     kind: 'before arrival',
     label: 'Before you arrive',
-    blurb: 'Sent the day before arrival. Carries the link where the guest fills in their own details.',
+    blurb: 'Sent the day before arrival, or by hand from the booking. Carries the link where the guest fills in their own details.',
     on: true,
-    text: 'Dear {guest}, we are expecting you at {hotel} tomorrow. Save time at the desk by filling in your details here: {link}',
+    text: 'Dear {guest}, we are expecting you at {hotel} on {arrival}. Save time at the desk by filling in your details here: {link}',
   },
   {
     kind: 'room ready',

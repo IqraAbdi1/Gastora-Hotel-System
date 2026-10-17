@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { PreRegDetails } from './preRegistration'
 import type { CallOutcome } from './confirmCalls'
 import type {
   Amendment,
@@ -34,6 +35,14 @@ export type HotelValue = {
   addPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
   /** Record the arrival-day call to a guest whose booking nothing is securing. */
   recordConfirmCall: (reservationId: string, outcome: CallOutcome, by: string) => void
+  /** Give this stay a pre-arrival link, so the guest can fill in their own details. */
+  sendPreReg: (reservationId: string) => void
+  /** The guest opened the link. Tells the desk the message arrived. */
+  openPreReg: (token: string) => void
+  /** The guest sent their answers. Nothing is believed until the desk checks it. */
+  submitPreReg: (token: string, details: PreRegDetails) => void
+  /** A member of staff checked what the guest sent against the ID in front of them. */
+  acceptPreReg: (reservationId: string, by: string) => void
   checkOut: (reservationId: string, note?: string) => void
   /** Moves an in-house guest to another room. The old room goes dirty, the new one becomes occupied. */
   moveRoom: (reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) => void

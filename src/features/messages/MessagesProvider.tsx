@@ -4,6 +4,7 @@ import { TODAY } from '../../data/sample'
 import { folioOf, stamp } from '../../lib/folio'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import { preRegLink } from '../../lib/preRegistration'
 import { depositFor, nightlyRate } from '../../lib/rates'
 import {
   DEFAULT_MESSAGING,
@@ -59,7 +60,7 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
           balance: ugx(Math.max(0, f.total - f.paid)),
           deposit: ugx(depositFor(nightly, nights, rates)),
           time: r.status === 'in-house' ? stayTimes.checkOutTime : r.status === 'booked' && r.paid === 0 ? rates.releaseTime : stayTimes.checkInTime,
-          link: `${window.location.origin}/arrive/${r.id}`,
+          link: preRegLink(window.location.origin, r.id, r.arrival),
         } as MessageVars,
       }
     },

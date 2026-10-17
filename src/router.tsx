@@ -21,6 +21,7 @@ import RoomsPage from './features/frontdesk/RoomsPage'
 import NewReservationPage from './features/frontdesk/NewReservationPage'
 import FoliosPage from './features/frontdesk/FoliosPage'
 import MessagesPage from './features/messages/MessagesPage'
+import ArrivePage from './features/prearrival/ArrivePage'
 import CompaniesPage from './features/corporate/CompaniesPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 import TasksPage from './features/housekeeping/TasksPage'
@@ -50,6 +51,8 @@ export const router = createBrowserRouter([
     element: <Root />,
     children: [
       { path: '/login', element: <LoginPage /> },
+      // The guest's own page. No sign-in, outside the app shell: it is opened from a link on a phone.
+      { path: '/arrive/:token', element: <ArrivePage /> },
       {
         path: '/',
         element: <AppShell />,

@@ -17,6 +17,7 @@ import { idTypeFor } from '../../lib/mrz'
 import type { MrzRead } from '../../lib/mrz'
 import { stayTaxes } from '../../lib/tax'
 import type { IdType, Reservation } from '../../types'
+import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
 import { useFeatures } from '../platform/featuresContext'
 import { isSensitiveTag } from '../../lib/loyalty'
@@ -73,12 +74,16 @@ function Row({ label, value, strong, tone }: { label: string; value: ReactNode; 
 // Check-in as a short wizard on its own page: guest, ID, room, payment, signature.
 // A stay billed to a company starts with the company check, because nothing else matters until it clears.
 export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
-  const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest } = useHotel()
+  const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest, acceptPreReg } = useHotel()
   const { tax, features } = useFeatures()
   // Always read the latest booking, so the company checks show what was just confirmed.
   const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
+  const { user } = useAuth()
   const known = guests.find((g) => g.id === r.guestId)
+  // What the guest filled in from their own phone before arriving. It fills the form; it is not believed
+  // until the receptionist has seen it against the ID in their hand.
+  const pre = r.preReg?.submittedAt ? r.preReg.details : undefined
 
   // A company-billed stay cannot be checked in until the company side is cleared.
   const blocked = r.corporate ? checkInBlock(r, byId(r.corporate.accountId)) : null
@@ -111,24 +116,24 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
     const sorted = [...readyRooms].sort((a, b) => Number(a.number) - Number(b.number))
     return sorted[0]?.number ?? ''
   })
-  const [idType, setIdType] = useState<IdType>('NIN')
-  const [idNumber, setIdNumber] = useState('')
-  const [idExpiry, setIdExpiry] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
-  const [gender, setGender] = useState('')
-  const [nationality, setNationality] = useState(known?.nationality ?? 'Ugandan')
-  const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState(known?.phone ?? '')
-  const [email, setEmail] = useState(known?.email ?? '')
-  const [purpose, setPurpose] = useState('Leisure')
-  const [comingFrom, setComingFrom] = useState('')
-  const [nextDestination, setNextDestination] = useState('')
+  const [idType, setIdType] = useState<IdType>(pre?.idType ?? 'NIN')
+  const [idNumber, setIdNumber] = useState(pre?.idNumber ?? '')
+  const [idExpiry, setIdExpiry] = useState(pre?.idExpiry ?? '')
+  const [dateOfBirth, setDateOfBirth] = useState(pre?.dateOfBirth ?? '')
+  const [gender, setGender] = useState(pre?.gender ?? '')
+  const [nationality, setNationality] = useState(pre?.nationality ?? known?.nationality ?? 'Ugandan')
+  const [address, setAddress] = useState(pre?.address ?? '')
+  const [phone, setPhone] = useState(pre?.phone ?? known?.phone ?? '')
+  const [email, setEmail] = useState(pre?.email ?? known?.email ?? '')
+  const [purpose, setPurpose] = useState(pre?.purpose ?? 'Leisure')
+  const [comingFrom, setComingFrom] = useState(pre?.comingFrom ?? '')
+  const [nextDestination, setNextDestination] = useState(pre?.nextDestination ?? '')
   const [adults, setAdults] = useState(r.adults ?? 1)
   const [children, setChildren] = useState(r.children ?? 0)
-  const [vehiclePlate, setVehiclePlate] = useState('')
-  const [emergencyName, setEmergencyName] = useState('')
-  const [emergencyPhone, setEmergencyPhone] = useState('')
-  const [requests, setRequests] = useState('')
+  const [vehiclePlate, setVehiclePlate] = useState(pre?.vehiclePlate ?? '')
+  const [emergencyName, setEmergencyName] = useState(pre?.emergencyName ?? '')
+  const [emergencyPhone, setEmergencyPhone] = useState(pre?.emergencyPhone ?? '')
+  const [requests, setRequests] = useState(pre?.specialRequests ?? '')
   // Preferences are saved on the guest, so the next stay starts with them already known.
   const [prefTags, setPrefTags] = useState<string[]>([])
   const [prefNote, setPrefNote] = useState('')
@@ -138,9 +143,9 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const [scanned, setScanned] = useState<{ source: ScanSource; lines: string; idName: string } | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(pre?.marketingConsent ?? false)
   // Remembering a guest between stays is a programme they join, not something done to them quietly.
-  const [loyaltyConsent, setLoyaltyConsent] = useState(known?.loyaltyConsent ?? false)
+  const [loyaltyConsent, setLoyaltyConsent] = useState(pre?.loyaltyConsent ?? known?.loyaltyConsent ?? false)
   const [sensitiveConsent, setSensitiveConsent] = useState(known?.sensitiveConsent ?? false)
   const [method, setMethod] = useState(paymentMethods[0])
   const [payText, setPayText] = useState('')
@@ -239,6 +244,8 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
           : undefined,
       })
     }
+    // What the guest sent before arriving has now been seen against their ID by a person.
+    if (r.preReg?.submittedAt && !r.preReg.acceptedAt) acceptPreReg(r.id, user?.name ?? 'Front desk')
     // Taxes are posted first, so the balance the payment is taken against is the full one.
     for (const l of taxes.onTop) addCharge(r.id, { category: l.category, description: l.label, amount: l.amount })
     // The payment goes on the folio straight after check-in, so the balance everywhere is right.
@@ -429,6 +436,16 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       </div>
                     </div>
                   </Card>
+                )}
+
+                {pre && (
+                  <div className="mb-4 rounded-xl bg-good/[0.08] p-3">
+                    <p className="text-sm font-semibold text-ink">Filled in by the guest before arriving</p>
+                    <p className="mt-0.5 text-xs text-ink/70">
+                      Sent {r.preReg?.submittedAt}. These are the guest's own answers and the form below starts from them. Check them against the ID
+                      and correct anything wrong — nothing is recorded until you confirm the check-in.
+                    </p>
+                  </div>
                 )}
 
                 {current === 'id' && (

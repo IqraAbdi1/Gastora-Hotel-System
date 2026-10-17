@@ -1,4 +1,7 @@
 import type { ConfirmCall } from '../lib/confirmCalls'
+import type { PreReg } from '../lib/preRegistration'
+export type { PreReg }
+
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
 // Housekeeping detail the four front-desk statuses cannot express.
@@ -139,6 +142,8 @@ export type Reservation = {
   upgrade?: { from: Room['type']; to: Room['type']; at: string; reason: string }
   /** The arrival-day call to a guest whose booking nothing is securing. */
   confirmCall?: ConfirmCall
+  /** What the guest filled in themselves before arriving, and how far they got. */
+  preReg?: PreReg
 }
 export type RoomMove = {
   at: string

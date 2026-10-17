@@ -15,6 +15,10 @@ import MoveRoomPanel from './MoveRoomPanel'
 import { checkInBlock } from '../../lib/corporate'
 import { useCorporate } from '../corporate/corporateContext'
 import { useMessages } from '../messages/messagesContext'
+import { useHotel } from '../../lib/hotelContext'
+import { useFeatures } from '../platform/featuresContext'
+import { PRE_REG_LABEL, PRE_REG_TONE, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
+import { Badge } from '../../components/ui'
 import { CHANNEL_LABEL, KIND_LABEL } from '../../lib/messages'
 
 type Props = { reservation: Reservation; onClose: () => void; onCheckIn?: () => void }
@@ -37,8 +41,12 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [showPhoto, setShowPhoto] = useState(false)
   const balance = r.total - r.paid
   const { byId } = useCorporate()
-  const { forStay } = useMessages()
+  const { forStay, queue } = useMessages()
   const stayMessages = forStay(r.id)
+  const { sendPreReg } = useHotel()
+  const { features } = useFeatures()
+  const preState = preRegState(r.preReg)
+  const preProgress = preRegProgress(r.preReg?.details)
   const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
   const rows: string[][] = [
@@ -180,6 +188,48 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {features.preRegistration && r.status === 'booked' && (
+          <div>
+            <p className={heading}>Before they arrive</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge tone={PRE_REG_TONE[preState]} dot>
+                {PRE_REG_LABEL[preState]}
+              </Badge>
+              {preState === 'filled in' && (
+                <span className="text-xs text-ink/60">
+                  {preProgress.answered} of {preProgress.total} answered · sent {r.preReg?.submittedAt}
+                </span>
+              )}
+              {preState === 'opened' && <span className="text-xs text-ink/60">Opened {r.preReg?.openedAt}, not finished yet.</span>}
+              {preState === 'sent' && <span className="text-xs text-ink/60">Sent {r.preReg?.sentAt}, not opened yet.</span>}
+            </div>
+            {preState === 'filled in' && (
+              <p className="mt-2 text-sm text-ink/70">
+                Their answers are waiting in the check-in form. Check them against the ID when they arrive.
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="text-sm font-semibold text-brand"
+                onClick={() => {
+                  sendPreReg(r.id)
+                  queue({ kind: 'before arrival', reservationId: r.id })
+                }}
+              >
+                {preState === 'not sent' ? 'Send the link' : 'Send the link again'}
+              </button>
+              <button
+                type="button"
+                className="text-sm font-semibold text-ink/60"
+                onClick={() => void navigator.clipboard?.writeText(preRegLink(window.location.origin, r.id, r.arrival))}
+              >
+                Copy the link
+              </button>
+            </div>
           </div>
         )}
 

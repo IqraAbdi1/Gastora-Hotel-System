@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { tokenFor } from '../lib/preRegistration'
+import type { PreRegDetails } from '../lib/preRegistration'
 import type { ReactNode } from 'react'
 import { reservations as sampleReservations, rooms as sampleRooms, TODAY } from '../data/sample'
 import { guests as sampleGuests } from '../data/guests'
@@ -224,6 +226,43 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Pre-registration. The guest fills these in from their own phone, so every one of these changes
+  // arrives from outside the hotel and none of them touches the dates, the room or the money.
+  function sendPreReg(reservationId: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId
+          ? { ...r, preReg: { ...(r.preReg ?? { token: tokenFor(r.id, r.arrival) }), token: r.preReg?.token ?? tokenFor(r.id, r.arrival), sentAt: stamp() } }
+          : r,
+      ),
+    )
+  }
+
+  function openPreReg(token: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        tokenFor(r.id, r.arrival) === token && r.preReg && !r.preReg.openedAt ? { ...r, preReg: { ...r.preReg, openedAt: stamp() } } : r,
+      ),
+    )
+  }
+
+  function submitPreReg(token: string, details: PreRegDetails) {
+    setReservations((list) =>
+      list.map((r) =>
+        tokenFor(r.id, r.arrival) === token
+          ? { ...r, preReg: { ...(r.preReg ?? { token }), token: r.preReg?.token ?? token, details, submittedAt: stamp() } }
+          : r,
+      ),
+    )
+  }
+
+  /** A member of staff has seen it against the ID in their hand. Until then it is only what the guest said. */
+  function acceptPreReg(reservationId: string, by: string) {
+    setReservations((list) =>
+      list.map((r) => (r.id === reservationId && r.preReg ? { ...r, preReg: { ...r.preReg, acceptedAt: stamp(), acceptedBy: by } } : r)),
+    )
+  }
+
   // BR-FO-06: the screen only allows this with no balance, or a manager's reason. The room goes dirty for housekeeping.
   function checkOut(reservationId: string, note?: string) {
     const r = reservations.find((x) => x.id === reservationId)
@@ -315,6 +354,10 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         upgradeStay,
         addPayment,
     recordConfirmCall,
+        sendPreReg,
+        openPreReg,
+        submitPreReg,
+        acceptPreReg,
         checkOut,
         setHousekeeping,
         setCorporate,
