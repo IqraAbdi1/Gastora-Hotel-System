@@ -29,4 +29,5 @@ export const guests: Guest[] = [
   { id: 'G-8', name: 'Esther Auma', phone: '0772 100 208' },
   { id: 'G-9', name: 'Brian Kigozi', phone: '0772 100 209' },
   { id: 'G-10', name: 'Ruth Nabirye', phone: '0772 100 210' },
+  { id: 'G-11', name: 'Daniel Wasswa', phone: '0772 455 677' },
 ]

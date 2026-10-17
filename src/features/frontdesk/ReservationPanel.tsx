@@ -14,6 +14,8 @@ import CompanyChecks from './CompanyChecks'
 import MoveRoomPanel from './MoveRoomPanel'
 import { checkInBlock } from '../../lib/corporate'
 import { useCorporate } from '../corporate/corporateContext'
+import { useMessages } from '../messages/messagesContext'
+import { CHANNEL_LABEL, KIND_LABEL } from '../../lib/messages'
 
 type Props = { reservation: Reservation; onClose: () => void; onCheckIn?: () => void }
 
@@ -35,6 +37,8 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [showPhoto, setShowPhoto] = useState(false)
   const balance = r.total - r.paid
   const { byId } = useCorporate()
+  const { forStay } = useMessages()
+  const stayMessages = forStay(r.id)
   const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
   const rows: string[][] = [
@@ -176,6 +180,31 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {stayMessages.length > 0 && (
+          <div>
+            <p className={heading}>Messages to the guest</p>
+            <ul className="mt-2 space-y-2 text-sm">
+              {stayMessages.map((m) => (
+                <li key={m.id} className="border-b border-ink/5 pb-2 last:border-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-medium text-ink">{KIND_LABEL[m.kind]}</span>
+                    <span className="text-xs text-ink/55">
+                      {m.status === 'sent'
+                        ? `Sent ${m.sentAt} by ${CHANNEL_LABEL[m.channel]}${m.by ? ` (${m.by})` : ''}`
+                        : m.status === 'queued'
+                          ? 'Written, waiting to be sent'
+                          : m.status === 'failed'
+                            ? `Could not go: ${m.problem}`
+                            : 'Not sent'}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-ink/70">{m.body}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

@@ -20,6 +20,7 @@ import ReservationsPage from './features/frontdesk/ReservationsPage'
 import RoomsPage from './features/frontdesk/RoomsPage'
 import NewReservationPage from './features/frontdesk/NewReservationPage'
 import FoliosPage from './features/frontdesk/FoliosPage'
+import MessagesPage from './features/messages/MessagesPage'
 import CompaniesPage from './features/corporate/CompaniesPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 import TasksPage from './features/housekeeping/TasksPage'
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
           { path: 'desk/rooms', element: <RoomsPage /> },
           { path: 'desk/new-reservation', element: <NewReservationPage /> },
           { path: 'desk/folios', element: <FoliosPage /> },
+          { path: 'desk/messages', element: <MessagesPage /> },
           { path: 'desk/companies', element: <CompaniesPage /> },
           { path: 'desk/documents', element: <GuestDocumentsPage /> },
           { path: 'desk/lost-found', element: <LostFoundPage /> },

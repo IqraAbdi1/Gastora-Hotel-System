@@ -1,3 +1,5 @@
+import { DEFAULT_MESSAGING } from './messages'
+import type { MessagingSettings } from './messages'
 import { DEFAULT_EFRIS, DEFAULT_TAX } from './tax'
 import type { TaxSettings } from './tax'
 
@@ -16,6 +18,7 @@ export type FeatureKey =
   | 'budgetApproval'
   | 'taxLines'
   | 'idScan'
+  | 'guestMessages'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -85,6 +88,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     blurb: 'Department budgets, costed requisitions and Finance approval when over budget.',
   },
   {
+    key: 'guestMessages',
+    label: 'Guest messages',
+    blurb:
+      'The system writes the messages a stay needs \u2014 booking confirmed, deposit reminder, room ready, before checkout \u2014 in the hotel\u2019s own wording, and the desk sends them. The hotel can let them go by themselves.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -125,6 +134,7 @@ export const PLANS: {
       'supplyChain',
       'taxLines',
       'idScan',
+      'guestMessages',
     ],
   },
   {
@@ -146,6 +156,7 @@ export const PLANS: {
       'budgetApproval',
       'taxLines',
       'idScan',
+      'guestMessages',
     ],
   },
 ]
@@ -253,6 +264,8 @@ export interface HotelOptions {
   service: ServiceRules
   /** Checklist items the hotel has added itself, offered to the attendant from then on. */
   extraChecks: string[]
+  /** The hotel's own wording for the messages a stay needs, and how they go out. */
+  messaging: MessagingSettings
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -269,6 +282,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   areas: DEFAULT_AREAS,
   service: DEFAULT_SERVICE,
   extraChecks: [],
+  messaging: DEFAULT_MESSAGING,
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [
