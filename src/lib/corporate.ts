@@ -3,6 +3,8 @@ import { addDays } from './availability'
 import { roleCan } from './roles'
 import type { RoleId } from './roles'
 import { roomRate } from '../data/rates'
+import { roomTotalFor } from './rateCalendar'
+import type { RatesPolicy } from './rates'
 import type {
   AccountStatus,
   ApprovalStep,
@@ -188,28 +190,49 @@ export type Quote = {
 }
 
 // Negotiated rate first (it replaces the room price), then at most one discount on top if allowed.
-export function quote(roomType: Room['type'], planId: string, nights: number, rules: PricingRule[]): Quote {
-  const roomOriginal = roomRate[roomType]
-  const planExtra = planFor(planId).extraPerNight
-  let room = roomOriginal
+//
+// The hotel's own price comes through the rate calendar when the dates are known, so a company without
+// an agreed rate pays the December price in December like anybody else. A negotiated rate is a flat
+// nightly figure by definition: that is what the company signed for, and it does not move with a season.
+export function quote(
+  roomType: Room['type'],
+  planId: string,
+  nights: number,
+  rules: PricingRule[],
+  rates?: RatesPolicy,
+  dates?: { arrival: string; departure: string },
+): Quote {
+  const n = Math.max(1, nights)
+  const planExtra = planFor(planId, rates).extraPerNight
+  const roomTotalOriginal =
+    rates && dates
+      ? roomTotalFor(roomType, dates.arrival, dates.departure, rates)
+      : (rates?.roomRates[roomType] ?? roomRate[roomType]) * n
+  const tidy = (x: number) => Math.max(0, Math.round(x / 100) * 100)
+
+  let roomTotalFinal = roomTotalOriginal
   const rate = rules.find((r) => r.kind === 'negotiated-rate')
-  if (rate) room = rate.value
+  if (rate) roomTotalFinal = rate.value * n
   const discount = rules.find((r) => r.kind !== 'negotiated-rate')
-  if (discount?.kind === 'percent') room = room * (1 - discount.value / 100)
-  if (discount?.kind === 'amount-off') room = room - discount.value
-  const roomFinal = Math.max(0, Math.round(room / 100) * 100)
-  const perNightOriginal = roomOriginal + planExtra
-  const perNightFinal = roomFinal + planExtra
+  if (discount?.kind === 'percent') roomTotalFinal = roomTotalFinal * (1 - discount.value / 100)
+  if (discount?.kind === 'amount-off') roomTotalFinal = roomTotalFinal - discount.value * n
+  roomTotalFinal = tidy(roomTotalFinal)
+
+  // Per-night figures are an average once a stay crosses a season boundary, and the totals are the truth.
+  const roomOriginal = Math.round(roomTotalOriginal / n)
+  const roomFinal = Math.round(roomTotalFinal / n)
+  const originalTotal = roomTotalOriginal + planExtra * n
+  const finalTotal = roomTotalFinal + planExtra * n
   return {
     nights,
     roomOriginal,
     roomFinal,
     planExtra,
-    perNightOriginal,
-    perNightFinal,
-    originalTotal: perNightOriginal * nights,
-    finalTotal: perNightFinal * nights,
-    discountTotal: (perNightOriginal - perNightFinal) * nights,
+    perNightOriginal: roomOriginal + planExtra,
+    perNightFinal: roomFinal + planExtra,
+    originalTotal,
+    finalTotal,
+    discountTotal: originalTotal - finalTotal,
     needsApproval: rules.some((r) => r.requiresApproval),
   }
 }

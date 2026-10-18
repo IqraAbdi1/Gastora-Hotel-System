@@ -1,6 +1,7 @@
 import type { CorporateAccount, CorporateContact, CorporatePolicy, PricingRule } from '../services/corporate/corporateTypes'
 import type { BillTo, CorporateBooking, GuaranteeType, Reservation, Room } from '../types'
-import { stayTotal } from './booking'
+import { stayTotalBetween } from './booking'
+import type { RatesPolicy } from './rates'
 import { checkRules, creditPosition, needsLpo, offersCredit, quote, selectionProblem, STATUS_LABEL, stampNow } from './corporate'
 import type { CreditPosition, Quote, RuleCheck } from './corporate'
 
@@ -45,6 +46,8 @@ export function planCompanyBooking(
   policy: CorporatePolicy,
   reservations: Reservation[],
   stay: { roomType: Room['type']; planId: string; arrival: string; departure: string; nights: number },
+  /** The hotel's own prices, so the normal price a company falls back to is the real one for these dates. */
+  rates?: RatesPolicy,
 ): CompanyPlan {
   const errors: string[] = []
   const notes: string[] = []
@@ -70,8 +73,9 @@ export function planCompanyBooking(
   const selected = (account.agreement?.rules ?? []).filter((r) => input.ruleIds.includes(r.id) && usable.has(r.id))
   const problem = selectionProblem(account, selected)
   if (problem) errors.push(problem)
-  const q = quote(stay.roomType, stay.planId, stay.nights, selected)
-  const normalTotal = stayTotal(stay.roomType, stay.planId, stay.nights)
+  const dates = { arrival: stay.arrival, departure: stay.departure }
+  const q = quote(stay.roomType, stay.planId, stay.nights, selected, rates, dates)
+  const normalTotal = stayTotalBetween(stay.roomType, stay.planId, stay.arrival, stay.departure, rates)
   const chargedTotal = selected.length && !q.needsApproval ? q.finalTotal : normalTotal
   if (q.needsApproval) notes.push('This company price needs a manager to approve it. The normal price is charged until then.')
 

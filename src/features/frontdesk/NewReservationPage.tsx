@@ -81,7 +81,9 @@ export function NewReservationForm({
   const free = useMemo(() => freeByType(rooms, reservations, from, departure), [rooms, reservations, from, departure])
   const typeFree = datesOk ? free[type] : 0
   // Refused before anything else: a date the hotel has closed is not a question of availability.
-  const refusal = datesOk ? refusedBy(rates.rules, type, from, departure) : undefined
+  const refusal = datesOk
+    ? refusedBy(rates.rules, type, from, departure, planId, planFor(planId, rates).name)
+    : undefined
   const soldOut = datesOk && typeFree < 1
   // How far past full this type may be sold. A hotel that never names the number overrides five times
   // in a row and wakes up with nowhere to put three families.
@@ -101,9 +103,16 @@ export function NewReservationForm({
   const companyPlan = useMemo(
     () =>
       company && companyAccount && datesOk
-        ? planCompanyBooking(company, companyAccount, policy, reservations, { roomType: type, planId, arrival: from, departure, nights })
+        ? planCompanyBooking(
+            company,
+            companyAccount,
+            policy,
+            reservations,
+            { roomType: type, planId, arrival: from, departure, nights },
+            rates,
+          )
         : null,
-    [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights],
+    [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights, rates],
   )
 
   const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotalBetween(type, planId, from, departure, rates)) : 0

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RULE_LABEL, RULE_NOTE, newRuleId } from '../../lib/rateRules'
+import { COUNTS_NIGHTS, RULE_LABEL, RULE_NOTE, newRuleId } from '../../lib/rateRules'
 import type { RateRule, RuleKind } from '../../lib/rateRules'
 import { Badge, Button, Card, Field, Input, PageHeader, Select, Textarea } from '../../components/ui'
 import { ugx } from '../../lib/format'
@@ -35,6 +35,7 @@ export default function RatesPoliciesPage() {
   const box = 'w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink'
   const [ruleKind, setRuleKind] = useState<RuleKind>('min-stay')
   const [ruleType, setRuleType] = useState('')
+  const [rulePlan, setRulePlan] = useState('')
   const [ruleFrom, setRuleFrom] = useState('')
   const [ruleTo, setRuleTo] = useState('')
   const [ruleNights, setRuleNights] = useState('2')
@@ -344,8 +345,10 @@ export default function RatesPoliciesPage() {
                   <div className="min-w-0">
                     <span className="font-medium text-ink">{RULE_LABEL[rule.kind]}</span>
                     <span className="ml-2 text-xs text-ink/65">
-                      {rule.type ?? 'Every type'} · {rule.from} to {rule.to}
-                      {rule.kind === 'min-stay' ? ` · ${rule.nights ?? 1} night(s)` : ''}
+                      {rule.type ?? 'Every type'}
+                      {rule.plan ? ` · ${rates.plans.find((p) => p.id === rule.plan)?.name ?? rule.plan}` : ''} · {rule.from} to{' '}
+                      {rule.to}
+                      {COUNTS_NIGHTS.includes(rule.kind) ? ` · ${rule.nights ?? 1} night(s)` : ''}
                       {rule.reason ? ` · ${rule.reason}` : ''}
                     </span>
                   </div>
@@ -370,9 +373,9 @@ export default function RatesPoliciesPage() {
               ))}
               {rates.rules.length === 0 && <li className="text-xs text-ink/55">Nothing is closed. Every date is on sale.</li>}
             </ul>
-            <div className="mt-2 grid gap-2 sm:grid-cols-[9rem_8rem_1fr_1fr_5rem_auto]">
+            <div className="mt-2 grid gap-2 sm:grid-cols-[9rem_7rem_8rem_1fr_1fr_5rem_auto]">
               <select value={ruleKind} onChange={(e) => setRuleKind(e.target.value as RuleKind)} aria-label="Rule" className={box}>
-                {(['min-stay', 'no-arrival', 'stop-sell'] as RuleKind[]).map((k) => (
+                {(['min-stay', 'max-stay', 'no-arrival', 'no-departure', 'stop-sell'] as RuleKind[]).map((k) => (
                   <option key={k} value={k}>
                     {RULE_LABEL[k]}
                   </option>
@@ -384,6 +387,14 @@ export default function RatesPoliciesPage() {
                   <option key={t}>{t}</option>
                 ))}
               </select>
+              <select value={rulePlan} onChange={(e) => setRulePlan(e.target.value)} aria-label="Rate plan" className={box}>
+                <option value="">Every plan</option>
+                {rates.plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name || 'Unnamed plan'}
+                  </option>
+                ))}
+              </select>
               <input type="date" value={ruleFrom} onChange={(e) => setRuleFrom(e.target.value)} aria-label="From" className={box} />
               <input type="date" value={ruleTo} onChange={(e) => setRuleTo(e.target.value)} aria-label="To" className={box} />
               <input
@@ -392,7 +403,7 @@ export default function RatesPoliciesPage() {
                 onChange={(e) => setRuleNights(e.target.value.replace(/\D/g, ''))}
                 aria-label="Nights"
                 placeholder="Nights"
-                disabled={ruleKind !== 'min-stay'}
+                disabled={!COUNTS_NIGHTS.includes(ruleKind)}
                 className={box}
               />
               <Button
@@ -406,9 +417,10 @@ export default function RatesPoliciesPage() {
                         id: newRuleId(rates.rules),
                         kind: ruleKind,
                         type: (ruleType || undefined) as RateRule['type'],
+                        plan: rulePlan || undefined,
                         from: ruleFrom,
                         to: ruleTo,
-                        nights: ruleKind === 'min-stay' ? Math.max(1, Number(ruleNights) || 2) : undefined,
+                        nights: COUNTS_NIGHTS.includes(ruleKind) ? Math.max(1, Number(ruleNights) || 2) : undefined,
                         reason: ruleReason.trim(),
                         on: true,
                       },

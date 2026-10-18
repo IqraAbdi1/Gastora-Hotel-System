@@ -12,19 +12,28 @@
 
 import type { Room } from '../types'
 
-export type RuleKind = 'min-stay' | 'no-arrival' | 'stop-sell'
+export type RuleKind = 'min-stay' | 'max-stay' | 'no-arrival' | 'no-departure' | 'stop-sell'
 
 export const RULE_LABEL: Record<RuleKind, string> = {
   'min-stay': 'Minimum stay',
+  'max-stay': 'Maximum stay',
   'no-arrival': 'No arrivals',
+  'no-departure': 'No departures',
   'stop-sell': 'Not for sale',
 }
 
 export const RULE_NOTE: Record<RuleKind, string> = {
   'min-stay': 'A booking that starts in these dates must be at least this many nights.',
+  'max-stay':
+    'A booking that starts in these dates may be no longer than this. Used to keep a long stay from eating a week the hotel can sell by the night.',
   'no-arrival': 'Nobody may arrive on these dates. A stay already running passes through them.',
+  'no-departure':
+    'Nobody may leave on these dates, so the room is not emptied into a day the hotel cannot resell. A stay already running passes through them.',
   'stop-sell': 'These dates are not for sale at all, for any length of stay.',
 }
+
+/** Rules that count nights, and so need a number beside them. */
+export const COUNTS_NIGHTS: RuleKind[] = ['min-stay', 'max-stay']
 
 export interface RateRule {
   id: string
@@ -33,7 +42,9 @@ export interface RateRule {
   type?: Room['type']
   from: string
   to: string
-  /** Minimum-stay rules only. */
+  /** Empty means every rate plan. A rule may close one plan and leave the others on sale. */
+  plan?: string
+  /** Minimum- and maximum-stay rules only. */
   nights?: number
   /** Why, in the hotel's own words. The desk sees this when a booking is refused. */
   reason: string
@@ -42,7 +53,8 @@ export interface RateRule {
 
 const within = (day: string, from: string, to: string) => day >= from && day <= to
 
-const applies = (rule: RateRule, type: Room['type']) => rule.on && (!rule.type || rule.type === type)
+const applies = (rule: RateRule, type: Room['type'], planId?: string) =>
+  rule.on && (!rule.type || rule.type === type) && (!rule.plan || !planId || rule.plan === planId)
 
 /** Every night of a stay, the last one excluded: a guest leaving on the 5th did not sleep on the 5th. */
 export function nightsOfStay(arrival: string, departure: string): string[] {
@@ -72,25 +84,46 @@ export function refusedBy(
   type: Room['type'],
   arrival: string,
   departure: string,
+  /** The rate plan being sold, when a rule may close one plan and leave the others open. */
+  planId?: string,
+  /** What the hotel calls that plan, for the refusal the desk reads. */
+  planName?: string,
 ): Refusal | undefined {
   const nights = nightsOfStay(arrival, departure)
   if (nights.length === 0) return undefined
+  const on = planName ? ` on ${planName}` : ''
 
   for (const rule of rules) {
-    if (!applies(rule, type)) continue
+    if (!applies(rule, type, planId)) continue
 
     if (rule.kind === 'stop-sell' && nights.some((n) => within(n, rule.from, rule.to))) {
-      return { rule, why: `${type} rooms are not for sale from ${rule.from} to ${rule.to}. ${rule.reason}`.trim() }
+      return {
+        rule,
+        why: `${type} rooms${rule.plan ? on : ''} are not for sale from ${rule.from} to ${rule.to}. ${rule.reason}`.trim(),
+      }
     }
     if (rule.kind === 'no-arrival' && within(arrival, rule.from, rule.to)) {
-      return { rule, why: `Nobody may arrive on ${arrival}. ${rule.reason}`.trim() }
+      return { rule, why: `Nobody may arrive on ${arrival}${rule.plan ? on : ''}. ${rule.reason}`.trim() }
+    }
+    // The departure day itself, not a night: a guest leaving on the 5th is a departure on the 5th.
+    if (rule.kind === 'no-departure' && within(departure, rule.from, rule.to)) {
+      return { rule, why: `Nobody may leave on ${departure}${rule.plan ? on : ''}. ${rule.reason}`.trim() }
     }
     if (rule.kind === 'min-stay' && within(arrival, rule.from, rule.to)) {
       const least = Math.max(1, rule.nights ?? 1)
       if (nights.length < least) {
         return {
           rule,
-          why: `Arriving between ${rule.from} and ${rule.to} needs at least ${least} night${least === 1 ? '' : 's'}; this is ${nights.length}. ${rule.reason}`.trim(),
+          why: `Arriving between ${rule.from} and ${rule.to}${rule.plan ? on : ''} needs at least ${least} night${least === 1 ? '' : 's'}; this is ${nights.length}. ${rule.reason}`.trim(),
+        }
+      }
+    }
+    if (rule.kind === 'max-stay' && within(arrival, rule.from, rule.to)) {
+      const most = Math.max(1, rule.nights ?? 1)
+      if (nights.length > most) {
+        return {
+          rule,
+          why: `Arriving between ${rule.from} and ${rule.to}${rule.plan ? on : ''} may be no more than ${most} night${most === 1 ? '' : 's'}; this is ${nights.length}. ${rule.reason}`.trim(),
         }
       }
     }
