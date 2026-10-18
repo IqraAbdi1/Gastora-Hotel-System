@@ -8,6 +8,7 @@ import { dayMonth, ugx } from '../../lib/format'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { depositForStay, freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal } from '../../lib/booking'
+import { RULE_LABEL, refusedBy } from '../../lib/rateRules'
 import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
 import { benefitList, loyaltyDiscount, loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
 import { useFeatures } from '../platform/featuresContext'
@@ -78,6 +79,8 @@ export function NewReservationForm({
   // Availability per room type for the whole stay, counted in one pass (FR-RMS-012).
   const free = useMemo(() => freeByType(rooms, reservations, from, departure), [rooms, reservations, from, departure])
   const typeFree = datesOk ? free[type] : 0
+  // Refused before anything else: a date the hotel has closed is not a question of availability.
+  const refusal = datesOk ? refusedBy(rates.rules, type, from, departure) : undefined
   const soldOut = datesOk && typeFree < 1
   // How far past full this type may be sold. A hotel that never names the number overrides five times
   // in a row and wakes up with nowhere to put three families.
@@ -128,7 +131,7 @@ export function NewReservationForm({
 
   const nameOk = name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 9
   const depositOk = deposit <= total && (guarantee !== 'deposit' || deposit > 0)
-  const overrideOk = !soldOut || (roomLeft && override && reason.trim().length >= 5)
+  const overrideOk = !refusal && (!soldOut || (roomLeft && override && reason.trim().length >= 5))
   const companyOk = !company || (!!companyPlan && companyPlan.errors.length === 0)
   const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1 && companyOk
 
@@ -392,7 +395,17 @@ export function NewReservationForm({
               </div>
             )}
 
-            {soldOut && (
+            {refusal && (
+              <div className="rounded-lg bg-bad/10 p-3 text-sm">
+                <p className="font-semibold text-bad">{RULE_LABEL[refusal.rule.kind]}: these dates cannot be sold.</p>
+                <p className="mt-0.5 text-ink/75">{refusal.why}</p>
+                <p className="mt-1 text-xs text-ink/55">
+                  The hotel sets this in Rates and policies. It is not an availability problem and no override gets around it.
+                </p>
+              </div>
+            )}
+
+            {!refusal && soldOut && (
               <div className="space-y-2 rounded-lg bg-bad/10 p-3 text-sm">
                 <p className="font-semibold text-bad">No {type} room is free for these dates.</p>
                 {roomLeft ? (

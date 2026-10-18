@@ -114,7 +114,21 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
   const value = useMemo<FeaturesValue>(() => {
     const tenant = tenants.find((t) => t.id === currentId) ?? (tenants[0] as Tenant)
     const features = featuresOf(tenant)
-    const options = optionsById[tenant.id] ?? DEFAULT_OPTIONS
+    // Settings are kept in the browser between visits, so a hotel that saved its options last week has
+    // an object with last week's shape. Merging over the defaults means a setting added since then
+    // exists rather than being undefined in the middle of a page.
+    const saved = optionsById[tenant.id]
+    const options: HotelOptions = saved
+      ? {
+          ...DEFAULT_OPTIONS,
+          ...saved,
+          rates: { ...DEFAULT_OPTIONS.rates, ...(saved.rates ?? {}) },
+          messaging: { ...DEFAULT_OPTIONS.messaging, ...(saved.messaging ?? {}) },
+          loyalty: { ...DEFAULT_OPTIONS.loyalty, ...(saved.loyalty ?? {}) },
+          limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },
+          service: { ...DEFAULT_OPTIONS.service, ...(saved.service ?? {}) },
+        }
+      : DEFAULT_OPTIONS
     const inspectionMode: InspectionMode = features.inspections ? options.inspectionMode : 'off'
     return {
       tenants,

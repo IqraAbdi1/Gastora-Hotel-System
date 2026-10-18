@@ -1,3 +1,4 @@
+import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
 // The hotel's own prices and booking rules, set by the hotel admin or owner.
@@ -42,6 +43,8 @@ export interface RatesPolicy {
    * waking up with nowhere to put three families.
    */
   overbook: Partial<Record<Room['type'], number>>
+  /** When rooms may be sold at all: minimum stays, days nobody may arrive, dates closed outright. */
+  rules: RateRule[]
   /** Printed on the registration card. Empty means use the wording built from the hotel's times. */
   houseRules: string
 }
@@ -64,6 +67,7 @@ export const DEFAULT_RATES: RatesPolicy = {
   releaseTime: '18:00',
   autoRelease: true,
   overbook: { Standard: 1, Deluxe: 1, Suite: 0 },
+  rules: [],
   houseRules: '',
 }
 

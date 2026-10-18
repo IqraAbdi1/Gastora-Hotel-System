@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { RULE_LABEL, RULE_NOTE, newRuleId } from '../../lib/rateRules'
+import type { RateRule, RuleKind } from '../../lib/rateRules'
 import { Badge, Button, Card, Field, Input, PageHeader, Select, Textarea } from '../../components/ui'
 import { ugx } from '../../lib/format'
 import {
@@ -29,6 +31,13 @@ export default function RatesPoliciesPage() {
   const { can } = useAuth()
   const { accounts } = useCorporate()
   const { reservations } = useHotel()
+  const box = 'w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink'
+  const [ruleKind, setRuleKind] = useState<RuleKind>('min-stay')
+  const [ruleType, setRuleType] = useState('')
+  const [ruleFrom, setRuleFrom] = useState('')
+  const [ruleTo, setRuleTo] = useState('')
+  const [ruleNights, setRuleNights] = useState('2')
+  const [ruleReason, setRuleReason] = useState('')
   const [previewPlan, setPreviewPlan] = useState('')
   const [previewNights, setPreviewNights] = useState(3)
   const rates = options.rates
@@ -320,6 +329,104 @@ export default function RatesPoliciesPage() {
               </span>
             </label>
           </div>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-ink/80">When rooms may be sold</p>
+            <p className="mt-0.5 text-xs text-ink/55">
+              The other half of a price list is refusing: no one-night bookings over a festival weekend, no arrivals the day a conference takes
+              the house, nothing at all while a wing is painted. Read in order, so a closed week can have one day reopened inside it.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {rates.rules.map((rule) => (
+                <li key={rule.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 p-2 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium text-ink">{RULE_LABEL[rule.kind]}</span>
+                    <span className="ml-2 text-xs text-ink/65">
+                      {rule.type ?? 'Every type'} · {rule.from} to {rule.to}
+                      {rule.kind === 'min-stay' ? ` · ${rule.nights ?? 1} night(s)` : ''}
+                      {rule.reason ? ` · ${rule.reason}` : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-ink/70">
+                      <input
+                        type="checkbox"
+                        checked={rule.on}
+                        onChange={(e) => set({ rules: rates.rules.map((x) => (x.id === rule.id ? { ...x, on: e.target.checked } : x)) })}
+                      />
+                      On
+                    </label>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-bad"
+                      onClick={() => set({ rules: rates.rules.filter((x) => x.id !== rule.id) })}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {rates.rules.length === 0 && <li className="text-xs text-ink/55">Nothing is closed. Every date is on sale.</li>}
+            </ul>
+            <div className="mt-2 grid gap-2 sm:grid-cols-[9rem_8rem_1fr_1fr_5rem_auto]">
+              <select value={ruleKind} onChange={(e) => setRuleKind(e.target.value as RuleKind)} aria-label="Rule" className={box}>
+                {(['min-stay', 'no-arrival', 'stop-sell'] as RuleKind[]).map((k) => (
+                  <option key={k} value={k}>
+                    {RULE_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+              <select value={ruleType} onChange={(e) => setRuleType(e.target.value)} aria-label="Room type" className={box}>
+                <option value="">Every type</option>
+                {(['Standard', 'Deluxe', 'Suite'] as const).map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+              <input type="date" value={ruleFrom} onChange={(e) => setRuleFrom(e.target.value)} aria-label="From" className={box} />
+              <input type="date" value={ruleTo} onChange={(e) => setRuleTo(e.target.value)} aria-label="To" className={box} />
+              <input
+                inputMode="numeric"
+                value={ruleNights}
+                onChange={(e) => setRuleNights(e.target.value.replace(/\D/g, ''))}
+                aria-label="Nights"
+                placeholder="Nights"
+                disabled={ruleKind !== 'min-stay'}
+                className={box}
+              />
+              <Button
+                size="sm"
+                disabled={!ruleFrom || !ruleTo || ruleTo < ruleFrom}
+                onClick={() => {
+                  set({
+                    rules: [
+                      ...rates.rules,
+                      {
+                        id: newRuleId(rates.rules),
+                        kind: ruleKind,
+                        type: (ruleType || undefined) as RateRule['type'],
+                        from: ruleFrom,
+                        to: ruleTo,
+                        nights: ruleKind === 'min-stay' ? Math.max(1, Number(ruleNights) || 2) : undefined,
+                        reason: ruleReason.trim(),
+                        on: true,
+                      },
+                    ],
+                  })
+                  setRuleReason('')
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            <input
+              value={ruleReason}
+              onChange={(e) => setRuleReason(e.target.value)}
+              placeholder="Why, in your own words — the desk repeats this to the guest"
+              aria-label="Reason"
+              className={`${box} mt-2`}
+            />
+            <p className="mt-1 text-xs text-ink/55">{RULE_NOTE[ruleKind]}</p>
+          </div>
+
           <div className="mt-4">
             <p className="text-sm font-medium text-ink/80">How far past full this hotel will sell</p>
             <p className="mt-0.5 text-xs text-ink/55">
