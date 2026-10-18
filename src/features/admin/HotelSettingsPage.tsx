@@ -401,6 +401,21 @@ export default function HotelSettingsPage() {
           </div>
           <Switch on={options.nightAudit} label="Night audit" onChange={(v) => setOptions({ nightAudit: v })} />
         </div>
+        {options.nightAudit && (
+          <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
+            Close the day at
+            <input
+              type="time"
+              value={options.nightAuditAt}
+              onChange={(e) => e.target.value && setOptions({ nightAuditAt: e.target.value })}
+              className={box}
+            />
+            <span className="mt-1 block text-xs font-normal text-ink/55">
+              At this hour the day closes itself: the figures are recorded and a booking that never arrived becomes a no-show, so
+              tomorrow's arrivals are true. Somebody can still close it earlier by hand.
+            </span>
+          </label>
+        )}
       </section>
 
       <section className="rounded-xl border border-ink/10 bg-surface p-4">

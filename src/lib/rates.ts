@@ -34,6 +34,8 @@ export interface RatesPolicy {
   noShowNights: number
   /** A booking with no deposit or card is released at this time on the arrival day. */
   releaseTime: string
+  /** Whether the clock may take the room back by itself, or only suggest it to the desk. */
+  autoRelease: boolean
   /** Printed on the registration card. Empty means use the wording built from the hotel's times. */
   houseRules: string
 }
@@ -54,6 +56,7 @@ export const DEFAULT_RATES: RatesPolicy = {
   cancelChargeNights: 1,
   noShowNights: 1,
   releaseTime: '18:00',
+  autoRelease: true,
   houseRules: '',
 }
 

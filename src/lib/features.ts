@@ -1,3 +1,4 @@
+import { DEFAULT_AUDIT_AT } from './dayRun'
 import { DEFAULT_EXPRESS_MAX } from './expressCheckout'
 import { DEFAULT_MESSAGING } from './messages'
 import type { MessagingSettings } from './messages'
@@ -296,6 +297,8 @@ export interface HotelOptions {
   messaging: MessagingSettings
   /** The most that may be settled by express checkout with nobody looking at it. 0 means no ceiling. */
   expressMax: number
+  /** The hour the day closes itself, when the night audit is on. */
+  nightAuditAt: string
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -314,6 +317,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   extraChecks: [],
   messaging: DEFAULT_MESSAGING,
   expressMax: DEFAULT_EXPRESS_MAX,
+  nightAuditAt: DEFAULT_AUDIT_AT,
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [

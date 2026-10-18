@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { noShowsAtClose, ran } from '../../lib/dayRun'
+import { useAuth } from '../auth/authContext'
 import { Badge, Button, Card, DataTable, PageHeader, StatCard } from '../../components/ui'
 import type { Column } from '../../components/ui'
 import { TODAY } from '../../data/sample'
@@ -14,11 +16,12 @@ import ReservationPanel from './ReservationPanel'
 // The end-of-day check. The front desk clears every item, then runs the audit, which posts tonight's
 // room charges and closes the day. Prototype: the business date is fixed sample data, so the run is recorded, not rolled.
 export default function NightAuditPage() {
-  const { reservations, rooms } = useHotel()
-  const { tenant, stayTimes } = useFeatures()
+  const { reservations, rooms, auditRuns, closeDay } = useHotel()
+  const { tenant, stayTimes, options } = useFeatures()
+  const { user } = useAuth()
   const [openId, setOpenId] = useState<string | null>(null)
   const [openFolio, setOpenFolio] = useState<string | null>(null)
-  const [ranAt, setRanAt] = useState<string | null>(null)
+  const done = ran(auditRuns, TODAY)
 
   const report = auditReport(reservations, rooms, TODAY)
   const blockers = report.items.filter((i) => i.severity === 'bad')
@@ -134,24 +137,55 @@ export default function NightAuditPage() {
       </Card>
 
       <Card title="Close the day" icon="check" padded>
-        {ranAt ? (
+        {done ? (
           <div className="rounded-lg border border-good/30 bg-good/10 p-3 text-sm">
-            <p className="font-semibold text-good">Night audit done for {TODAY} at {ranAt}.</p>
-            <p className="mt-1 text-xs text-ink/70">
-              {report.toPost.length} night{report.toPost.length === 1 ? '' : 's'} checked, {ugx(report.postTotal)}. {ugx(report.owed)} is
-              carried into tomorrow. Check-out tomorrow is {stayTimes.checkOutTime}.
+            <p className="font-semibold text-good">
+              Night audit done for {done.date} at {done.at}, by {done.by}
+              {done.auto ? ', without being asked' : ''}.
             </p>
+            <p className="mt-1 text-xs text-ink/70">
+              {done.inHouse} in house, {done.arrivals} arrival{done.arrivals === 1 ? '' : 's'}, {done.departures} departure
+              {done.departures === 1 ? '' : 's'}. {ugx(done.owed)} is carried into tomorrow. Check-out tomorrow is{' '}
+              {stayTimes.checkOutTime}.
+            </p>
+            {done.noShows.length > 0 && (
+              <p className="mt-1 text-xs text-ink/70">
+                {done.noShows.length} booking{done.noShows.length === 1 ? '' : 's'} that never arrived {done.noShows.length === 1 ? 'was' : 'were'}{' '}
+                recorded as no-shows, so tomorrow's arrivals are true.
+              </p>
+            )}
           </div>
         ) : (
           <>
             <p className="text-sm text-ink/70">
-              {ready
-                ? 'Everything agrees. Running the audit closes the day and posts tonight.'
-                : `Clear the ${blockers.length} red item${blockers.length === 1 ? '' : 's'} above first. An arrival that never came must be checked in or recorded as a no-show.`}
+              {options.nightAudit
+                ? `The day closes itself at ${options.nightAuditAt}. Running it now does the same thing earlier.`
+                : 'Closing the day by itself is switched off for this hotel, so somebody runs it.'}
             </p>
+            {!ready && (
+              <p className="mt-1 text-xs text-ink/60">
+                {blockers.length} red item{blockers.length === 1 ? '' : 's'} above. Closing the day records an arrival that never came as a
+                no-show, which is what clearing it means.
+              </p>
+            )}
             <div className="mt-3">
-              <Button disabled={!ready} onClick={() => setRanAt(nowTime())}>
-                Run night audit for {TODAY}
+              <Button
+                onClick={() =>
+                  closeDay({
+                    date: TODAY,
+                    at: nowTime(),
+                    by: user?.name ?? 'Front desk',
+                    auto: false,
+                    inHouse: report.inHouse,
+                    arrivals: report.arrivals,
+                    departures: report.departures,
+                    owed: report.owed,
+                    noShows: noShowsAtClose(reservations, TODAY).map((x) => x.id),
+                    open: report.items.filter((i) => i.kind !== 'not-arrived').length,
+                  })
+                }
+              >
+                Close the day for {TODAY}
               </Button>
             </div>
           </>

@@ -1,4 +1,5 @@
 import { useBrowserSyncedState } from '../hooks/useBrowserSyncedState'
+import type { AuditRun } from '../lib/dayRun'
 import { tokenFor } from '../lib/preRegistration'
 import type { PreRegDetails } from '../lib/preRegistration'
 import type { ReactNode } from 'react'
@@ -77,6 +78,7 @@ const KEYS = {
   reservations: 'gastora:hotel:reservations',
   rooms: 'gastora:hotel:rooms',
   guests: 'gastora:hotel:guests',
+  audits: 'gastora:hotel:audits',
 } as const
 
 export default function HotelProvider({ children }: { children: ReactNode }) {
@@ -88,19 +90,21 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   const [reservations, setReservations] = useBrowserSyncedState(KEYS.reservations, start.reservations)
   const [rooms, setRooms] = useBrowserSyncedState(KEYS.rooms, start.rooms)
   const [guests, setGuests] = useBrowserSyncedState<Guest[]>(KEYS.guests, start.guests)
+  const [auditRuns, setAuditRuns] = useBrowserSyncedState<AuditRun[]>(KEYS.audits, [])
 
   /** Put the demonstration back to how it started, on this browser. */
   function resetDemo() {
-    for (const key of Object.values(KEYS)) {
+    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants']) {
       try {
         window.localStorage.removeItem(key)
       } catch {
         // Nothing stored to clear.
       }
     }
-    setReservations(start.reservations)
-    setRooms(start.rooms)
-    setGuests(start.guests)
+    // Reloading is the honest way to put everything back, settings included: those live in another
+    // provider, and clearing what is stored without reloading would leave the screen showing the old
+    // values until something happened to redraw it.
+    window.location.reload()
   }
 
   function checkIn(reservationId: string, roomNumber: string, details: GuestDetails) {
@@ -287,6 +291,38 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  /**
+   * The room goes back on sale. The booking becomes a no-show rather than being deleted, because the
+   * hotel needs to be able to say what happened to it, and a guest who turns up at nine deserves a
+   * truthful answer rather than a shrug.
+   */
+  function releaseRoom(reservationId: string, by: string, auto: boolean, reason: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId && r.status === 'booked'
+          ? { ...r, status: 'no-show' as const, room: null, release: { at: stamp(), by, auto, reason } }
+          : r,
+      ),
+    )
+    // A room that was being held for this booking is free again.
+    const held = reservations.find((x) => x.id === reservationId)?.room
+    if (held) {
+      setRooms((list) => list.map((room) => (room.number === held && room.status !== 'occupied' ? { ...room, status: 'clean' as const } : room)))
+    }
+  }
+
+  /** Close the day: record what the hotel looked like, and stop counting arrivals that never came. */
+  function closeDay(run: AuditRun) {
+    setAuditRuns((list) => (list.some((x) => x.date === run.date) ? list : [run, ...list]))
+    setReservations((list) =>
+      list.map((r) =>
+        run.noShows.includes(r.id) && r.status === 'booked'
+          ? { ...r, status: 'no-show' as const, release: r.release ?? { at: run.at, by: run.by, auto: run.auto, reason: 'Never arrived; the day was closed' } }
+          : r,
+      ),
+    )
+  }
+
   // Express checkout. Agreeing is one step and leaving is another, deliberately: what the hotel can
   // charge may have changed between the two, so the check is made again at the moment of leaving.
   function agreeExpress(reservationId: string, by: string, via: 'desk' | 'guest') {
@@ -405,6 +441,9 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         openPreReg,
         submitPreReg,
         acceptPreReg,
+        releaseRoom,
+        auditRuns,
+        closeDay,
         resetDemo,
         agreeExpress,
         cancelExpress,

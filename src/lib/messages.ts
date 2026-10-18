@@ -22,6 +22,7 @@ export type MessageKind =
   | 'before checkout'
   | 'bill sent'
   | 'room now free'
+  | 'room released'
   | 'thank you'
 
 export type MessageStatus = 'queued' | 'sent' | 'failed' | 'cancelled'
@@ -37,6 +38,7 @@ export const MESSAGE_BASIS: Record<MessageKind, MessageBasis> = {
   'before checkout': 'the stay',
   'bill sent': 'the stay',
   'room now free': 'the stay',
+  'room released': 'the stay',
   'thank you': 'marketing',
 }
 
@@ -146,6 +148,13 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     blurb: 'Sent to a guest on the waiting list when a cancellation frees a room.',
     on: true,
     text: 'Dear {guest}, a room has come free at {hotel} for {arrival} to {departure}. Reply within {hours} hours and it is yours, otherwise it goes to the next guest waiting.',
+  },
+  {
+    kind: 'room released',
+    label: 'Room released',
+    blurb: 'Sent when nobody confirmed and the hour the hotel set has passed, so the room went back on sale.',
+    on: true,
+    text: 'Dear {guest}, we held your room at {hotel} until {time} and could not reach you, so it has been released. We are sorry. Please call us if you are still coming and we will see what is free.',
   },
   {
     kind: 'thank you',
@@ -307,5 +316,6 @@ export const KIND_LABEL: Record<MessageKind, string> = {
   'before checkout': 'Before checkout',
   'bill sent': 'Bill sent',
   'room now free': 'A room has come free',
+  'room released': 'Room released',
   'thank you': 'After the stay',
 }

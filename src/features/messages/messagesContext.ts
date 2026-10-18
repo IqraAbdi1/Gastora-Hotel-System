@@ -15,6 +15,11 @@ export interface QueueInput {
   sendNow?: boolean
   /** Who is sending it, when it goes straight out. */
   by?: string
+  /**
+   * Write it only if this stay has never had this message. For anything the clock does, where the same
+   * moment can be noticed twice. The desk sending a link again deliberately does not pass this.
+   */
+  once?: boolean
 }
 
 export interface MessagesValue {

@@ -78,6 +78,9 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
       if (body.trim() === '') return null
       let created: GuestMessage | null = null
       setMessages((list) => {
+        // Checked inside the update, against the list as it really is, so the same moment noticed twice
+        // cannot write the same message twice.
+        if (input.once && input.reservationId && writtenAlready(list, input.reservationId, input.kind)) return list
         created = {
           id: newMessageId(list),
           kind: input.kind,

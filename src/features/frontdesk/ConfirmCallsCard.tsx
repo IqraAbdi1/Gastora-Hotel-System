@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Badge, Button, Card } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { CALL_OUTCOMES, CALL_STATE_LABEL, toConfirm } from '../../lib/confirmCalls'
+import { lateButConfirmed } from '../../lib/dayRun'
 import type { CallOutcome, CallState } from '../../lib/confirmCalls'
 import { useHotel } from '../../lib/hotelContext'
 import { nowTime } from '../../lib/stayTimes'
@@ -21,7 +22,7 @@ const tone: Record<CallState, 'bad' | 'warn' | 'good' | 'neutral'> = {
  * protection is ringing them on the arrival day and freeing the room early enough to sell it again.
  */
 export default function ConfirmCallsCard() {
-  const { reservations, recordConfirmCall } = useHotel()
+  const { reservations, recordConfirmCall, releaseRoom } = useHotel()
   const { options } = useFeatures()
   const { user } = useAuth()
   const [open, setOpen] = useState<string | null>(null)
@@ -31,7 +32,12 @@ export default function ConfirmCallsCard() {
   const list = toConfirm(reservations, TODAY, releaseTime, now)
   const left = list.filter((x) => x.state === 'to call' || x.state === 'chase' || x.state === 'overdue').length
 
-  if (list.length === 0) return null
+  // Rooms the clock took back today, and the ones it would not: a guest who said they were coming is
+  // released by a person, never by the hour, because they may simply be late.
+  const releasedToday = reservations.filter((r) => r.status === 'no-show' && r.release && r.arrival === TODAY)
+  const lateConfirmed = lateButConfirmed(reservations, TODAY, releaseTime, now)
+
+  if (list.length === 0 && releasedToday.length === 0) return null
 
   function record(id: string, outcome: CallOutcome) {
     recordConfirmCall(id, outcome, user?.name ?? 'Front desk')
@@ -64,7 +70,15 @@ export default function ConfirmCallsCard() {
                 )}
                 {state === 'overdue' && (
                   <p className="mt-1 text-xs font-medium text-bad">
-                    Past {releaseTime}. This room can be sold to someone else.
+                    {options.rates.autoRelease
+                      ? `Past ${releaseTime}. The room goes back on sale by itself.`
+                      : `Past ${releaseTime}. This room can be sold to someone else.`}
+                  </p>
+                )}
+                {lateConfirmed.some((x) => x.id === r.id) && (
+                  <p className="mt-1 text-xs text-ink/70">
+                    They said they were coming, so the clock leaves this one alone. Release it only if you have decided
+                    they are not arriving.
                   </p>
                 )}
               </div>
@@ -93,15 +107,36 @@ export default function ConfirmCallsCard() {
                 </button>
               </div>
             ) : (
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" onClick={() => setOpen(r.id)}>
                   {r.confirmCall ? 'Called again' : 'I called them'}
                 </Button>
+                {state === 'overdue' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => releaseRoom(r.id, user?.name ?? 'Front desk', false, `Released at the desk after ${releaseTime}`)}
+                  >
+                    Release the room
+                  </Button>
+                )}
               </div>
             )}
           </li>
         ))}
       </ul>
+      {releasedToday.length > 0 && (
+        <div className="mt-4 rounded-xl bg-ink/[0.04] p-3">
+          <p className="text-xs font-semibold text-ink/70">Rooms back on sale today</p>
+          <ul className="mt-1 space-y-0.5 text-xs text-ink/65">
+            {releasedToday.map((r) => (
+              <li key={r.id}>
+                {r.guest} &middot; {r.roomType} &middot; {r.release?.reason} &middot; {r.release?.by} at {r.release?.at}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="mt-3 text-xs text-ink/55">
         The release time is set in Rates and policies. Recording the call is what lets the desk know, at{' '}
         {releaseTime}, which rooms it can honestly resell.

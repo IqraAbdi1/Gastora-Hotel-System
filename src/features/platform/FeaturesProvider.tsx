@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import type { ReactNode } from 'react'
 import {
   DEFAULT_OPTIONS,
@@ -25,15 +26,18 @@ import { FeaturesContext } from './featuresContext'
 import type { FeaturesValue } from './featuresContext'
 
 export default function FeaturesProvider({ children }: { children: ReactNode }) {
-  const [tenants, setTenants] = useState<Tenant[]>(SAMPLE_TENANTS)
+  const [tenants, setTenants] = useBrowserSyncedState<Tenant[]>('gastora:platform:tenants', SAMPLE_TENANTS)
   const [currentId, setCurrentId] = useState('t1')
-  const [optionsById, setOptionsById] = useState<Record<string, HotelOptions>>({})
-  const [taxById, setTaxById] = useState<Record<string, TaxSettings>>(SAMPLE_TAX)
-  const [stayTimesById, setStayTimesById] = useState<Record<string, StayTimes>>({})
+  const [optionsById, setOptionsById] = useBrowserSyncedState<Record<string, HotelOptions>>('gastora:hotel:options', {})
+  const [taxById, setTaxById] = useBrowserSyncedState<Record<string, TaxSettings>>('gastora:hotel:tax', SAMPLE_TAX)
+  const [stayTimesById, setStayTimesById] = useBrowserSyncedState<Record<string, StayTimes>>('gastora:hotel:stayTimes', {})
 
-  const patchTenant = useCallback((id: string, fn: (t: Tenant) => Tenant) => {
-    setTenants((list) => list.map((t) => (t.id === id ? fn(t) : t)))
-  }, [])
+  const patchTenant = useCallback(
+    (id: string, fn: (t: Tenant) => Tenant) => {
+      setTenants((list) => list.map((t) => (t.id === id ? fn(t) : t)))
+    },
+    [setTenants],
+  )
 
   const setPlan = useCallback(
     (id: string, plan: PlanId) => patchTenant(id, (t) => ({ ...t, plan, overrides: {} })),
@@ -48,13 +52,13 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
   const setTax = useCallback(
     (patch: Partial<TaxSettings>) =>
       setTaxById((m) => ({ ...m, [currentId]: { ...(m[currentId] ?? DEFAULT_TAX), ...patch } })),
-    [currentId],
+    [currentId, setTaxById],
   )
 
   const setStayTimes = useCallback(
     (patch: Partial<StayTimes>) =>
       setStayTimesById((m) => ({ ...m, [currentId]: { ...(m[currentId] ?? DEFAULT_STAY_TIMES), ...patch } })),
-    [currentId],
+    [currentId, setStayTimesById],
   )
 
   const addTenant = useCallback((input: NewTenant) => {
@@ -70,7 +74,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
     }
     setTenants((list) => [...list, created])
     return created
-  }, [])
+  }, [setTenants])
 
   const setRegistry = useCallback(
     (id: string, patch: Partial<TenantRegistry>) => patchTenant(id, (t) => ({ ...t, registry: { ...t.registry, ...patch } })),
@@ -104,7 +108,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
         ...m,
         [currentId]: { ...(m[currentId] ?? DEFAULT_OPTIONS), ...patch },
       })),
-    [currentId],
+    [currentId, setOptionsById],
   )
 
   const value = useMemo<FeaturesValue>(() => {

@@ -1,7 +1,8 @@
 import type { ConfirmCall } from '../lib/confirmCalls'
 import type { Express } from '../lib/expressCheckout'
+import type { Release } from '../lib/dayRun'
 import type { PreReg } from '../lib/preRegistration'
-export type { PreReg, Express }
+export type { PreReg, Express, Release }
 
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
@@ -147,6 +148,8 @@ export type Reservation = {
   preReg?: PreReg
   /** The guest asked to leave without stopping at the desk. */
   express?: Express
+  /** The room was taken back because nobody confirmed and the hour passed. */
+  release?: Release
 }
 export type RoomMove = {
   at: string

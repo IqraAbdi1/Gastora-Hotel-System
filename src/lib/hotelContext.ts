@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { AuditRun } from './dayRun'
 import type { PreRegDetails } from './preRegistration'
 import type { CallOutcome } from './confirmCalls'
 import type {
@@ -48,6 +49,12 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** The room goes back on sale; the booking becomes a no-show with a record of why. */
+  releaseRoom: (reservationId: string, by: string, auto: boolean, reason: string) => void
+  /** Every closing of the day, newest first. */
+  auditRuns: AuditRun[]
+  /** Close the day. */
+  closeDay: (run: AuditRun) => void
   /** Put the demonstration back to how it started, on this browser. */
   resetDemo: () => void
   checkOut: (reservationId: string, note?: string) => void

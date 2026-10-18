@@ -309,6 +309,16 @@ export default function RatesPoliciesPage() {
             <Field label="Release an unguaranteed booking at" hint="A booking with no deposit and no card is let go at this time on the arrival day.">
               {(id) => <Input id={id} type="time" className="w-40" value={rates.releaseTime} onChange={(e) => e.target.value && set({ releaseTime: e.target.value })} />}
             </Field>
+            <label className="mt-2 flex items-start gap-2 text-sm text-ink/80">
+              <input type="checkbox" className="mt-1" checked={rates.autoRelease} onChange={(e) => set({ autoRelease: e.target.checked })} />
+              <span>
+                Put the room back on sale by itself at that time.
+                <span className="block text-xs text-ink/55">
+                  Off, the front desk is told the room can be resold and presses the button. On, the hour does it and says so. A guest who
+                  confirmed by phone is never released by the clock either way.
+                </span>
+              </span>
+            </label>
           </div>
           <div className="mt-3 rounded-lg border border-ink/10 bg-canvas/60 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">What each guarantee means here</p>
