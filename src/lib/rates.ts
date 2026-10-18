@@ -1,4 +1,4 @@
-import type { DayRate, OccupancyRate, RateSeason } from './rateCalendar'
+import type { DayRate, OccupancyRate, RateOverride, RateSeason } from './rateCalendar'
 import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
@@ -56,6 +56,8 @@ export interface RatesPolicy {
   dayRates: DayRate[]
   /** Steps that move the rate once the house is filling for that night. */
   occupancyRates: OccupancyRate[]
+  /** Prices a person set for one date, which beat every rule above. */
+  overrides: RateOverride[]
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -89,6 +91,7 @@ export const DEFAULT_RATES: RatesPolicy = {
   occupancyRates: [
     { id: 'busy-1', name: 'Filling up', atLeast: 80, how: 'percent', value: 15, on: false },
   ],
+  overrides: [],
 }
 
 /** The wording a hotel starts with, built from its own check-in and check-out times. */

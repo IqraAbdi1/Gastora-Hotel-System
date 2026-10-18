@@ -8,6 +8,7 @@ import { averageLeadTime, addDays, curveIsThin, kpisBehind, kpisOfNights, paceAh
 import type { NightPace } from '../../lib/pace'
 import { DAY_SHORT, dayOf } from '../../lib/rateCalendar'
 import { useFeatures } from '../platform/featuresContext'
+import RateAdviceCard from './RateAdviceCard'
 
 const AHEAD = 30
 
@@ -162,6 +163,8 @@ export default function RevenuePage() {
           hint="Average, booking to arrival"
         />
       </div>
+
+      <RateAdviceCard nights={nights} />
 
       <Card
         title="Where the next thirty nights stand"

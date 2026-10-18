@@ -18,6 +18,10 @@
 //      so the caller hands it in. A hotel that does not price on occupancy passes nothing and nothing
 //      changes.
 //
+// Above all three sits one more thing, and it is not a rule: an OVERRIDE, a price a person set for one
+// date and one room type. It wins outright. A manager who has decided what Saturday costs is not
+// arguing with a percentage, and the night records who decided and when.
+//
 // Occupancy is the whole house, not the room type. A hotelier raises the Deluxe rate because the hotel
 // is filling, not because four Deluxes went: the guest who cannot find a Standard is the one who ends up
 // paying for a Deluxe.
@@ -57,6 +61,18 @@ export interface RateSeason extends Moves {
 /** Days of the week that cost more or less than the rest. 0 is Sunday. */
 export interface DayRate extends Moves {
   days: number[]
+}
+
+/** One date's price, set by a person. Not a rule: it beats every rule, and it is signed. */
+export interface RateOverride {
+  id: string
+  date: string
+  type: Room['type']
+  rate: number
+  by: string
+  at: string
+  /** Why, in the words shown when it was approved. */
+  note?: string
 }
 
 /** A step that applies once the house is at least this full for that night. */
@@ -106,6 +122,7 @@ export interface NightPrice {
   occupancyRate?: OccupancyRate
   /** How full the house was when this price was worked out, where that was known. */
   sold?: number
+  override?: RateOverride
 }
 
 export interface RateCalendar {
@@ -113,6 +130,7 @@ export interface RateCalendar {
   seasons: RateSeason[]
   dayRates: DayRate[]
   occupancyRates: OccupancyRate[]
+  overrides: RateOverride[]
 }
 
 /** How full the house is on a given night, as a percentage. Nothing known means no occupancy step. */
@@ -152,7 +170,14 @@ export function priceNight(type: Room['type'], date: string, c: RateCalendar, so
     }
   }
 
-  return { date, rate, steps, season, dayRate, occupancyRate, sold }
+  // A person's decision, last and absolute.
+  const override = (c.overrides ?? []).find((o) => o.date === date && o.type === type)
+  if (override) {
+    rate = tidy(override.rate)
+    steps.push({ label: `Set by ${override.by}`, rate })
+  }
+
+  return { date, rate, steps, season, dayRate, occupancyRate, sold, override }
 }
 
 /** Every night of a stay. Arrival counts, the departure day does not: nobody sleeps on it. */
@@ -218,6 +243,12 @@ export function newDayRateId(list: DayRate[]): string {
   let n = list.length + 1
   while (list.some((x) => x.id === `day-${n}`)) n += 1
   return `day-${n}`
+}
+
+export function newOverrideId(list: RateOverride[]): string {
+  let n = list.length + 1
+  while (list.some((x) => x.id === `set-${n}`)) n += 1
+  return `set-${n}`
 }
 
 export function newOccupancyRateId(list: OccupancyRate[]): string {
