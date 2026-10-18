@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react'
+import { Badge, Button, Card, DataTable, EmptyState, PageHeader, Pager, Select } from '../../components/ui'
+import type { Column } from '../../components/ui'
 import { useHousekeeping } from './hkContext'
-import { defectStatusStyles, exceptionStatuses } from './hkModel'
-import { Empty, PAGE, PageHeader, Pager, StatusChip, btnGhost, card, field } from './hkUi'
+import { defectStatusTone, exceptionStatuses, statusTone } from './hkModel'
+import type { RoomDefect } from './hkModel'
 import { useRoomOverlays } from './useRoomOverlays'
 
 const OPEN = 'Not resolved'
+const PAGE = 25
+
+type Row = { room: string; defect: RoomDefect }
 
 export default function IssuesPage() {
   const hk = useHousekeeping()
@@ -12,10 +17,7 @@ export default function IssuesPage() {
   const [status, setStatus] = useState(OPEN)
   const [page, setPage] = useState(0)
 
-  const flagged = useMemo(
-    () => hk.rooms.filter((r) => exceptionStatuses.includes(r.status as never)),
-    [hk.rooms],
-  )
+  const flagged = useMemo(() => hk.rooms.filter((r) => exceptionStatuses.includes(r.status as never)), [hk.rooms])
 
   const defects = useMemo(
     () =>
@@ -26,54 +28,123 @@ export default function IssuesPage() {
   )
   const shown = defects.slice(page * PAGE, page * PAGE + PAGE)
 
+  const columns: Column<Row>[] = [
+    {
+      key: 'room',
+      header: 'Room',
+      cell: ({ room }) => (
+        <button type="button" onClick={() => openRoom(room, 'defects')} className="font-semibold text-ink hover:text-brand">
+          {room}
+        </button>
+      ),
+    },
+    {
+      key: 'defect',
+      header: 'Defect',
+      cell: ({ defect }) => (
+        <>
+          <p className="font-medium text-ink">{defect.category}</p>
+          <p className="max-w-xs truncate text-xs text-ink/60">{defect.description}</p>
+        </>
+      ),
+    },
+    { key: 'severity', header: 'Severity', hideBelow: 'sm', cell: ({ defect }) => defect.severity },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: ({ defect }) => (
+        <>
+          <Badge tone={defectStatusTone[defect.status]}>{defect.status}</Badge>
+          {defect.technician && <p className="mt-1 text-xs text-ink/60">With {defect.technician}</p>}
+        </>
+      ),
+    },
+    {
+      key: 'reported',
+      header: 'Reported',
+      hideBelow: 'md',
+      cell: ({ defect }) => <span className="text-ink/70">{defect.reportedAt}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      cell: ({ room, defect }) =>
+        defect.status === 'Open' ? (
+          <Button variant="secondary" size="sm" onClick={() => hk.requestMaintenance(room, defect.id)}>
+            Request maintenance
+          </Button>
+        ) : null,
+    },
+  ]
+
   return (
     <div className="space-y-5">
-      <PageHeader title="Issues" hint="Rooms out of sale and defects that housekeeping has reported." />
+      <PageHeader
+        eyebrow="Housekeeping"
+        title="Issues"
+        description="Rooms out of sale, and the defects housekeeping has reported."
+      />
 
-      <section className={card}>
-        <div className="border-b border-ink/10 p-4">
-          <h2 className="font-semibold">Rooms with an issue ({flagged.length})</h2>
-          <p className="text-xs text-ink/60">
-            Resetting sends a vacant room back to Dirty so it is cleaned before it is sold. A room kept out of sale by a repair is released when maintenance closes it.
-          </p>
-        </div>
-        <ul className="divide-y divide-ink/10">
-          {flagged.map((room) => (
-            <li key={room.room} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <button type="button" onClick={() => openRoom(room.room)} className="font-bold hover:text-brand">
-                  Room {room.room}
-                </button>
-                <p className="text-sm text-ink/60">{room.type} · {room.zone}</p>
-                {room.reason && <p className="text-sm text-ink/70">Reason: {room.reason}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusChip status={room.status} />
-                {hk.blockedByRepair(room.room) ? (
-                  <span className="text-xs text-ink/60">Waiting for repair</span>
-                ) : (
-                  <button type="button" onClick={() => hk.resetRoom(room.room)} className={btnGhost}>Reset</button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-        {flagged.length === 0 && <Empty title="No rooms are out of sale" />}
-      </section>
+      <Card
+        title="Rooms with an issue"
+        icon="alert"
+        count={flagged.length}
+        description="Resetting sends a vacant room back to dirty so it is cleaned before it is sold. A room held out of sale by a repair is released when maintenance closes it."
+        padded={false}
+      >
+        {flagged.length === 0 ? (
+          <EmptyState title="No rooms are out of sale" />
+        ) : (
+          <ul className="divide-y divide-ink/10">
+            {flagged.map((room) => (
+              <li key={room.room} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => openRoom(room.room)}
+                    className="font-semibold text-ink hover:text-brand"
+                  >
+                    Room {room.room}
+                  </button>
+                  <p className="text-sm text-ink/60">
+                    {room.type} · {room.zone}
+                  </p>
+                  {room.reason && <p className="text-sm text-ink/70">Reason: {room.reason}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge tone={statusTone[room.status]} dot>
+                    {room.status}
+                  </Badge>
+                  {hk.blockedByRepair(room.room) ? (
+                    <span className="text-xs text-ink/60">Waiting for repair</span>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={() => hk.resetRoom(room.room)}>
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
-      <section className={card}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 p-4">
-          <div>
-            <h2 className="font-semibold">Defects</h2>
-            <p className="text-xs text-ink/60">Report a problem from a room&apos;s detail panel. Maintenance closes the repair.</p>
-          </div>
-          <select
+      <Card
+        title="Defects"
+        icon="alert"
+        count={defects.length}
+        description="Report a problem from a room's detail panel. Maintenance closes the repair."
+        padded={false}
+        actions={
+          <Select
             value={status}
             onChange={(e) => {
               setStatus(e.target.value)
               setPage(0)
             }}
-            className={`${field} w-auto! py-2`}
+            className="w-auto! py-1.5"
+            aria-label="Filter by status"
           >
             <option>{OPEN}</option>
             <option>Open</option>
@@ -82,56 +153,17 @@ export default function IssuesPage() {
             <option>Done</option>
             <option>Resolved</option>
             <option>All</option>
-          </select>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-190 text-left text-sm">
-            <thead className="border-b border-ink/10 bg-canvas text-xs uppercase tracking-wide text-ink/50">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Room</th>
-                <th className="px-4 py-3 font-semibold">Defect</th>
-                <th className="px-4 py-3 font-semibold">Severity</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Reported</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/10">
-              {shown.map(({ room, defect }) => (
-                <tr key={`${room}-${defect.id}`} className="hover:bg-canvas/60">
-                  <td className="px-4 py-3">
-                    <button type="button" onClick={() => openRoom(room, 'defects')} className="font-semibold hover:text-brand">
-                      {room}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{defect.category}</p>
-                    <p className="max-w-xs truncate text-xs text-ink/60">{defect.description}</p>
-                  </td>
-                  <td className="px-4 py-3">{defect.severity}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${defectStatusStyles[defect.status]}`}>{defect.status}</span>
-                    {defect.technician && <p className="mt-1 text-xs text-ink/60">With {defect.technician}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-ink/70">{defect.reportedAt}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      {defect.status === 'Open' && (
-                        <button type="button" onClick={() => hk.requestMaintenance(room, defect.id)} className={btnGhost}>
-                          Request maintenance
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {defects.length === 0 && <Empty title="No defects here" />}
-        <Pager page={page} total={defects.length} onPage={setPage} noun="defects" />
-      </section>
+          </Select>
+        }
+      >
+        <DataTable
+          columns={columns}
+          rows={shown}
+          rowKey={({ room, defect }) => `${room}-${defect.id}`}
+          empty={{ title: 'No defects here', hint: 'Nothing matches this status.' }}
+        />
+        <Pager page={page} total={defects.length} perPage={PAGE} onPage={setPage} noun="defects" />
+      </Card>
 
       {overlays}
     </div>

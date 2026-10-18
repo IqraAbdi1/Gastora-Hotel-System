@@ -1,4 +1,5 @@
 import type { Room, Reservation } from '../../types'
+import type { Tone } from '../../components/ui'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import type {
   HousekeepingPriority,
@@ -118,32 +119,54 @@ export const taskTypes: TaskType[] = [
 export const taskStatuses: TaskStatus[] = ['Unassigned', 'Assigned', 'In Progress', 'Completed', 'Cancelled']
 export const cleanTypes: TaskType[] = ['Departure Clean', 'Arrival Preparation', 'Deep Clean']
 
-export const statusStyles: Record<HkStatus, string> = {
-  Dirty: 'bg-red-50 text-red-700 ring-red-200',
-  'Being Cleaned': 'bg-amber-50 text-amber-700 ring-amber-200',
-  Clean: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  Inspected: 'bg-blue-50 text-blue-700 ring-blue-200',
-  'Out of Service': 'bg-orange-50 text-orange-700 ring-orange-200',
-  'Out of Order': 'bg-slate-200 text-slate-700 ring-slate-300',
-  Discrepancy: 'bg-purple-50 text-purple-700 ring-purple-200',
-  Occupied: 'bg-ink/5 text-ink/70 ring-ink/15',
+// A button says what it does, not what the room becomes.
+export const ADVANCE_LABEL: Record<string, string> = {
+  'Being Cleaned': 'Start cleaning',
+  Clean: 'Mark clean',
+  Inspected: 'Mark inspected',
 }
 
-export const priorityStyles: Record<Priority, string> = {
-  Urgent: 'bg-red-100 text-red-700',
-  High: 'bg-orange-100 text-orange-700',
-  Normal: 'bg-slate-100 text-slate-600',
-}
-
-export const taskStatusStyles: Record<TaskStatus, string> = {
-  Unassigned: 'bg-slate-100 text-slate-600',
-  Assigned: 'bg-blue-50 text-blue-700',
-  'In Progress': 'bg-amber-50 text-amber-700',
-  Completed: 'bg-emerald-50 text-emerald-700',
-  Cancelled: 'bg-red-50 text-red-700',
+export const TASK_ADVANCE_LABEL: Record<TaskStatus, string> = {
+  Unassigned: 'Assign',
+  Assigned: 'Start',
+  'In Progress': 'Finish',
+  Completed: 'Done',
+  Cancelled: 'Cancelled',
 }
 
 export const priorityRank: Record<Priority, number> = { Urgent: 0, High: 1, Normal: 2 }
+
+// Colour carries meaning and comes from the shared palette, so a status reads the same here as it does
+// on the front desk: good = ready, warn = needs work, bad = a problem, info = under way.
+export const statusTone: Record<HkStatus, Tone> = {
+  Dirty: 'warn',
+  'Being Cleaned': 'info',
+  Clean: 'brand',
+  Inspected: 'good',
+  'Out of Service': 'warn',
+  'Out of Order': 'bad',
+  Discrepancy: 'accent',
+  Occupied: 'neutral',
+}
+
+export const priorityTone: Record<Priority, Tone> = { Urgent: 'bad', High: 'warn', Normal: 'neutral' }
+
+export const taskStatusTone: Record<TaskStatus, Tone> = {
+  Unassigned: 'neutral',
+  Assigned: 'info',
+  'In Progress': 'warn',
+  Completed: 'good',
+  Cancelled: 'bad',
+}
+
+export const defectStatusTone: Record<DefectStatus, Tone> = {
+  Open: 'neutral',
+  'Maintenance Requested': 'info',
+  'In Progress': 'warn',
+  Done: 'brand',
+  Resolved: 'good',
+}
+
 
 // Rule: how urgent a defect is. A problem that takes the room out of sale, or a High severity, is Urgent.
 export function defectPriority(d: RoomDefect): Priority {
@@ -155,14 +178,6 @@ export const defectTarget: Record<Priority, string> = {
   Urgent: 'within 2 hours',
   High: 'today',
   Normal: 'within 3 days',
-}
-
-export const defectStatusStyles: Record<DefectStatus, string> = {
-  Open: 'bg-slate-100 text-slate-600',
-  'Maintenance Requested': 'bg-blue-50 text-blue-700',
-  'In Progress': 'bg-amber-50 text-amber-700',
-  Done: 'bg-purple-50 text-purple-700',
-  Resolved: 'bg-emerald-50 text-emerald-700',
 }
 
 export function nextStatus(status: HkStatus): HousekeepingRoomStatus | null {

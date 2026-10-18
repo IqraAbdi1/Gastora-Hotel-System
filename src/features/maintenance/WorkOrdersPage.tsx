@@ -1,11 +1,24 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import FilterBar from '../../components/FilterBar'
+import { Badge, Button, Card, DataTable, Field, Input, Modal, PageHeader, Pager, Select, StatCard } from '../../components/ui'
+import type { Column } from '../../components/ui'
 import { useFeatures } from '../platform/featuresContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
-import { defectPriority, defectStatusStyles, defectTarget, priorityRank, technicians } from '../housekeeping/hkModel'
-import { Empty, PAGE, PageHeader, Pager, PriorityChip, btnGhost, btnPrimary, card, field } from '../housekeeping/hkUi'
+import {
+  defectPriority,
+  defectStatusTone,
+  defectTarget,
+  priorityRank,
+  priorityTone,
+  technicians,
+} from '../housekeeping/hkModel'
+import type { RoomDefect } from '../housekeeping/hkModel'
 import { useRoomOverlays } from '../housekeeping/useRoomOverlays'
 
 const ACTIVE = 'Active'
+const PAGE = 25
+
+type Row = { room: string; defect: RoomDefect }
 
 export default function WorkOrdersPage() {
   const hk = useHousekeeping()
@@ -15,7 +28,7 @@ export default function WorkOrdersPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [roomNo, setRoomNo] = useState('')
-  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState<Row | null>(null)
   const [note, setNote] = useState('')
 
   const full = features.maintenanceFull
@@ -37,199 +50,252 @@ export default function WorkOrdersPage() {
       )
   }, [hk.allDefects, status, search])
   const shown = orders.slice(page * PAGE, page * PAGE + PAGE)
-  const waiting = hk.allDefects.filter((d) => d.defect.status === 'Open').length
 
-  function reject(room: string, id: number) {
-    if (!note.trim()) return
-    hk.verifyDefect(room, id, false, note)
+  const waiting = hk.allDefects.filter((d) => d.defect.status === 'Open').length
+  const live = hk.allDefects.filter((d) => d.defect.status !== 'Open' && d.defect.status !== 'Resolved')
+  const urgent = live.filter((d) => defectPriority(d.defect) === 'Urgent').length
+  const offSale = live.filter((d) => d.defect.blocksRoom).length
+
+  function reject() {
+    if (!rejecting || !note.trim()) return
+    hk.verifyDefect(rejecting.room, rejecting.defect.id, false, note)
     setRejecting(null)
     setNote('')
   }
 
+  const columns: Column<Row>[] = [
+    {
+      key: 'room',
+      header: 'Room',
+      cell: ({ room, defect }) => (
+        <>
+          <button type="button" onClick={() => openRoom(room, 'defects')} className="font-semibold text-ink hover:text-brand">
+            {room}
+          </button>
+          {defect.blocksRoom && <p className="text-xs font-medium text-bad">Room out of sale</p>}
+        </>
+      ),
+    },
+    {
+      key: 'problem',
+      header: 'Problem',
+      cell: ({ defect }) => (
+        <>
+          <p className="font-medium text-ink">{defect.category}</p>
+          <p className="max-w-xs text-xs text-ink/60">{defect.description}</p>
+          {defect.note && <p className="max-w-xs text-xs text-ink/50">{defect.note}</p>}
+        </>
+      ),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      hideBelow: 'sm',
+      cell: ({ defect }) => {
+        const priority = defectPriority(defect)
+        return (
+          <>
+            <Badge tone={priorityTone[priority]}>{priority}</Badge>
+            {full && defect.status !== 'Resolved' && (
+              <p className="mt-1 text-xs text-ink/50">Target: {defectTarget[priority]}</p>
+            )}
+          </>
+        )
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: ({ defect }) => <Badge tone={defectStatusTone[defect.status]}>{defect.status}</Badge>,
+    },
+    ...(full
+      ? ([
+          {
+            key: 'technician',
+            header: 'Technician',
+            hideBelow: 'md',
+            cell: ({ room, defect }) =>
+              defect.status === 'Resolved' ? (
+                <span className="text-ink/60">{defect.technician ?? '—'}</span>
+              ) : (
+                <Select
+                  value={defect.technician ?? 'Unassigned'}
+                  onChange={(e) => hk.assignDefect(room, defect.id, e.target.value)}
+                  className="w-auto! py-1.5"
+                  aria-label={`Technician for room ${room}`}
+                >
+                  {technicians.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </Select>
+              ),
+          },
+        ] as Column<Row>[])
+      : []),
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      cell: (row) => {
+        const { room, defect } = row
+        return (
+          <div className="flex justify-end gap-2">
+            {defect.status === 'Maintenance Requested' &&
+              (full ? (
+                <Button size="sm" onClick={() => hk.startDefect(room, defect.id)}>
+                  Start
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => hk.finishDefect(room, defect.id)}>
+                  Done
+                </Button>
+              ))}
+            {defect.status === 'In Progress' && (
+              <Button size="sm" onClick={() => hk.finishDefect(room, defect.id)}>
+                Done
+              </Button>
+            )}
+            {defect.status === 'Done' && (
+              <>
+                <Button size="sm" onClick={() => hk.verifyDefect(room, defect.id, true, '')}>
+                  Verified
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setRejecting(row)
+                    setNote('')
+                  }}
+                >
+                  Reopen
+                </Button>
+              </>
+            )}
+          </div>
+        )
+      },
+    },
+  ]
+
   return (
     <div className="space-y-5">
       <PageHeader
+        eyebrow="Maintenance"
         title="Work orders"
-        hint={
+        description={
           full
-            ? 'Repairs reported by housekeeping and the front desk. Rule: priority comes from how serious it is, and whether the room is out of sale.'
+            ? 'Repairs reported by housekeeping and the front desk. Rule: priority comes from how serious the fault is, and whether it has taken the room out of sale.'
             : 'Things that need fixing. Mark each one done when it is fixed.'
         }
       />
 
-      <div className={`${card} flex flex-wrap items-center gap-2 p-4`}>
-        <input
-          value={roomNo}
-          onChange={(e) => setRoomNo(e.target.value)}
-          placeholder="Room number"
-          className={`${field} w-40! py-2`}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Open repairs" icon="alert" value={String(live.length)} hint="Not yet closed" />
+        <StatCard
+          label="Urgent"
+          icon="alert"
+          value={String(urgent)}
+          hint="Serious, or room off sale"
+          tone={urgent > 0 ? 'bad' : 'default'}
         />
-        <button type="button" disabled={!knownRoom} onClick={() => reportIssue(roomNo.trim())} className={btnPrimary}>
-          Report a problem
-        </button>
-        {roomNo.trim() && !knownRoom && <span className="text-xs text-ink/60">No such room.</span>}
-        {full && waiting > 0 && (
-          <span className="ml-auto text-xs text-ink/60">
-            {waiting} reported problem{waiting === 1 ? '' : 's'} waiting for a housekeeping supervisor to send them here.
-          </span>
-        )}
+        <StatCard
+          label="Rooms off sale"
+          icon="bed"
+          value={String(offSale)}
+          hint="Held by a repair"
+          tone={offSale > 0 ? 'warn' : 'default'}
+        />
+        <StatCard
+          label="With the supervisor"
+          icon="list"
+          value={String(waiting)}
+          hint="Reported, not sent here yet"
+          tone={full && waiting > 0 ? 'warn' : 'default'}
+        />
       </div>
 
-      <section className={card}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 p-4">
-          <h2 className="font-semibold">Repairs</h2>
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(0)
-              }}
-              placeholder="Search a room or problem"
-              className={`${field} w-56! py-2`}
-            />
-            <select
+      <Card title="Report a problem" icon="alert" description="Raise a repair against a room number.">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={roomNo}
+            onChange={(e) => setRoomNo(e.target.value)}
+            placeholder="Room number"
+            className="w-40!"
+            aria-label="Room number"
+          />
+          <Button disabled={!knownRoom} onClick={() => reportIssue(roomNo.trim())}>
+            Report a problem
+          </Button>
+          {roomNo.trim() && !knownRoom && <span className="text-xs text-ink/60">No such room.</span>}
+        </div>
+      </Card>
+
+      <FilterBar
+        query={search}
+        onQuery={(v) => {
+          setSearch(v)
+          setPage(0)
+        }}
+        placeholder="Search a room or problem"
+        active={status === ACTIVE ? 0 : 1}
+      >
+        <Field label="Status">
+          {(id) => (
+            <Select
+              id={id}
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value)
                 setPage(0)
               }}
-              className={`${field} w-auto! py-2`}
             >
               <option>{ACTIVE}</option>
               <option>Maintenance Requested</option>
               <option>In Progress</option>
               {features.repairSignoff && <option>Done</option>}
               <option>Resolved</option>
-            </select>
-          </div>
-        </div>
+            </Select>
+          )}
+        </Field>
+      </FilterBar>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-190 text-left text-sm">
-            <thead className="border-b border-ink/10 bg-canvas text-xs uppercase tracking-wide text-ink/50">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Room</th>
-                <th className="px-4 py-3 font-semibold">Problem</th>
-                <th className="px-4 py-3 font-semibold">Priority</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                {full && <th className="px-4 py-3 font-semibold">Technician</th>}
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/10">
-              {shown.map(({ room, defect }) => {
-                const key = `${room}-${defect.id}`
-                const priority = defectPriority(defect)
-                return (
-                  <Fragment key={key}>
-                    <tr className="hover:bg-canvas/60">
-                      <td className="px-4 py-3">
-                        <button type="button" onClick={() => openRoom(room, 'defects')} className="font-semibold hover:text-brand">
-                          {room}
-                        </button>
-                        {defect.blocksRoom && <p className="text-xs font-medium text-orange-700">Room out of sale</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium">{defect.category}</p>
-                        <p className="max-w-xs text-xs text-ink/60">{defect.description}</p>
-                        {defect.note && <p className="max-w-xs text-xs text-ink/50">{defect.note}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <PriorityChip priority={priority} />
-                        {full && defect.status !== 'Resolved' && (
-                          <p className="mt-1 text-xs text-ink/50">Target: {defectTarget[priority]}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${defectStatusStyles[defect.status]}`}>
-                          {defect.status}
-                        </span>
-                      </td>
-                      {full && (
-                        <td className="px-4 py-3">
-                          {defect.status === 'Resolved' ? (
-                            <span className="text-ink/60">{defect.technician ?? '—'}</span>
-                          ) : (
-                            <select
-                              value={defect.technician ?? 'Unassigned'}
-                              onChange={(e) => hk.assignDefect(room, defect.id, e.target.value)}
-                              className={`${field} w-auto! py-1.5`}
-                            >
-                              {technicians.map((t) => (
-                                <option key={t}>{t}</option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          {defect.status === 'Maintenance Requested' &&
-                            (full ? (
-                              <button type="button" onClick={() => hk.startDefect(room, defect.id)} className={btnPrimary}>
-                                Start
-                              </button>
-                            ) : (
-                              <button type="button" onClick={() => hk.finishDefect(room, defect.id)} className={btnPrimary}>
-                                Done
-                              </button>
-                            ))}
-                          {defect.status === 'In Progress' && (
-                            <button type="button" onClick={() => hk.finishDefect(room, defect.id)} className={btnPrimary}>
-                              Done
-                            </button>
-                          )}
-                          {defect.status === 'Done' && (
-                            <>
-                              <button type="button" onClick={() => hk.verifyDefect(room, defect.id, true, '')} className={btnPrimary}>
-                                Verified
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRejecting(rejecting === key ? null : key)
-                                  setNote('')
-                                }}
-                                className={btnGhost}
-                              >
-                                Reopen
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {rejecting === key && (
-                      <tr>
-                        <td colSpan={full ? 6 : 5} className="bg-canvas px-4 py-3">
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <input
-                              value={note}
-                              onChange={(e) => setNote(e.target.value)}
-                              placeholder="What is still wrong? (required)"
-                              className={field}
-                              autoFocus
-                            />
-                            <button type="button" onClick={() => reject(room, defect.id)} disabled={!note.trim()} className={btnPrimary}>
-                              Send back
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {orders.length === 0 && (
-          <Empty title="No repairs here" hint="Problems reported from a room appear here when they reach maintenance." />
-        )}
-        <Pager page={page} total={orders.length} onPage={setPage} noun="repairs" />
-      </section>
+      <Card title="Repairs" icon="alert" count={orders.length} padded={false}>
+        <DataTable
+          columns={columns}
+          rows={shown}
+          rowKey={({ room, defect }) => `${room}-${defect.id}`}
+          empty={{
+            title: 'No repairs here',
+            hint: 'Problems reported from a room appear here when they reach maintenance.',
+          }}
+        />
+        <Pager page={page} total={orders.length} perPage={PAGE} onPage={setPage} noun="repairs" />
+      </Card>
+
+      {rejecting && (
+        <Modal
+          title={`Reopen room ${rejecting.room}`}
+          description={`${rejecting.defect.category}: ${rejecting.defect.description}`}
+          onClose={() => setRejecting(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setRejecting(null)}>
+                Cancel
+              </Button>
+              <Button onClick={reject} disabled={!note.trim()}>
+                Send back
+              </Button>
+            </>
+          }
+        >
+          <Field label="What is still wrong?" required>
+            {(id) => (
+              <Input id={id} value={note} onChange={(e) => setNote(e.target.value)} autoFocus placeholder="The tap still drips." />
+            )}
+          </Field>
+        </Modal>
+      )}
 
       {overlays}
     </div>
