@@ -13,6 +13,7 @@ import { folioOf, paymentMethods } from '../../lib/folio'
 import { suggestedDeposit } from '../../lib/booking'
 import { useHotel } from '../../lib/hotelContext'
 import { expressCheck } from '../../lib/expressCheckout'
+import { earlyArrivalFee, nowTime } from '../../lib/stayTimes'
 import { idTypeFor } from '../../lib/mrz'
 import type { MrzRead } from '../../lib/mrz'
 import { stayTaxes } from '../../lib/tax'
@@ -75,7 +76,7 @@ function Row({ label, value, strong, tone }: { label: string; value: ReactNode; 
 // A stay billed to a company starts with the company check, because nothing else matters until it clears.
 export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
   const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest, acceptPreReg, agreeExpress } = useHotel()
-  const { tax, features, options } = useFeatures()
+  const { tax, features, options, stayTimes } = useFeatures()
   // Always read the latest booking, so the company checks show what was just confirmed.
   const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
@@ -200,6 +201,10 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
 
   const expressOk = expressCheck(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined, options.expressMax)
 
+  // Arriving before the room was promised. Free when a room is clean and the hour is reasonable;
+  // charged when the guest has in effect slept a night the hotel could have sold.
+  const early = earlyArrivalFee(stayTimes, nowTime(), f.roomCharge / Math.max(1, nights))
+
   function confirm() {
     checkIn(r.id, room, {
       idType,
@@ -251,6 +256,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
     // What the guest sent before arriving has now been seen against their ID by a person.
     if (r.preReg?.submittedAt && !r.preReg.acceptedAt) acceptPreReg(r.id, user?.name ?? 'Front desk')
     if (wantsExpress && expressOk.ok) agreeExpress(r.id, user?.name ?? 'Front desk', 'desk')
+    if (early.amount > 0) addCharge(r.id, { category: 'Other', description: `Early arrival · ${early.label}`, amount: early.amount })
     // Taxes are posted first, so the balance the payment is taken against is the full one.
     for (const l of taxes.onTop) addCharge(r.id, { category: l.category, description: l.label, amount: l.amount })
     // The payment goes on the folio straight after check-in, so the balance everywhere is right.
@@ -441,6 +447,15 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       </div>
                     </div>
                   </Card>
+                )}
+
+                {early.amount > 0 && (
+                  <div className="mb-4 rounded-xl bg-warn/[0.08] p-3">
+                    <p className="text-sm font-semibold text-ink">Arriving early: {ugx(early.amount)}</p>
+                    <p className="mt-0.5 text-xs text-ink/70">
+                      {early.label}. It is posted to the folio when the check-in is confirmed. The hotel sets the hours in Hotel settings.
+                    </p>
+                  </div>
                 )}
 
                 {pre && (

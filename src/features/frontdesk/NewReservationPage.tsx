@@ -79,6 +79,11 @@ export function NewReservationForm({
   const free = useMemo(() => freeByType(rooms, reservations, from, departure), [rooms, reservations, from, departure])
   const typeFree = datesOk ? free[type] : 0
   const soldOut = datesOk && typeFree < 1
+  // How far past full this type may be sold. A hotel that never names the number overrides five times
+  // in a row and wakes up with nowhere to put three families.
+  const overbookLimit = rates.overbook[type] ?? 0
+  const alreadyOver = Math.max(0, -typeFree)
+  const roomLeft = alreadyOver < overbookLimit
 
   // Specific rooms are only offered while the type still has room. Capped, so 400 rooms never build a long list.
   const roomChoices = useMemo(
@@ -123,7 +128,7 @@ export function NewReservationForm({
 
   const nameOk = name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 9
   const depositOk = deposit <= total && (guarantee !== 'deposit' || deposit > 0)
-  const overrideOk = !soldOut || (override && reason.trim().length >= 5)
+  const overrideOk = !soldOut || (roomLeft && override && reason.trim().length >= 5)
   const companyOk = !company || (!!companyPlan && companyPlan.errors.length === 0)
   const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1 && companyOk
 
@@ -390,8 +395,20 @@ export function NewReservationForm({
             {soldOut && (
               <div className="space-y-2 rounded-lg bg-bad/10 p-3 text-sm">
                 <p className="font-semibold text-bad">No {type} room is free for these dates.</p>
-                <p className="text-ink/70">Only a manager can book it anyway. The override and the reason are saved on the booking (FR-RES-005).</p>
-                <label className="flex items-center gap-2 font-medium">
+                {roomLeft ? (
+                  <p className="text-ink/70">
+                    This hotel allows {overbookLimit} {type} room{overbookLimit === 1 ? '' : 's'} to be sold beyond what it has, and{' '}
+                    {alreadyOver} {alreadyOver === 1 ? 'is' : 'are'} already sold that way. Only a manager can book it, and the reason is saved
+                    on the booking.
+                  </p>
+                ) : (
+                  <p className="font-medium text-bad">
+                    {overbookLimit === 0
+                      ? `This hotel does not oversell ${type} rooms, so this booking cannot be made.`
+                      : `The hotel's limit of ${overbookLimit} oversold ${type} room${overbookLimit === 1 ? '' : 's'} is already used. Put the guest on the waiting list instead.`}
+                  </p>
+                )}
+                <label className={`flex items-center gap-2 font-medium ${roomLeft ? '' : 'hidden'}`}>
                   <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
                   Manager override (simulated)
                 </label>

@@ -36,6 +36,12 @@ export interface RatesPolicy {
   releaseTime: string
   /** Whether the clock may take the room back by itself, or only suggest it to the desk. */
   autoRelease: boolean
+  /**
+   * How many rooms of each type the hotel will sell beyond what it has. Every hotel does this and
+   * pretends it does not; naming the number is what stops a manager overriding five times in a row and
+   * waking up with nowhere to put three families.
+   */
+  overbook: Partial<Record<Room['type'], number>>
   /** Printed on the registration card. Empty means use the wording built from the hotel's times. */
   houseRules: string
 }
@@ -57,6 +63,7 @@ export const DEFAULT_RATES: RatesPolicy = {
   noShowNights: 1,
   releaseTime: '18:00',
   autoRelease: true,
+  overbook: { Standard: 1, Deluxe: 1, Suite: 0 },
   houseRules: '',
 }
 

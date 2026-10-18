@@ -431,6 +431,8 @@ export default function HotelSettingsPage() {
               { key: 'checkOutTime', label: 'Check-out by' },
               { key: 'lateFreeUntil', label: 'Late, free until' },
               { key: 'lateHalfUntil', label: 'Half night until' },
+              { key: 'earlyFreeFrom', label: 'Early, free from' },
+              { key: 'earlyFullBefore', label: 'Full night before' },
             ] as const
           ).map((t) => (
             <label key={t.key} className="block text-sm font-medium text-ink">
@@ -444,7 +446,10 @@ export default function HotelSettingsPage() {
             </label>
           ))}
         </div>
-        <p className="mt-2 text-xs text-ink/55">After {stayTimes.lateHalfUntil} a full night is charged.</p>
+        <p className="mt-2 text-xs text-ink/55">
+          After {stayTimes.lateHalfUntil} a full night is charged for leaving late. Arriving before {stayTimes.earlyFreeFrom} costs half a
+          night, and before {stayTimes.earlyFullBefore} a full one, because the guest has slept a night the hotel could have sold.
+        </p>
         <label className="mt-3 block max-w-sm text-sm font-medium text-ink">
           Partner hotel for overflow (optional)
           <input

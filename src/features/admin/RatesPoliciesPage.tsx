@@ -320,6 +320,27 @@ export default function RatesPoliciesPage() {
               </span>
             </label>
           </div>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-ink/80">How far past full this hotel will sell</p>
+            <p className="mt-0.5 text-xs text-ink/55">
+              Every hotel oversells a little and most pretend they do not. Naming the number is what stops a manager overriding five times in a
+              row and waking up with nowhere to put three families. 0 means the type is never oversold.
+            </p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {(['Standard', 'Deluxe', 'Suite'] as const).map((t) => (
+                <label key={t} className="block text-sm font-medium text-ink">
+                  {t}
+                  <input
+                    inputMode="numeric"
+                    value={String(rates.overbook[t] ?? 0)}
+                    onChange={(e) => set({ overbook: { ...rates.overbook, [t]: Number(e.target.value.replace(/\D/g, '')) || 0 } })}
+                    className="mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm font-normal tabular-nums"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-3 rounded-lg border border-ink/10 bg-canvas/60 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">What each guarantee means here</p>
             <ul className="mt-1.5 space-y-1 text-xs text-ink/70">

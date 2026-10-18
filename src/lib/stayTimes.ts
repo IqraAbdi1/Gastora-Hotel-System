@@ -9,6 +9,14 @@ export interface StayTimes {
   lateFreeUntil: string
   /** Rule: until this hour half a night is charged. After it, a full night. */
   lateHalfUntil: string
+  /**
+   * Rule: arriving before the check-in time is free from this hour, when a clean room is ready. Before
+   * it the guest has slept in the room on a night the hotel could have sold, so half a night is
+   * charged, and before the early hour below, a full one.
+   */
+  earlyFreeFrom: string
+  /** Until this hour an early arrival costs a full night, because the room was held overnight. */
+  earlyFullBefore: string
   /** A nearby hotel guests can be moved to when nothing is free. Empty means none. */
   partnerHotel: string
 }
@@ -18,6 +26,8 @@ export const DEFAULT_STAY_TIMES: StayTimes = {
   checkOutTime: '11:00',
   lateFreeUntil: '14:00',
   lateHalfUntil: '18:00',
+  earlyFreeFrom: '10:00',
+  earlyFullBefore: '06:00',
   partnerHotel: '',
 }
 
@@ -44,6 +54,25 @@ export function lateCheckoutFee(s: StayTimes, time: string, nightlyRate: number)
   if (time <= s.lateHalfUntil)
     return { kind: 'half', amount: Math.round(nightlyRate / 2), label: `Half night, left after ${s.lateFreeUntil}` }
   return { kind: 'full', amount: Math.round(nightlyRate), label: `Full night, left after ${s.lateHalfUntil}` }
+}
+
+export interface EarlyFee {
+  kind: 'none' | 'half' | 'full'
+  amount: number
+  label: string
+}
+
+/**
+ * What arriving early costs. A guest who walks in at eleven for a two o'clock room has cost the hotel
+ * nothing if a room is clean. One who arrives at four in the morning has slept a night the hotel could
+ * have sold, and every hotel charges for that.
+ */
+export function earlyArrivalFee(s: StayTimes, time: string, nightlyRate: number): EarlyFee {
+  if (time >= s.checkInTime) return { kind: 'none', amount: 0, label: 'Arrived at or after check-in time' }
+  if (time >= s.earlyFreeFrom) return { kind: 'none', amount: 0, label: `Free from ${s.earlyFreeFrom} when a room is ready` }
+  if (time >= s.earlyFullBefore)
+    return { kind: 'half', amount: Math.round(nightlyRate / 2), label: `Half night, arrived before ${s.earlyFreeFrom}` }
+  return { kind: 'full', amount: Math.round(nightlyRate), label: `Full night, arrived before ${s.earlyFullBefore}` }
 }
 
 /** When a room would be ready for the waiting guest: a dirty room rushed now, or an occupied one cleaned after check-out time. */
