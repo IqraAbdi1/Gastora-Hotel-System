@@ -360,7 +360,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
               </span>
               <h2 className="text-xl font-bold text-ink">{r.guest} is checked in to room {doneRoom}</h2>
               <p className="max-w-md text-sm text-ink/65">
-                The room is now occupied. Guest details, ID photo and signature are saved on the booking
+                The room is now occupied. The guest's details, their ID number and their signature are saved on the booking
                 {payAmount > 0 ? `, and ${ugx(payAmount)} is on the folio.` : '.'}
               </p>
               <Button onClick={onClose}>Done</Button>
