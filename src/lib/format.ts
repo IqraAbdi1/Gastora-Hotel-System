@@ -3,6 +3,18 @@ export const ugx = (amount: number) => 'UGX ' + amount.toLocaleString('en-US')
 export const dayMonth = (iso: string) =>
   new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' })
 
+/**
+ * A date far enough away that the year matters. "21 September" is read as this year by anybody
+ * glancing at it, which is wrong and alarming when the real date is two years out.
+ */
+export const dayMonthYear = (iso: string) =>
+  new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+
 export const nightsBetween = (arrival: string, departure: string) =>
   Math.round((new Date(departure + 'T00:00:00Z').getTime() - new Date(arrival + 'T00:00:00Z').getTime()) / 86400000)
 

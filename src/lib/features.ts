@@ -31,6 +31,8 @@ export type FeatureKey =
   | 'revenue'
   | 'bookingEngine'
   | 'channels'
+  | 'guestValue'
+  | 'loyaltyPoints'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -143,6 +145,18 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
   },
   {
+    key: 'guestValue',
+    label: 'Guest value',
+    blurb:
+      "What a guest has actually paid, over how long, and what they have cost in bookings that fell through and complaints raised. Counted, never projected, and kept to whoever answers for the hotel: a small hotel knows its regulars by face, and a larger one needs the figure.",
+  },
+  {
+    key: 'loyaltyPoints',
+    label: 'Points and vouchers',
+    blurb:
+      "Points earned on what a guest spends, and vouchers they can spend back. Tiers work without this on every plan; points are the part that needs watching, because unspent points are money the hotel owes.",
+  },
+  {
     key: 'channels',
     label: 'Channel manager',
     blurb:
@@ -210,6 +224,8 @@ export const PLANS: {
       'revenue',
       'bookingEngine',
       'channels',
+      'guestValue',
+      'loyaltyPoints',
     ],
   },
   {
@@ -240,6 +256,8 @@ export const PLANS: {
       'revenue',
       'bookingEngine',
       'channels',
+      'guestValue',
+      'loyaltyPoints',
       'crossProperty',
     ],
   },
@@ -321,6 +339,8 @@ import { DEFAULT_LIMITS } from './approvals'
 import type { RatesPolicy } from './rates'
 import { DEFAULT_RATES } from './rates'
 import type { LoyaltySettings } from './loyalty'
+import { DEFAULT_POINTS } from './points'
+import type { PointsSettings } from './points'
 import { DEFAULT_LOYALTY } from './loyalty'
 import { DEFAULT_AREAS, DEFAULT_SERVICE } from './cleaning'
 import type { CleaningArea, ServiceRules } from './cleaning'
@@ -345,6 +365,8 @@ export interface HotelOptions {
   nightAudit: boolean
   /** Tiers and rewards for guests who come back. Every hotel sets its own. */
   loyalty: LoyaltySettings
+  /** Points earned on room money, and what they are worth when spent. */
+  points: PointsSettings
   /** The hotel's own prices and booking rules. Company prices are separate, on each company account. */
   rates: RatesPolicy
   /** Corridors, the lobby, the pool: everything cleaned that is not a room. */
@@ -369,6 +391,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   keepGuestMonths: 24,
   nightAudit: true,
   loyalty: DEFAULT_LOYALTY,
+  points: DEFAULT_POINTS,
   rates: DEFAULT_RATES,
   addOns: DEFAULT_ADD_ONS,
   inspectionMode: 'spot',

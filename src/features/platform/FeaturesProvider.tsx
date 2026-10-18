@@ -135,6 +135,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
           rates: { ...DEFAULT_OPTIONS.rates, ...(saved.rates ?? {}) },
           messaging: { ...DEFAULT_OPTIONS.messaging, ...(saved.messaging ?? {}) },
           loyalty: { ...DEFAULT_OPTIONS.loyalty, ...(saved.loyalty ?? {}) },
+          points: { ...DEFAULT_OPTIONS.points, ...(saved.points ?? {}) },
           limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },
           service: { ...DEFAULT_OPTIONS.service, ...(saved.service ?? {}) },
         }

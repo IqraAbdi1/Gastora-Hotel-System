@@ -15,6 +15,7 @@ import { useFeedback } from '../feedback/useFeedback'
 import { useMessages } from '../messages/messagesContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
+import PointsCard from '../loyalty/PointsCard'
 import RelationshipsCard from './RelationshipsCard'
 
 /**
@@ -33,6 +34,8 @@ export default function GuestProfilePage() {
   const { can } = useAuth()
   // The desk recognises and serves. The whole record belongs to whoever answers for the hotel.
   const full = can('seeGuestRecord')
+  // Worth is a bigger hotel's question: a small one knows its regulars by face.
+  const showValue = full && features.guestValue
   const [editing, setEditing] = useState(false)
 
   const guest = guests.find((g) => g.id === guestId)
@@ -137,7 +140,7 @@ export default function GuestProfilePage() {
             {guest.vip && <Badge tone="warn">VIP</Badge>}
             {tier && <Badge tone="good">{tier.name}</Badge>}
             {!known && <Badge tone="neutral">Not in the programme</Badge>}
-            {value.stays > 0 && <Badge tone={BAND_TONE[value.band]}>{BAND_LABEL[value.band]}</Badge>}
+            {features.guestValue && value.stays > 0 && <Badge tone={BAND_TONE[value.band]}>{BAND_LABEL[value.band]}</Badge>}
           </div>
         }
         actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
@@ -271,7 +274,7 @@ export default function GuestProfilePage() {
         )}
       </div>
 
-      {full && value.stays > 0 && (
+      {showValue && value.stays > 0 && (
         <Card
           title="What they are worth"
           icon="money"
@@ -345,6 +348,8 @@ export default function GuestProfilePage() {
           </ul>
         </Card>
       )}
+
+      {features.loyaltyPoints && <PointsCard guest={guest} />}
 
       <RelationshipsCard guest={guest} />
 
