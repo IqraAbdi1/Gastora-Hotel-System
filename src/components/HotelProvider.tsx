@@ -1,5 +1,7 @@
 import { useBrowserSyncedState } from '../hooks/useBrowserSyncedState'
 import type { AuditRun } from '../lib/dayRun'
+import { newKeyId } from '../lib/keys'
+import type { RoomKey } from '../lib/keys'
 import { targetFor } from '../lib/routing'
 import type { RoutingRule } from '../lib/routing'
 import { tokenFor } from '../lib/preRegistration'
@@ -81,10 +83,11 @@ const KEYS = {
   rooms: 'gastora:hotel:rooms',
   guests: 'gastora:hotel:guests',
   audits: 'gastora:hotel:audits',
+  keys: 'gastora:hotel:keys',
 } as const
 
 export default function HotelProvider({ children }: { children: ReactNode }) {
-  const { tax } = useFeatures()
+  const { tax, stayTimes } = useFeatures()
   // The hotel's own record is shared between tabs on this browser, because the guest's pages - the
   // pre-arrival form and the bill - are opened from a link and are therefore never the tab the desk is
   // working in. Browser-only: two tabs on one machine see each other, two devices do not. A real build
@@ -93,6 +96,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   const [rooms, setRooms] = useBrowserSyncedState(KEYS.rooms, start.rooms)
   const [guests, setGuests] = useBrowserSyncedState<Guest[]>(KEYS.guests, start.guests)
   const [auditRuns, setAuditRuns] = useBrowserSyncedState<AuditRun[]>(KEYS.audits, [])
+  const [keys, setKeys] = useBrowserSyncedState<RoomKey[]>(KEYS.keys, [])
 
   /** Put the demonstration back to how it started, on this browser. */
   function resetDemo() {
@@ -317,6 +321,35 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setReservations((list) =>
       list.map((r) => (r.id === reservationId && r.preReg ? { ...r, preReg: { ...r.preReg, acceptedAt: stamp(), acceptedBy: by } } : r)),
     )
+  }
+
+  /** Cut a key. The record is the hotel's; writing the card itself belongs to the lock vendor. */
+  function issueKey(reservationId: string, by: string, copy: boolean): void {
+    const r = reservations.find((x) => x.id === reservationId)
+    if (!r || !r.room) return
+    setKeys((list) => [
+      {
+        id: newKeyId(list),
+        reservationId,
+        room: r.room as string,
+        guest: r.guest,
+        copy,
+        issuedAt: stamp(),
+        issuedBy: by,
+        worksUntil: `${r.departure} ${stayTimes.checkOutTime}`,
+        state: 'active' as const,
+      },
+      ...list,
+    ])
+  }
+
+  function returnKey(keyId: string): void {
+    setKeys((list) => list.map((k) => (k.id === keyId && k.state === 'active' ? { ...k, state: 'returned', returnedAt: stamp() } : k)))
+  }
+
+  /** A key that is lost, or one the hotel wants to stop working now. */
+  function cancelKey(keyId: string, reason: string): void {
+    setKeys((list) => list.map((k) => (k.id === keyId && k.state === 'active' ? { ...k, state: 'cancelled', cancelledReason: reason } : k)))
   }
 
   /**
@@ -566,6 +599,10 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         acceptPreReg,
         nameGroupRoom,
         setRouting,
+        keys,
+        issueKey,
+        returnKey,
+        cancelKey,
         addShare,
         splitStay,
         releaseRoom,

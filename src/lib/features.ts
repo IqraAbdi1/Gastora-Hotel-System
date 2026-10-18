@@ -25,6 +25,7 @@ export type FeatureKey =
   | 'waitlist'
   | 'expressCheckout'
   | 'groups'
+  | 'roomKeys'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -124,6 +125,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'Rooms held under one name for a workshop, a wedding or a tour operator, with a rooming list that can be filled in now or at the desk. Each block says who pays for what, so the bar bill follows the guest even when the room is paid for.',
   },
   {
+    key: 'roomKeys',
+    label: 'Room keys',
+    blurb:
+      "The hotel's record of which key opens which room and until when, who cut it and whether it came back. The card itself is written by the door-lock vendor; this is the part that answers who could open a room on a given night.",
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -169,6 +176,7 @@ export const PLANS: {
       'waitlist',
       'expressCheckout',
       'groups',
+      'roomKeys',
     ],
   },
   {
@@ -195,6 +203,7 @@ export const PLANS: {
       'waitlist',
       'expressCheckout',
       'groups',
+      'roomKeys',
     ],
   },
 ]

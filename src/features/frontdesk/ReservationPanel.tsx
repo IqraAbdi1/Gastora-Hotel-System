@@ -19,6 +19,8 @@ import { useHotel } from '../../lib/hotelContext'
 import { useFeatures } from '../platform/featuresContext'
 import { PRE_REG_LABEL, PRE_REG_TONE, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
 import { SHARE_NOTE, legsOf } from '../../lib/sharing'
+import { KEY_STATE_LABEL, KEY_STATE_TONE } from '../../lib/keys'
+import { useAuth } from '../auth/authContext'
 import ShareDialog from './ShareDialog'
 import SplitStayDialog from './SplitStayDialog'
 import { Badge } from '../../components/ui'
@@ -48,10 +50,13 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const { byId } = useCorporate()
   const { forStay, queue } = useMessages()
   const stayMessages = forStay(r.id)
-  const { sendPreReg, reservations, addShare, splitStay } = useHotel()
+  const { sendPreReg, reservations, addShare, splitStay, keys, issueKey, returnKey, cancelKey } = useHotel()
   const { features } = useFeatures()
+  const { user } = useAuth()
+  const me = user?.name ?? 'Front desk'
   const preState = preRegState(r.preReg)
   const canArrange = r.status === 'booked' || r.status === 'in-house'
+  const stayKeys = keys.filter((k) => k.reservationId === r.id)
   const preProgress = preRegProgress(r.preReg?.details)
   const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
@@ -260,6 +265,60 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                 ))}
               </ul>
             )}
+          </div>
+        )}
+
+        {features.roomKeys && r.room && (r.status === 'in-house' || r.status === 'checked-out') && (
+          <div>
+            <p className={heading}>Keys</p>
+            {stayKeys.length === 0 ? (
+              <p className="mt-1 text-sm text-ink/60">No key has been cut for this stay.</p>
+            ) : (
+              <ul className="mt-1 space-y-1 text-sm">
+                {stayKeys.map((k) => (
+                  <li key={k.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-ink/75">
+                      {k.copy ? 'Copy' : 'Key'} · {k.id} · works until {k.worksUntil}
+                      <span className="block text-xs text-ink/55">
+                        {k.issuedBy}, {k.issuedAt}
+                        {k.returnedAt ? ` · handed back ${k.returnedAt}` : ''}
+                        {k.cancelledReason ? ` · ${k.cancelledReason}` : ''}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Badge tone={KEY_STATE_TONE[k.state]} dot>
+                        {KEY_STATE_LABEL[k.state]}
+                      </Badge>
+                      {k.state === 'active' && (
+                        <>
+                          <button type="button" className="text-xs font-semibold text-brand" onClick={() => returnKey(k.id)}>
+                            Handed back
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-bad"
+                            onClick={() => cancelKey(k.id, 'Reported lost')}
+                          >
+                            Lost
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {r.status === 'in-house' && (
+              <div className="mt-2 flex flex-wrap gap-3">
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => issueKey(r.id, me, stayKeys.length > 0)}>
+                  {stayKeys.length > 0 ? 'Cut another copy' : 'Cut a key'}
+                </button>
+              </div>
+            )}
+            <p className="mt-1 text-xs text-ink/55">
+              The hotel's own record of who could open this room and until when. Writing the card itself belongs to the door-lock vendor, and
+              in this prototype nothing is written.
+            </p>
           </div>
         )}
 

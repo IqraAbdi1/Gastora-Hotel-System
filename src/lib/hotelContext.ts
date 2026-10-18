@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { AuditRun } from './dayRun'
+import type { RoomKey } from './keys'
 import type { PreRegDetails } from './preRegistration'
 import type { RoutingRule } from './routing'
 import type { CallOutcome } from './confirmCalls'
@@ -52,6 +53,13 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** Every key the hotel has cut, newest first. */
+  keys: RoomKey[]
+  /** Cut a key for a stay. The second and later ones are copies. */
+  issueKey: (reservationId: string, by: string, copy: boolean) => void
+  returnKey: (keyId: string) => void
+  /** Stop a key working now, because it was lost. */
+  cancelKey: (keyId: string, reason: string) => void
   /** A second guest in the same room, with a bill of their own. */
   addShare: (reservationId: string, guest: string, phone: string, splitRoom: boolean) => void
   /** The rest of the stay moves to another room from this date. */
