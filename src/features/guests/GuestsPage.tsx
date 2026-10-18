@@ -6,6 +6,7 @@ import type { Column } from '../../components/ui'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
+import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
 
@@ -21,6 +22,8 @@ const PAGE = 12
 export default function GuestsPage() {
   const { guests, reservations } = useHotel()
   const { options } = useFeatures()
+  const { can } = useAuth()
+  const full = can('seeGuestRecord')
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [creating, setCreating] = useState(false)
@@ -93,13 +96,17 @@ export default function GuestsPage() {
         </div>
       ),
     },
-    {
-      key: 'spent',
-      header: 'Spent',
-      align: 'right',
-      hideBelow: 'sm',
-      cell: ({ history }) => <span className="tabular-nums">{ugx(history.spent)}</span>,
-    },
+    ...(full
+      ? ([
+          {
+            key: 'spent',
+            header: 'Spent',
+            align: 'right',
+            hideBelow: 'sm',
+            cell: ({ history }) => <span className="tabular-nums">{ugx(history.spent)}</span>,
+          },
+        ] as Column<Row>[])
+      : []),
     {
       key: 'last',
       header: 'Last here',
@@ -124,7 +131,11 @@ export default function GuestsPage() {
         <StatCard label="Guests" icon="guests" value={String(guests.length)} hint="On file" />
         <StatCard label="Come back" icon="occupancy" value={String(returning)} hint="More than one stay" tone={returning > 0 ? 'good' : 'default'} />
         <StatCard label="VIP" icon="alert" value={String(vips)} hint="Marked by the hotel" />
-        <StatCard label="Spent altogether" icon="money" value={ugx(spent)} hint="Finished stays" />
+        {full ? (
+          <StatCard label="Spent altogether" icon="money" value={ugx(spent)} hint="Finished stays" />
+        ) : (
+          <StatCard label="Known here" icon="calendar" value={String(rows.filter((r) => r.history.stays > 0).length)} hint="Have stayed before" />
+        )}
       </div>
 
       <FilterBar query={q} onQuery={(v) => setParam('q', v)} placeholder="Search name, telephone or email" />

@@ -36,6 +36,17 @@ export type Action =
   | 'approveCorporateManager'
   /** Finance sign-off: open accounts where finance must agree, set credit limits. */
   | 'approveCorporateFinance'
+  /**
+   * The whole of a guest's record: what they have spent across every stay, their home address and
+   * identification, the notes staff have written about them, and the consent they gave and when.
+   *
+   * The desk does not need it. A receptionist must recognise a guest, see what they asked for last
+   * time and what they owe tonight - that is the job. Lifetime spend is the figure that tempts a clerk
+   * to treat two guests differently, identification and address are kept because the law requires the
+   * hotel to hold them rather than because the desk needs to read them, and dietary and access needs
+   * are health data. Those belong to whoever answers for the hotel, not to everybody on the rota.
+   */
+  | 'seeGuestRecord'
 
 export interface Role {
   id: RoleId
@@ -83,6 +94,7 @@ export const ROLES: Role[] = [
       'manageCorporate',
       'approveCorporateManager',
       'approveCorporateFinance',
+      'seeGuestRecord',
     ],
     canViewAs: true,
   },
@@ -92,7 +104,7 @@ export const ROLES: Role[] = [
     blurb: 'Runs the system: settings, staff and roles.',
     landing: '/admin',
     allow: [...ALL_HOTEL, '/admin', '/guest'],
-    actions: ['changeSettings', 'raiseRequest', 'manageStock', 'requestCorporate', 'manageCorporate'],
+    actions: ['changeSettings', 'raiseRequest', 'manageStock', 'requestCorporate', 'manageCorporate', 'seeGuestRecord'],
     canViewAs: true,
   },
   {
@@ -111,6 +123,7 @@ export const ROLES: Role[] = [
       'requestCorporate',
       'manageCorporate',
       'approveCorporateManager',
+      'seeGuestRecord',
     ],
   },
   {

@@ -7,6 +7,7 @@ import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { benefitList, isSensitiveTag, loyaltyKnown, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
 import type { Reservation } from '../../types'
+import { useAuth } from '../auth/authContext'
 import { useMessages } from '../messages/messagesContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
@@ -23,6 +24,9 @@ export default function GuestProfilePage() {
   const { guests, reservations } = useHotel()
   const { options, features } = useFeatures()
   const { messages } = useMessages()
+  const { can } = useAuth()
+  // The desk recognises and serves. The whole record belongs to whoever answers for the hotel.
+  const full = can('seeGuestRecord')
   const [editing, setEditing] = useState(false)
 
   const guest = guests.find((g) => g.id === guestId)
@@ -64,10 +68,14 @@ export default function GuestProfilePage() {
     ['Telephone', guest.phone],
     ['Email', guest.email],
     ['Nationality', guest.nationality],
-    ['Date of birth', guest.dateOfBirth ? dayMonth(guest.dateOfBirth) : undefined],
-    ['Gender', guest.gender],
-    ['Address', guest.address],
-    ['Identification', guest.idNumber ? `${guest.idType ?? 'ID'} ending ${guest.idNumber.slice(-4)}` : undefined],
+    ...(full
+      ? ([
+          ['Date of birth', guest.dateOfBirth ? dayMonth(guest.dateOfBirth) : undefined],
+          ['Gender', guest.gender],
+          ['Address', guest.address],
+          ['Identification', guest.idNumber ? `${guest.idType ?? 'ID'} ending ${guest.idNumber.slice(-4)}` : undefined],
+        ] as [string, string | undefined][])
+      : []),
   ]
 
   const columns: Column<Reservation>[] = [
@@ -125,9 +133,9 @@ export default function GuestProfilePage() {
         actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-3 ${full ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         <StatCard label="Stays" icon="guests" value={String(history.stays)} hint={`${history.nights} nights altogether`} />
-        <StatCard label="Spent" icon="money" value={ugx(history.spent)} hint="Finished stays" />
+        {full && <StatCard label="Spent" icon="money" value={ugx(history.spent)} hint="Finished stays" />}
         <StatCard
           label="Last here"
           icon="calendar"
@@ -153,6 +161,12 @@ export default function GuestProfilePage() {
               </div>
             ))}
           </dl>
+          {!full && (
+            <p className="mt-2 text-xs text-ink/55">
+              The home address, the identification and what this guest has spent over the years are part of the
+              hotel's record rather than the desk's work, so they are kept for the manager.
+            </p>
+          )}
         </Card>
 
         <Card title="What they like" icon="bed" padded description="Taken at check-in and kept between stays.">
@@ -161,7 +175,7 @@ export default function GuestProfilePage() {
           ) : (
             <>
               <div className="flex flex-wrap gap-1.5">
-                {tags.map((t) => (
+                {tags.filter((t) => full || !isSensitiveTag(t)).map((t) => (
                   <span
                     key={t}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${
@@ -173,7 +187,7 @@ export default function GuestProfilePage() {
                 ))}
               </div>
               {guest.preferences?.other && <p className="mt-2 text-sm text-ink/75">{guest.preferences.other}</p>}
-              {tags.some(isSensitiveTag) && (
+              {full && tags.some(isSensitiveTag) && (
                 <p className="mt-2 text-xs text-ink/55">
                   The amber ones are dietary or access needs. The law treats those as sensitive, and the guest agreed
                   to the hotel keeping them.
@@ -183,6 +197,7 @@ export default function GuestProfilePage() {
           )}
         </Card>
 
+        {full && (
         <Card title="What they agreed to" icon="check" padded description="Kept with the date it was given.">
           <ul className="space-y-2 text-sm">
             {[
@@ -204,6 +219,7 @@ export default function GuestProfilePage() {
             require them.
           </p>
         </Card>
+        )}
 
         {options.loyalty.on && (
           <Card title="The programme" icon="money" padded>
@@ -280,7 +296,7 @@ export default function GuestProfilePage() {
         </Card>
       )}
 
-      {(guest.notes ?? []).length > 0 && (
+      {full && (guest.notes ?? []).length > 0 && (
         <Card title="Notes" icon="list" count={(guest.notes ?? []).length} padded>
           <ul className="space-y-2 text-sm">
             {(guest.notes ?? []).map((n) => (
