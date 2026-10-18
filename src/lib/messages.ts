@@ -94,6 +94,7 @@ export const PLACEHOLDERS: { key: string; meaning: string }[] = [
   { key: 'deposit', meaning: 'The deposit asked for' },
   { key: 'time', meaning: 'Check-in or check-out time, whichever the message is about' },
   { key: 'link', meaning: 'A link for the guest to open' },
+  { key: 'hours', meaning: 'How long the guest has to answer, on a waiting-list offer' },
 ]
 
 export const DEFAULT_TEMPLATES: MessageTemplate[] = [
@@ -144,7 +145,7 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     label: 'A room has come free',
     blurb: 'Sent to a guest on the waiting list when a cancellation frees a room.',
     on: true,
-    text: 'Dear {guest}, a room has come free at {hotel} for {arrival} to {departure}. Reply within two hours and it is yours.',
+    text: 'Dear {guest}, a room has come free at {hotel} for {arrival} to {departure}. Reply within {hours} hours and it is yours, otherwise it goes to the next guest waiting.',
   },
   {
     kind: 'thank you',

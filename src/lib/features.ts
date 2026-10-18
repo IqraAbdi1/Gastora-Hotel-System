@@ -20,6 +20,7 @@ export type FeatureKey =
   | 'idScan'
   | 'guestMessages'
   | 'preRegistration'
+  | 'waitlist'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -101,6 +102,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'The guest is sent a link the day before and fills in their own details from their phone. The desk checks what they sent against the ID instead of typing it. Needs guest messages.',
   },
   {
+    key: 'waitlist',
+    label: 'Waiting list',
+    blurb:
+      'Guests the hotel had to turn away are kept on a list. When a cancellation frees the room they asked for, the system says whose it is and the desk tells them. A room is offered, never held.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -143,6 +150,7 @@ export const PLANS: {
       'idScan',
       'guestMessages',
       'preRegistration',
+      'waitlist',
     ],
   },
   {
@@ -166,6 +174,7 @@ export const PLANS: {
       'idScan',
       'guestMessages',
       'preRegistration',
+      'waitlist',
     ],
   },
 ]

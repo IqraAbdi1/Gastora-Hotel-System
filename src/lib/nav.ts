@@ -32,6 +32,7 @@ export const modules: NavModule[] = [
     { to: '/desk/folios', label: 'Folios' },
     { to: '/desk/companies', label: 'Companies', badge: 'companies' },
     { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages' },
+    { to: '/desk/waiting-list', label: 'Waiting list', feature: 'waitlist' },
     { to: '/desk/documents', label: 'Guest documents' },
     { to: '/desk/lost-found', label: 'Lost and found' },
     { to: '/desk/night-audit', label: 'Night audit', option: 'nightAudit' },

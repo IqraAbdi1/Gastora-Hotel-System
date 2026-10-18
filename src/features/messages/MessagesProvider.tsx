@@ -74,7 +74,7 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
       const to = input.to ?? d?.phone ?? ''
       const allowed = mayReceive(input.kind, to, input.to ? true : d?.marketingConsent)
       const template = templateFor(settings.templates, input.kind)
-      const body = input.body ?? fillTemplate(template?.text ?? '', { ...(d?.vars ?? {}), ...(input.vars ?? {}) })
+      const body = input.body ?? fillTemplate(template?.text ?? '', { hotel: tenant.name, ...(d?.vars ?? {}), ...(input.vars ?? {}) })
       if (body.trim() === '') return null
       let created: GuestMessage | null = null
       setMessages((list) => {

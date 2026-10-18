@@ -5,6 +5,7 @@ import CorporateProvider from '../features/corporate/CorporateProvider'
 import FrontDeskProvider from '../features/frontdesk/FrontDeskProvider'
 import HousekeepingProvider from '../features/housekeeping/HousekeepingProvider'
 import MessagesProvider from '../features/messages/MessagesProvider'
+import WaitlistProvider from '../features/waitlist/WaitlistProvider'
 import ApprovalsProvider from '../features/approvals/ApprovalsProvider'
 import LostFoundProvider from '../features/lostfound/LostFoundProvider'
 import FeaturesProvider from '../features/platform/FeaturesProvider'
@@ -24,7 +25,9 @@ export default function Root() {
                   <ApprovalsProvider>
                     <LostFoundProvider>
                       <MessagesProvider>
-                        <Outlet />
+                        <WaitlistProvider>
+                          <Outlet />
+                        </WaitlistProvider>
                       </MessagesProvider>
                     </LostFoundProvider>
                   </ApprovalsProvider>
