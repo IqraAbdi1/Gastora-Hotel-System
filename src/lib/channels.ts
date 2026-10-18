@@ -213,3 +213,95 @@ export function newPushId(list: Push[]): string {
 
 /** Nights a booking covers, for working out what a channel earned on it. */
 export const nightsOfBooking = (r: Reservation): number => Math.max(1, nightsOf(r.arrival, r.departure))
+
+// ---- What each channel actually brought ----
+//
+// The question a hotelier should ask of a channel is not how many bookings it sent but what the hotel
+// kept. A channel at 18% that fills Tuesdays nobody else fills is worth more than one at 12% selling
+// rooms the hotel's own site would have sold for nothing. So every line here carries the commission
+// and the net, and the hotel's own site and desk sit in the same table at zero.
+
+export interface Production {
+  key: string
+  name: string
+  /** True for business the hotel brought itself, which costs no commission. */
+  direct: boolean
+  bookings: number
+  roomNights: number
+  /** What the guests were charged, room and extras together. */
+  money: number
+  commission: number
+  /** What the hotel keeps. */
+  net: number
+  /** The average a room night fetched through this source. */
+  perNight: number
+  /** Bookings that were cancelled or never arrived. A channel that books and cancels costs real money. */
+  lost: number
+}
+
+const SOURCE_NAME: Record<string, string> = {
+  online: 'The hotel’s own site',
+  'front desk': 'The front desk',
+  phone: 'Telephone',
+  email: 'Email',
+  'walk-in': 'Walked in',
+  ota: 'A travel agent, unnamed',
+}
+
+const DIRECT_SOURCES = ['online', 'front desk', 'phone', 'email', 'walk-in']
+
+/**
+ * Production by where the business came from, for stays arriving in a window.
+ *
+ * Cancelled and no-show bookings are counted in `lost` but bring no money, because they brought none.
+ */
+export function productionBy(reservations: Reservation[], from: string, to: string): Production[] {
+  const rows = new Map<string, Production>()
+  const row = (key: string, name: string, direct: boolean) => {
+    if (!rows.has(key)) {
+      rows.set(key, { key, name, direct, bookings: 0, roomNights: 0, money: 0, commission: 0, net: 0, perNight: 0, lost: 0 })
+    }
+    return rows.get(key)!
+  }
+
+  for (const r of reservations) {
+    if (r.arrival < from || r.arrival > to) continue
+    if (r.share && !r.share.primary) continue
+    const key = r.channel ? `ch:${r.channel.id}` : `src:${r.source ?? 'front desk'}`
+    const name = r.channel ? r.channel.name : SOURCE_NAME[r.source ?? 'front desk'] ?? 'Unknown'
+    const line = row(key, name, !r.channel && DIRECT_SOURCES.includes(r.source ?? 'front desk'))
+
+    if (r.status === 'cancelled' || r.status === 'no-show') {
+      line.lost += 1
+      continue
+    }
+    const nights = nightsOfBooking(r)
+    line.bookings += 1
+    line.roomNights += nights
+    line.money += r.total
+    line.commission += r.channel ? commissionOn(r.total, r.channel) : 0
+  }
+
+  const out = [...rows.values()]
+  for (const line of out) {
+    line.net = line.money - line.commission
+    line.perNight = line.roomNights ? Math.round(line.money / line.roomNights) : 0
+  }
+  return out.sort((a, b) => b.net - a.net)
+}
+
+/** The totals under a production table. */
+export function productionTotals(rows: Production[]) {
+  const money = rows.reduce((n, r) => n + r.money, 0)
+  const commission = rows.reduce((n, r) => n + r.commission, 0)
+  return {
+    bookings: rows.reduce((n, r) => n + r.bookings, 0),
+    roomNights: rows.reduce((n, r) => n + r.roomNights, 0),
+    money,
+    commission,
+    net: money - commission,
+    lost: rows.reduce((n, r) => n + r.lost, 0),
+    /** What every commission together took out of the hotel, as a share of what guests paid. */
+    costPercent: money ? Math.round((commission / money) * 1000) / 10 : 0,
+  }
+}

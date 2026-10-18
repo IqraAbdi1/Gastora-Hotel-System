@@ -24,6 +24,9 @@ import { roomTypeList } from '../../lib/rates'
 import type { Room } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
+import GroupDistributionCard from './GroupDistributionCard'
+import ParityCard from './ParityCard'
+import ProductionCard from './ProductionCard'
 import { useChannels } from './useChannels'
 
 const AHEAD = 14
@@ -324,6 +327,12 @@ export default function ChannelsPage() {
           )}
         </ul>
       </Card>
+
+      <GroupDistributionCard />
+
+      <ParityCard channels={channels} />
+
+      <ProductionCard />
 
       <Card
         title="What was sent"
