@@ -24,6 +24,7 @@ export type FeatureKey =
   | 'preRegistration'
   | 'waitlist'
   | 'expressCheckout'
+  | 'groups'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -117,6 +118,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'A guest whose stay is secured by a card or a company account can leave without stopping at the desk. The bill settles itself against that, and a copy is sent to the guest. A guest with only a deposit, or nothing, still settles at the desk.',
   },
   {
+    key: 'groups',
+    label: 'Groups and blocks',
+    blurb:
+      'Rooms held under one name for a workshop, a wedding or a tour operator, with a rooming list that can be filled in now or at the desk. Each block says who pays for what, so the bar bill follows the guest even when the room is paid for.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -161,6 +168,7 @@ export const PLANS: {
       'preRegistration',
       'waitlist',
       'expressCheckout',
+      'groups',
     ],
   },
   {
@@ -186,6 +194,7 @@ export const PLANS: {
       'preRegistration',
       'waitlist',
       'expressCheckout',
+      'groups',
     ],
   },
 ]

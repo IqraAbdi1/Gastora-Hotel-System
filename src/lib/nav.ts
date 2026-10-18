@@ -30,6 +30,7 @@ export const modules: NavModule[] = [
     { to: '/desk/reservations', label: 'Reservations' },
     { to: '/desk/rooms', label: 'Rooms' },
     { to: '/desk/folios', label: 'Folios' },
+    { to: '/desk/groups', label: 'Groups', feature: 'groups' },
     { to: '/desk/companies', label: 'Companies', badge: 'companies' },
     { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages' },
     { to: '/desk/waiting-list', label: 'Waiting list', feature: 'waitlist' },

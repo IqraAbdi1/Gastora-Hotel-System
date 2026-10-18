@@ -26,6 +26,8 @@ export type HotelValue = {
   guests: Guest[]
   checkIn: (reservationId: string, roomNumber: string, details: GuestDetails) => void
   addReservation: (input: NewReservation) => Reservation
+  /** Several at once, for a block of rooms held under one name. */
+  addReservations: (inputs: NewReservation[]) => void
   addGuest: (input: Omit<Guest, 'id'>) => Guest
   updateGuest: (guestId: string, patch: Partial<Omit<Guest, 'id'>>) => void
   amendReservation: (reservationId: string, patch: AmendPatch, entry: Amendment) => void
@@ -49,6 +51,8 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** Put a name to one of a block's rooms, in advance or at the desk. */
+  nameGroupRoom: (reservationId: string, guest: string, phone: string, guestId?: string) => void
   /** The room goes back on sale; the booking becomes a no-show with a record of why. */
   releaseRoom: (reservationId: string, by: string, auto: boolean, reason: string) => void
   /** Every closing of the day, newest first. */

@@ -1,8 +1,9 @@
 import type { ConfirmCall } from '../lib/confirmCalls'
 import type { Express } from '../lib/expressCheckout'
 import type { Release } from '../lib/dayRun'
+import type { GroupLink } from '../lib/groups'
 import type { PreReg } from '../lib/preRegistration'
-export type { PreReg, Express, Release }
+export type { PreReg, Express, Release, GroupLink }
 
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
@@ -150,6 +151,8 @@ export type Reservation = {
   express?: Express
   /** The room was taken back because nobody confirmed and the hour passed. */
   release?: Release
+  /** This booking is one room of a block held under a group's name. */
+  group?: GroupLink
 }
 export type RoomMove = {
   at: string

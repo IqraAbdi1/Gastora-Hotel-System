@@ -94,7 +94,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
 
   /** Put the demonstration back to how it started, on this browser. */
   function resetDemo() {
-    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants']) {
+    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants', 'gastora:hotel:groups']) {
       try {
         window.localStorage.removeItem(key)
       } catch {
@@ -126,6 +126,22 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     const created: Reservation = { ...input, id: nextId(reservations), status: 'booked' }
     setReservations((list) => [...list, created])
     return created
+  }
+
+  /**
+   * Several bookings at once, which is what holding a block of rooms is. The ids are worked out inside
+   * the update, against the list as it really is: handing out ids from the list as it was when the
+   * screen last drew gives every room in the block the same number.
+   */
+  function addReservations(inputs: NewReservation[]): void {
+    if (inputs.length === 0) return
+    setReservations((list) => {
+      const made: Reservation[] = []
+      for (const input of inputs) {
+        made.push({ ...input, id: nextId([...list, ...made]), status: 'booked' })
+      }
+      return [...list, ...made]
+    })
   }
 
   function addGuest(input: Omit<Guest, 'id'>) {
@@ -291,6 +307,23 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  /** Somebody is put in one of a block's rooms, whether days ahead or at the desk. */
+  function nameGroupRoom(reservationId: string, guest: string, phone: string, guestId?: string) {
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId && r.group
+          ? {
+              ...r,
+              guest: guest.trim() || r.guest,
+              guestId: guestId ?? r.guestId,
+              group: { ...r.group, named: guest.trim() !== '' },
+              details: phone.trim() ? { ...(r.details ?? { idType: 'NIN' as const, idNumber: '', nationality: '', specialRequests: '' }), phone: phone.trim() } : r.details,
+            }
+          : r,
+      ),
+    )
+  }
+
   /**
    * The room goes back on sale. The booking becomes a no-show rather than being deleted, because the
    * hotel needs to be able to say what happened to it, and a guest who turns up at nine deserves a
@@ -427,6 +460,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         guests,
         checkIn,
         addReservation,
+        addReservations,
         addGuest,
         updateGuest,
         amendReservation,
@@ -441,6 +475,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         openPreReg,
         submitPreReg,
         acceptPreReg,
+        nameGroupRoom,
         releaseRoom,
         auditRuns,
         closeDay,
