@@ -7,23 +7,32 @@ import { TODAY } from '../../data/sample'
 import { folioOf } from '../../lib/folio'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import { defaultHouseRules } from '../../lib/rates'
 import { isTaxCategory, vatInsideOf } from '../../lib/tax'
 import type { Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
 import DocumentDialog from '../receipts/DocumentDialog'
-import { folioDoc } from '../receipts/documents'
+import { folioDoc, registrationCardDoc } from '../receipts/documents'
 
 const PAGE = 12
 
-type View = 'invoices' | 'open' | 'today' | 'all'
+type View = 'invoices' | 'open' | 'today' | 'cards' | 'all'
 
 const chips: { key: View; label: string; dot?: string }[] = [
   { key: 'invoices', label: 'Tax invoices', dot: 'bg-good' },
   { key: 'open', label: 'Open folios', dot: 'bg-brand' },
   { key: 'today', label: 'Issued today', dot: 'bg-warn' },
+  { key: 'cards', label: 'Registration cards', dot: 'bg-info' },
   { key: 'all', label: 'All' },
 ]
+
+/**
+ * A stay has a registration card once somebody has checked in and the details were recorded. It is
+ * not the key card: it opens no doors. It is the record of who stayed, which is what an inspector asks
+ * for.
+ */
+const hasCard = (r: Reservation) => !!r.details && (r.status === 'in-house' || r.status === 'checked-out')
 
 /** What kind of document a stay has right now. The folio becomes a receipt once it is settled, and a tax invoice at check-out. */
 function kindOf(r: Reservation): { label: string; tone: 'good' | 'brand' | 'neutral' } {
@@ -35,11 +44,11 @@ function kindOf(r: Reservation): { label: string; tone: 'good' | 'brand' | 'neut
 // Every guest document in one place: invoices issued at check-out and the folios of guests still in the house.
 // Search by guest, room or invoice number, then print. The sheet is the same one the folio prints.
 export default function GuestDocumentsPage() {
-  const { reservations } = useHotel()
-  const { tenant, tax } = useFeatures()
+  const { reservations, guests } = useHotel()
+  const { tenant, tax, options, stayTimes } = useFeatures()
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
-  const [printId, setPrintId] = useState<string | null>(null)
+  const [printing, setPrinting] = useState<{ id: string; kind: 'folio' | 'card' } | null>(null)
 
   const view = (params.get('view') ?? 'invoices') as View
   const q = params.get('q') ?? ''
@@ -62,6 +71,7 @@ export default function GuestDocumentsPage() {
       invoices: withDocs.filter((r) => r.invoice).length,
       open: withDocs.filter((r) => r.status === 'in-house').length,
       today: withDocs.filter((r) => r.invoice?.issuedAt?.startsWith(TODAY)).length,
+      cards: withDocs.filter(hasCard).length,
       all: withDocs.length,
     }),
     [withDocs],
@@ -74,6 +84,7 @@ export default function GuestDocumentsPage() {
         if (view === 'invoices' && !r.invoice) return false
         if (view === 'open' && r.status !== 'in-house') return false
         if (view === 'today' && !r.invoice?.issuedAt?.startsWith(TODAY)) return false
+        if (view === 'cards' && !hasCard(r)) return false
         if (!text) return true
         return [r.guest, r.id, r.room ?? '', r.invoice?.number ?? '', r.corporate?.accountName ?? '']
           .join(' ')
@@ -85,7 +96,7 @@ export default function GuestDocumentsPage() {
 
   const pages = Math.max(1, Math.ceil(list.length / PAGE))
   const shown = list.slice(page * PAGE, page * PAGE + PAGE)
-  const printing = printId ? reservations.find((r) => r.id === printId) : undefined
+  const open = printing ? reservations.find((r) => r.id === printing.id) : undefined
 
   const columns: Column<Reservation>[] = [
     {
@@ -151,16 +162,30 @@ export default function GuestDocumentsPage() {
       header: '',
       align: 'right',
       cell: (r) => (
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={(e) => {
-            e.stopPropagation()
-            setPrintId(r.id)
-          }}
-        >
-          Print
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {hasCard(r) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                setPrinting({ id: r.id, kind: 'card' })
+              }}
+            >
+              Registration card
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation()
+              setPrinting({ id: r.id, kind: 'folio' })
+            }}
+          >
+            Print
+          </Button>
+        </div>
       ),
     },
   ]
@@ -177,10 +202,10 @@ export default function GuestDocumentsPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Guest documents"
-        description="Every receipt, folio and tax invoice. Search, open and print."
+        description="Every registration card, folio, receipt and tax invoice. Search, open and print."
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard
           label="Tax invoices"
           icon="money"
@@ -204,6 +229,14 @@ export default function GuestDocumentsPage() {
           hint={TODAY}
           active={view === 'today'}
           onClick={() => setParam('view', 'today', 'invoices')}
+        />
+        <StatCard
+          label="Registration cards"
+          icon="guests"
+          value={counts.cards}
+          hint="Who stayed, and what they agreed"
+          active={view === 'cards'}
+          onClick={() => setParam('view', 'cards', 'invoices')}
         />
         <StatCard
           label="All documents"
@@ -230,10 +263,20 @@ export default function GuestDocumentsPage() {
           columns={columns}
           rows={shown}
           rowKey={(r) => r.id}
-          onRowClick={(r) => setPrintId(r.id)}
+          onRowClick={(r) => setPrinting({ id: r.id, kind: view === 'cards' ? 'card' : 'folio' })}
           empty={{
-            title: view === 'invoices' ? 'No invoice has been issued yet' : 'No documents match',
-            hint: view === 'invoices' ? 'An invoice is created when a guest checks out.' : 'Change the filter or the search.',
+            title:
+              view === 'invoices'
+                ? 'No invoice has been issued yet'
+                : view === 'cards'
+                  ? 'No registration card yet'
+                  : 'No documents match',
+            hint:
+              view === 'invoices'
+                ? 'An invoice is created when a guest checks out.'
+                : view === 'cards'
+                  ? 'A card is made when a guest is checked in.'
+                  : 'Change the filter or the search.',
           }}
         />
         {pages > 1 && (
@@ -253,13 +296,23 @@ export default function GuestDocumentsPage() {
         )}
       </Card>
 
-      {printing && (
+      {open && printing && (
         <DocumentDialog
-          doc={folioDoc(printing, tenant.name, user?.name ?? 'Front desk', {
-            vatInside: vatOf(printing),
-            vatRate: tax?.vatRate,
-          })}
-          onClose={() => setPrintId(null)}
+          doc={
+            printing.kind === 'card'
+              ? registrationCardDoc(
+                  open,
+                  tenant.name,
+                  user?.name ?? 'Front desk',
+                  options.rates.houseRules || defaultHouseRules(stayTimes.checkInTime, stayTimes.checkOutTime),
+                  guests.find((g) => g.id === open.guestId)?.loyaltyConsent,
+                )
+              : folioDoc(open, tenant.name, user?.name ?? 'Front desk', {
+                  vatInside: vatOf(open),
+                  vatRate: tax?.vatRate,
+                })
+          }
+          onClose={() => setPrinting(null)}
         />
       )}
     </div>

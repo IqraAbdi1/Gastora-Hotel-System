@@ -22,6 +22,12 @@ export interface DocView {
   lines: DocLine[]
   note?: string
   signatures: string[]
+  /** Blocks of plain detail, for a document that records facts rather than money. */
+  sections?: { heading: string; rows: { label: string; value: string }[] }[]
+  /** Wording the guest agreed to, printed above the signature. */
+  terms?: string
+  /** A signature already captured on screen, printed where the guest's line would be. */
+  signed?: { label: string; image: string }
 }
 
 const SIGNATURES: Record<Receipt['kind'], string[]> = {
@@ -166,5 +172,90 @@ export function folioDoc(
     lines,
     note,
     signatures: ['Guest', 'Front desk'],
+  }
+}
+
+// ---- Guest registration card ----
+// The form a guest used to fill in by hand at the desk, built from what the check-in already recorded.
+// It opens no doors: that is the key card. This is the record a hotel is asked to produce when
+// somebody official wants to know who slept in a room on a given night, so it carries the identification
+// shown, the stay, what the guest agreed to and their signature.
+export function registrationCardDoc(
+  r: Reservation,
+  hotel: string,
+  by: string,
+  houseRules: string,
+  /** The returning-guest answer lives on the guest profile, not on the stay. */
+  loyaltyConsent?: boolean,
+): DocView {
+  const d = r.details
+  const nights = Math.max(1, nightsOf(r.arrival, r.departure))
+  const rows = (list: [string, string | number | undefined][]) =>
+    list
+      .filter(([, v]) => v !== undefined && v !== '' && v !== null)
+      .map(([label, v]) => ({ label, value: String(v) }))
+
+  const sections: NonNullable<DocView['sections']> = []
+
+  const guest = rows([
+    ['Full name', r.guest],
+    ['ID type', d?.idType],
+    ['ID number', d?.idNumber],
+    ['ID expiry', d?.idExpiry],
+    ['Name on the ID', d?.idName && d.idName !== r.guest ? d.idName : undefined],
+    ['Nationality', d?.nationality],
+    ['Date of birth', d?.dateOfBirth],
+    ['Gender', d?.gender],
+    ['Phone', d?.phone],
+    ['Email', d?.email],
+    ['Home address', d?.address],
+  ])
+  if (guest.length) sections.push({ heading: 'Guest', rows: guest })
+
+  const stay = rows([
+    ['Booking', r.id],
+    ['Room', r.room ? `Room ${r.room}` : r.roomType],
+    ['Arrival', r.arrival],
+    ['Departure', r.departure],
+    ['Nights', nights],
+    ['Adults', d?.adults ?? r.adults],
+    ['Children', d?.children ?? r.children],
+    ['Purpose of visit', d?.purpose],
+    ['Coming from', d?.comingFrom],
+    ['Next destination', d?.nextDestination],
+    ['Vehicle plate', d?.vehiclePlate],
+    ['Billed to', r.corporate?.accountName],
+    ['Special requests', d?.specialRequests],
+  ])
+  if (stay.length) sections.push({ heading: 'Stay', rows: stay })
+
+  const emergency = rows([
+    ['Name', d?.emergencyName],
+    ['Phone', d?.emergencyPhone],
+  ])
+  if (emergency.length) sections.push({ heading: 'Emergency contact', rows: emergency })
+
+  // Separated on purpose: what the law and the stay require is not the same as what the guest chose.
+  sections.push({
+    heading: 'What the guest agreed',
+    rows: [
+      { label: 'House rules', value: d?.termsAccepted ? 'Accepted' : 'Not recorded' },
+      { label: 'Remembered between stays', value: loyaltyConsent ? 'Agreed' : 'Declined' },
+      { label: 'Offers and news', value: d?.marketingConsent ? 'Agreed' : 'Declined' },
+    ],
+  })
+
+  return {
+    title: 'Guest registration card',
+    number: r.id,
+    at: new Date().toISOString(),
+    by,
+    hotel,
+    parties: [],
+    lines: [],
+    sections,
+    terms: houseRules,
+    signed: d?.signature ? { label: 'Guest signature', image: d.signature } : undefined,
+    signatures: d?.signature ? ['Front desk'] : ['Guest', 'Front desk'],
   }
 }

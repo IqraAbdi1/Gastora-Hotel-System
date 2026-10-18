@@ -55,6 +55,28 @@ function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: 
         ))}
       </dl>
 
+      {doc.sections?.map((sec) => (
+        <section key={sec.heading} className="mt-4">
+          <p className="border-b border-black/40 pb-1 font-bold uppercase tracking-wide">{sec.heading}</p>
+          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1">
+            {sec.rows.map((row) => (
+              <div key={row.label}>
+                <dt className={muted}>{row.label}</dt>
+                <dd className="font-medium">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+
+      {doc.terms && (
+        <section className="mt-4">
+          <p className="border-b border-black/40 pb-1 font-bold uppercase tracking-wide">Terms accepted</p>
+          <p className="mt-2 whitespace-pre-wrap">{doc.terms}</p>
+        </section>
+      )}
+
+      {doc.lines.length > 0 && (
       <table className="mt-4 w-full border-collapse">
         <thead>
           <tr className="border-y border-black/40 text-left">
@@ -97,6 +119,14 @@ function Sheet({ doc, size, printedBy }: { doc: DocView; size: Size; printedBy: 
           </tfoot>
         )}
       </table>
+      )}
+
+      {doc.signed && (
+        <div className="mt-6">
+          <img src={doc.signed.image} alt={doc.signed.label} className="h-20 object-contain" />
+          <div className="mt-1 w-64 border-t border-black/60 pt-1">{doc.signed.label}</div>
+        </div>
+      )}
 
       {doc.note && (
         <p className="mt-3">
