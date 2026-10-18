@@ -1,4 +1,6 @@
 import { folioOf } from './folio'
+import { hasMaster, routeOf } from './groups'
+import type { GroupBlock } from './groups'
 import { isTaxCategory } from './tax'
 import type { BillTo, FolioCharge, Reservation } from '../types'
 
@@ -9,6 +11,13 @@ import type { BillTo, FolioCharge, Reservation } from '../types'
  */
 
 export type Payer = 'company' | 'guest'
+
+/**
+ * A stay can be divided by two different agreements. A company account divides it by what the company
+ * agreed to carry for this one guest; a group block divides it by what the organiser agreed to carry
+ * for everybody. When a stay is in a block, the block wins: the workshop's rule is the same for all
+ * twenty-five rooms, and a guest-by-guest exception is how a hotel loses track of a master bill.
+ */
 
 export interface FolioLine {
   id: string
@@ -56,12 +65,19 @@ export function payerFor(category: string, billTo: BillTo): Payer {
 const ROOM_LINE = 'room'
 
 /** The stay's bill, divided if it is on a company account. */
-export function splitFolio(r: Reservation, accountName?: string): SplitFolio {
+export function splitFolio(r: Reservation, accountName?: string, block?: GroupBlock): SplitFolio {
   const f = folioOf(r)
   const billTo = r.corporate?.billTo ?? null
-  const split = !!billTo && billTo !== 'guest'
+  const byBlock = !!block && hasMaster(block.billing)
+  const split = byBlock || (!!billTo && billTo !== 'guest')
 
-  const roomPayer: Payer = split ? 'company' : 'guest'
+  const asPayer = (side: 'master' | 'guest'): Payer => (side === 'master' ? 'company' : 'guest')
+  const roomPayer: Payer = byBlock ? asPayer(routeOf(block, 'Room')) : split ? 'company' : 'guest'
+  // A tax belongs with the thing it was charged on, so it follows the room.
+  const payerOf = (category: string): Payer => {
+    if (byBlock) return isTaxCategory(category) ? roomPayer : asPayer(routeOf(block, category))
+    return split && billTo ? payerFor(category, billTo) : 'guest'
+  }
   const lines: FolioLine[] = [
     {
       id: ROOM_LINE,
@@ -77,7 +93,7 @@ export function splitFolio(r: Reservation, accountName?: string): SplitFolio {
       label: `${c.category}: ${c.description}`,
       note: c.at,
       amount: c.amount,
-      payer: split ? payerFor(c.category, billTo) : ('guest' as Payer),
+      payer: payerOf(c.category),
       cancelled: !!c.reversedBy,
     })),
   ]

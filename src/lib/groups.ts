@@ -12,6 +12,7 @@
 //
 // Pure rules only: no React.
 
+import { chargeCategories } from './folio'
 import type { Reservation, Room } from '../types'
 
 export type GroupBilling = 'master-all' | 'master-room' | 'each-guest' | 'agent-net'
@@ -37,14 +38,20 @@ export const BILLING_NOTE: Record<GroupBilling, string> = {
 /** Whether this block has somebody other than the guest paying for anything. */
 export const hasMaster = (billing: GroupBilling): boolean => billing !== 'each-guest'
 
-/** Charge categories a master bill can be asked to cover. Everything else follows the guest. */
-export const COVERABLE = ['Room', 'Breakfast', 'Lunch', 'Dinner', 'Conference', 'Transfer', 'Laundry', 'Bar', 'Room service']
+/**
+ * What a master bill can be asked to carry. These are the hotel's own charge categories and nothing
+ * else: a list of tidy words like "Conference" and "Breakfast" would read well and route nothing,
+ * because the only categories a charge is ever posted under are these.
+ */
+export const COVERABLE = ['Room', ...chargeCategories]
 
 /** What each kind of block covers before the hotel edits it. */
 export function defaultCovers(billing: GroupBilling): string[] {
   if (billing === 'master-all') return [...COVERABLE]
-  if (billing === 'master-room') return ['Room', 'Breakfast', 'Lunch', 'Conference', 'Transfer']
-  if (billing === 'agent-net') return ['Room', 'Breakfast']
+  // The room and the meals the package includes. A restaurant bill is the workshop's buffet; the bar
+  // and the laundry are the guest's own, which is the whole point of the arrangement.
+  if (billing === 'master-room') return ['Room', 'Restaurant', 'Transport']
+  if (billing === 'agent-net') return ['Room']
   return []
 }
 
@@ -183,4 +190,72 @@ export function pastCutOff(block: GroupBlock, reservations: Reservation[], today
   if (!block.cutOff || today < block.cutOff) return []
   if (block.status === 'cancelled' || block.status === 'closed') return []
   return inBlock(reservations, block.id).filter((r) => r.status === 'booked' && !r.group?.named)
+}
+
+// ---- The organiser's bill ----
+
+export interface MasterLine {
+  reservationId: string
+  guest: string
+  room: string | null
+  /** What the organiser carries for this room. */
+  master: number
+  /** What this guest settles themselves. */
+  guest_: number
+  status: Reservation['status']
+}
+
+export interface MasterBill {
+  lines: MasterLine[]
+  masterTotal: number
+  guestTotal: number
+  /** Rooms in the block that nobody ever took. */
+  unused: number
+  /** Net-rate blocks: what the hotel actually receives, and what the agent keeps. */
+  net?: number
+  margin?: number
+}
+
+/**
+ * The organiser's side of the whole block, room by room. A hotel cannot invoice a ministry twenty-five
+ * times; it sends one bill, and this is the arithmetic behind it.
+ */
+export function masterBill(
+  block: GroupBlock,
+  reservations: Reservation[],
+  split: (r: Reservation, block: GroupBlock) => { company: { total: number }; guest: { total: number } },
+  rackOf: (type: Room['type']) => number,
+): MasterBill {
+  const rooms = inBlock(reservations, block.id)
+  const lines: MasterLine[] = []
+  let masterTotal = 0
+  let guestTotal = 0
+  let net = 0
+  let margin = 0
+
+  for (const r of rooms) {
+    if (r.status === 'cancelled' || r.status === 'no-show') continue
+    const s = split(r, block)
+    lines.push({ reservationId: r.id, guest: r.guest, room: r.room, master: s.company.total, guest_: s.guest.total, status: r.status })
+    masterTotal += s.company.total
+    guestTotal += s.guest.total
+    if (block.billing === 'agent-net') {
+      const rack = rackOf(r.roomType)
+      const n = block.net[r.roomType]
+      if (n !== undefined) {
+        const nights = Math.max(1, Math.round((Date.parse(`${r.departure}T00:00:00`) - Date.parse(`${r.arrival}T00:00:00`)) / 86400000))
+        net += n * nights
+        margin += agentMargin(block, r.roomType, rack) * nights
+      }
+    }
+  }
+
+  const counts = blockCounts(reservations, block.id)
+  return {
+    lines,
+    masterTotal,
+    guestTotal,
+    unused: counts.held - counts.named,
+    ...(block.billing === 'agent-net' ? { net, margin } : {}),
+  }
 }

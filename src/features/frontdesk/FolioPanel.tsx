@@ -7,6 +7,7 @@ import { TODAY } from '../../data/sample'
 import { chargeCategories, folioOf, paymentMethods } from '../../lib/folio'
 import { BILL_TO_SUMMARY, payerFor, splitFolio } from '../../lib/folioSplit'
 import { useCorporate } from '../corporate/corporateContext'
+import { useGroups } from '../groups/groupsContext'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { nightsBetween } from '../../lib/format'
@@ -33,8 +34,12 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
   const { addCharge, addPayment, checkOut, reverseCharge, agreeExpress, cancelExpress } = useHotel()
   const f = folioOf(r)
   const { byId } = useCorporate()
+  const { byId: blockOf } = useGroups()
   // One stay, two bills when the company carries part of it. For an ordinary stay this is just the one bill.
-  const s = splitFolio(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined)
+  // A stay in a group block is divided by the block's rule rather than its own.
+  const block = blockOf(r.group?.blockId)
+  const blockAccount = block ? byId(block.accountId ?? block.agentId ?? '')?.name : undefined
+  const s = splitFolio(r, blockAccount ?? (r.corporate ? byId(r.corporate.accountId)?.name : undefined), block)
   // The desk can only take money from the guest, so every balance the desk acts on is the guest's side.
   const owed = s.split ? s.guestBalance : f.balance
   const { tax, stayTimes, tenant, options, features } = useFeatures()

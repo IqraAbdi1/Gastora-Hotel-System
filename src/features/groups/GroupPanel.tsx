@@ -13,10 +13,12 @@ import {
   blockCounts,
   hasMaster,
   inBlock,
+  masterBill,
   pastCutOff,
   rateFor,
 } from '../../lib/groups'
 import type { GroupBlock } from '../../lib/groups'
+import { splitFolio } from '../../lib/folioSplit'
 import { useCorporate } from '../corporate/corporateContext'
 import { useFeatures } from '../platform/featuresContext'
 import { useGroups } from './groupsContext'
@@ -38,6 +40,12 @@ export default function GroupPanel({ block, onClose }: { block: GroupBlock; onCl
   const linked = block.accountId ?? block.agentId
   const account = linked ? byId(linked) : undefined
   const overdue = pastCutOff(block, reservations, TODAY)
+  const bill = masterBill(
+    block,
+    reservations,
+    (r, b) => splitFolio(r, account?.name, b),
+    (type) => nightlyRate(type, 0, options.rates),
+  )
 
   const value = rooms
     .filter((r) => r.status !== 'cancelled' && r.status !== 'no-show')
@@ -128,6 +136,48 @@ export default function GroupPanel({ block, onClose }: { block: GroupBlock; onCl
                 Put {overdue.length} room(s) back on sale
               </Button>
             </div>
+          </div>
+        )}
+
+        {hasMaster(block.billing) && (
+          <div>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className={heading}>{block.billing === 'agent-net' ? "The agent's bill" : "The organiser's bill"}</p>
+              <span className="text-xs text-ink/60">One invoice for the block</span>
+            </div>
+            <dl className="mt-1 space-y-1 text-sm">
+              {bill.lines.map((l) => (
+                <div key={l.reservationId} className="flex items-baseline justify-between gap-3">
+                  <dt className="min-w-0 truncate text-ink/65">
+                    {l.guest}
+                    {l.room ? ` · Room ${l.room}` : ''}
+                  </dt>
+                  <dd className="shrink-0 text-right tabular-nums text-ink/80">
+                    {ugx(l.master)}
+                    {l.guest_ > 0 && <span className="ml-2 text-xs text-ink/50">guest {ugx(l.guest_)}</span>}
+                  </dd>
+                </div>
+              ))}
+              <div className="border-t border-ink/10 pt-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="font-semibold text-ink">To invoice {account ? account.name : 'the organiser'}</dt>
+                  <dd className="font-bold tabular-nums text-ink">{ugx(bill.masterTotal)}</dd>
+                </div>
+                <div className="mt-0.5 flex items-baseline justify-between gap-3 text-xs text-ink/60">
+                  <dt>Settled by guests at the desk</dt>
+                  <dd className="tabular-nums">{ugx(bill.guestTotal)}</dd>
+                </div>
+                {block.billing === 'agent-net' && bill.net !== undefined && (
+                  <div className="mt-1 rounded-lg bg-warn/[0.08] p-2 text-xs text-ink/75">
+                    Staff only: the hotel receives {ugx(bill.net)} and the agent keeps {ugx(bill.margin ?? 0)}. Nothing the guest is given
+                    shows either figure.
+                  </div>
+                )}
+              </div>
+            </dl>
+            <p className="mt-1 text-xs text-ink/55">
+              The guest column is what each person settles for themselves before they leave, whatever the organiser is paying.
+            </p>
           </div>
         )}
 
