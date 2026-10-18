@@ -30,6 +30,7 @@ export type FeatureKey =
   | 'roomKeys'
   | 'revenue'
   | 'bookingEngine'
+  | 'channels'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -142,6 +143,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
   },
   {
+    key: 'channels',
+    label: 'Channel manager',
+    blurb:
+      "The places a hotel sells other than its own desk and its own site: online travel agents, the global distribution systems, wholesalers. Keeps what each channel may sell and at what price, maps this hotel's room types to the names each channel uses, and takes their bookings back into the desk. The wire itself is a commercial agreement with a channel manager; this is everything on the hotel's side of it.",
+  },
+  {
     key: 'bookingEngine',
     label: 'Booking page',
     blurb:
@@ -202,6 +209,7 @@ export const PLANS: {
       'roomKeys',
       'revenue',
       'bookingEngine',
+      'channels',
     ],
   },
   {
@@ -231,6 +239,7 @@ export const PLANS: {
       'roomKeys',
       'revenue',
       'bookingEngine',
+      'channels',
       'crossProperty',
     ],
   },

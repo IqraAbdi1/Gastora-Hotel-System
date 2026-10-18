@@ -100,7 +100,7 @@ export const ROLES: Role[] = [
     label: 'General manager',
     blurb: 'Runs operations and approves requisitions.',
     landing: '/dashboard',
-    allow: [...ALL_HOTEL, '/admin/revenue'],
+    allow: [...ALL_HOTEL, '/admin/revenue', '/admin/channels'],
     actions: [
       'raiseRequest',
       'endorseRequest',
@@ -134,7 +134,7 @@ export const ROLES: Role[] = [
     label: 'Reservations agent',
     blurb: 'Bookings and availability only.',
     landing: '/desk/reservations',
-    allow: ['/desk/reservations', '/desk/rooms', '/desk/new-reservation', '/desk/companies', '/admin/revenue'],
+    allow: ['/desk/reservations', '/desk/rooms', '/desk/new-reservation', '/desk/companies', '/admin/revenue', '/admin/channels'],
     actions: ['requestCorporate'],
   },
   {

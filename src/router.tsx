@@ -7,6 +7,7 @@ import Root from './components/Root'
 import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import RevenuePage from './features/revenue/RevenuePage'
 import BookPage from './features/book/BookPage'
+import ChannelsPage from './features/channels/ChannelsPage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
 import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
@@ -242,6 +243,14 @@ export const router = createBrowserRouter([
           { path: 'admin/taxes', element: <TaxSettingsPage /> },
           { path: 'admin/approvals', element: <ApprovalsPage /> },
           { path: 'admin/policies', element: <RatesPoliciesPage /> },
+          {
+            path: 'admin/channels',
+            element: (
+              <FeatureGate feature="channels">
+                <ChannelsPage />
+              </FeatureGate>
+            ),
+          },
           {
             path: 'admin/revenue',
             element: (

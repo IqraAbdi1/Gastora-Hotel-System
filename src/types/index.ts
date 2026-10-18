@@ -130,6 +130,8 @@ export type Reservation = {
   bookedAt?: string
   /** The promotional code used, and what it took off, so a campaign can be counted afterwards. */
   promo?: { code: string; saved: number }
+  /** The channel that brought the booking, and what it takes, so a channel can be judged on what it costs. */
+  channel?: { id: string; name: string; commissionPercent: number }
   guestId?: string
   plan?: string
   guarantee?: GuaranteeType
