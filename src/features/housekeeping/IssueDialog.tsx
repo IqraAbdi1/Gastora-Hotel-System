@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button, Field, Modal, Segmented, Select, Textarea } from '../../components/ui'
+import { useAssets } from '../assets/useAssets'
 import { useFeatures } from '../platform/featuresContext'
 import { useHousekeeping } from './hkContext'
 import type { BlockKind } from './hkContext'
@@ -13,24 +14,35 @@ type Sell = 'yes' | 'no'
 export default function IssueDialog({ roomNumber, onClose }: { roomNumber: string; onClose: () => void }) {
   const hk = useHousekeeping()
   const { features } = useFeatures()
+  const { assets } = useAssets()
   const [kind, setKind] = useState<Kind>('broken')
   const [category, setCategory] = useState('General')
   const [severity, setSeverity] = useState<RoomDefect['severity']>('Medium')
   const [text, setText] = useState('')
   const [sell, setSell] = useState<Sell>('yes')
+  const [assetId, setAssetId] = useState('')
   const [block, setBlock] = useState<BlockKind>('out-of-order')
   const room = hk.rooms.find((r) => r.room === roomNumber)
   if (!room) return null
 
   // A room with a guest in it can be reported, but it cannot be taken out of sale from here.
   const occupied = room.status === 'Occupied'
+  // Only the equipment in this room, so the list is short enough to pick from on a phone.
+  const roomAssets = assets.filter((a) => a.room === roomNumber && a.state === 'in service')
   const blocks = kind === 'broken' && !occupied && sell === 'no'
   const blockKind: BlockKind = features.maintenanceFull ? block : 'out-of-order'
 
   function save() {
     if (!text.trim()) return
     if (kind === 'discrepancy') hk.setException(roomNumber, 'discrepancy', text)
-    else hk.reportDefect(roomNumber, { category, severity, description: text, blocksRoom: blocks ? blockKind : undefined })
+    else
+      hk.reportDefect(roomNumber, {
+        category,
+        severity,
+        description: text,
+        blocksRoom: blocks ? blockKind : undefined,
+        assetId: assetId || undefined,
+      })
     onClose()
   }
 
@@ -87,6 +99,24 @@ export default function IssueDialog({ roomNumber, onClose }: { roomNumber: strin
                 )}
               </Field>
             </div>
+
+            {features.assetRegister && roomAssets.length > 0 && (
+              <Field
+                label="Which piece of equipment"
+                hint="Naming it puts this repair on that machine's record, so a thing that keeps failing can be seen."
+              >
+                {(id) => (
+                  <Select id={id} value={assetId} onChange={(e) => setAssetId(e.target.value)}>
+                    <option value="">Not a particular machine</option>
+                    {roomAssets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.tag} · {a.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            )}
 
             <Field label="What is wrong" required>
               {(id) => (

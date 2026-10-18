@@ -67,7 +67,7 @@ export type HkValue = {
   addPhoto: (room: string) => void
    reportDefect: (
     room: string,
-    input: Pick<RoomDefect, 'category' | 'severity' | 'description'> & { blocksRoom?: BlockKind },
+    input: Pick<RoomDefect, 'category' | 'severity' | 'description'> & { blocksRoom?: BlockKind; assetId?: string },
   ) => void
   requestMaintenance: (room: string, defectId: number) => void
   assignDefect: (room: string, defectId: number, technician: string) => void

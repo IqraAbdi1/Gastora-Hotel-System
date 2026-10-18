@@ -34,6 +34,8 @@ export type FeatureKey =
   | 'guestValue'
   | 'loyaltyPoints'
   | 'guestPortal'
+  | 'assetRegister'
+  | 'assetCosts'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -52,6 +54,16 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'maintenanceFull',
     label: 'Full maintenance',
     blurb: 'Priorities, due times, technicians, out of order vs out of service.',
+  },
+  {
+    key: 'assetRegister',
+    label: 'Asset register',
+    blurb: 'What the hotel owns: where each machine is, its warranty, and everything that has gone wrong with it.',
+  },
+  {
+    key: 'assetCosts',
+    label: 'Equipment cost',
+    blurb: 'What each machine cost, what it is worth now, and what it has cost to keep running.',
   },
   {
     key: 'repairSignoff',
@@ -234,6 +246,7 @@ export const PLANS: {
       'guestValue',
       'loyaltyPoints',
       'guestPortal',
+      'assetRegister',
     ],
   },
   {
@@ -267,6 +280,8 @@ export const PLANS: {
       'guestValue',
       'loyaltyPoints',
       'guestPortal',
+      'assetRegister',
+      'assetCosts',
       'crossProperty',
     ],
   },

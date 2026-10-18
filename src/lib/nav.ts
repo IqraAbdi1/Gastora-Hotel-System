@@ -54,6 +54,7 @@ export const modules: NavModule[] = [
   module('maintenance', 'Maintenance', 'maintenance', [
     { to: '/maintenance', label: 'Work orders', end: true, badge: 'workOrders' },
     { to: '/maintenance/out-of-order', label: 'Rooms out of order', feature: 'maintenanceFull' },
+    { to: '/maintenance/assets', label: 'Asset register', feature: 'assetRegister' },
     { to: '/maintenance/supplies', label: 'Supplies', feature: 'requests' },
   ]),
   module('pos', 'POS', 'pos', [

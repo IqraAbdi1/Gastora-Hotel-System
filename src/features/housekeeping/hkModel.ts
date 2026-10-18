@@ -75,6 +75,10 @@ export type RoomDefect = {
   technician?: string
   /** Set when this problem took the room out of sale. Closing the repair releases the room. */
   blocksRoom?: 'out-of-service' | 'out-of-order'
+  /** The piece of equipment that failed, when the hotel keeps an asset register. */
+  assetId?: string
+  /** The day it was reported. `reportedAt` is only a clock time, which cannot answer a question next month. */
+  reportedOn?: string
   note?: string
 }
 

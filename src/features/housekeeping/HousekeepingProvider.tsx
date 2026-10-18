@@ -700,7 +700,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   // full maintenance there is no separate "request" step, so reporting is requesting.
   function reportDefect(
     room: string,
-    input: { category: string; severity: RoomDefect['severity']; description: string; blocksRoom?: BlockKind },
+    input: { category: string; severity: RoomDefect['severity']; description: string; blocksRoom?: BlockKind; assetId?: string },
   ) {
     const text = input.description.trim()
     const status: DefectStatus = input.blocksRoom || !features.maintenanceFull ? 'Maintenance Requested' : 'Open'
@@ -714,7 +714,9 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
           description: text,
           status,
           reportedAt: clock(),
+          reportedOn: TODAY,
           blocksRoom: input.blocksRoom,
+          assetId: input.assetId,
         },
         ...d.defects,
       ],

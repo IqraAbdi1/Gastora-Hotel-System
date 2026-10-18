@@ -40,6 +40,7 @@ import MyTasksPage from './features/housekeeping/MyTasksPage'
 import InspectionsPage from './features/housekeeping/InspectionsPage'
 import IssuesPage from './features/housekeeping/IssuesPage'
 import RoomsOutOfOrderPage from './features/maintenance/RoomsOutOfOrderPage'
+import AssetsPage from './features/assets/AssetsPage'
 import WorkOrdersPage from './features/maintenance/WorkOrdersPage'
 import PlatformPage from './features/platform/PlatformPage'
 import RequestsPage from './features/procurement/RequestsPage'
@@ -129,6 +130,14 @@ export const router = createBrowserRouter([
             element: (
               <FeatureGate feature="maintenanceFull">
                 <RoomsOutOfOrderPage />
+              </FeatureGate>
+            ),
+          },
+          {
+            path: 'maintenance/assets',
+            element: (
+              <FeatureGate feature="assetRegister">
+                <AssetsPage />
               </FeatureGate>
             ),
           },
