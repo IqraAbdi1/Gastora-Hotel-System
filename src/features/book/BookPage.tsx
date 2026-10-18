@@ -17,13 +17,15 @@ import {
 } from '../../lib/bookingEngine'
 import type { Offer, PayMethod, PayState, Search } from '../../lib/bookingEngine'
 import { dayMonth, ugx } from '../../lib/format'
+import { stamp } from '../../lib/folio'
 import { useHotel } from '../../lib/hotelContext'
 import { DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
+import { addOnsTotal, chargesFor, PER_LABEL, priceOf } from '../../lib/addOns'
 import { findPromo, promoProblem, promoSaving, tidyCode } from '../../lib/promos'
 import type { Promo } from '../../lib/promos'
 import { useFeatures } from '../platform/featuresContext'
 
-type Step = 'search' | 'rooms' | 'details' | 'pay' | 'done'
+type Step = 'search' | 'rooms' | 'extras' | 'details' | 'pay' | 'done'
 
 /**
  * The hotel's own booking page, as a guest meets it: no sign-in, no staff words, nothing about any
@@ -53,6 +55,7 @@ export default function BookPage() {
   const [codeText, setCodeText] = useState('')
   const [promo, setPromo] = useState<Promo | null>(null)
   const [codeSaid, setCodeSaid] = useState('')
+  const [extras, setExtras] = useState<string[]>([])
 
   const rates = options.rates
   const problem = searchProblem(search, TODAY)
@@ -73,7 +76,11 @@ export default function BookPage() {
 
   // What the code takes off, if one has been accepted and still applies to what is now chosen.
   const saving = chosen && promo ? promoSaving(promo, chosen.total, nights) : 0
-  const payable = chosen ? chosen.total - saving : 0
+  // Extras are sold beside the room: the code is a room price, so it does not touch them.
+  const offered = (options.addOns ?? []).filter((a) => a.on)
+  const picked = offered.filter((a) => extras.includes(a.id))
+  const extrasMoney = addOnsTotal(picked, nights, search.adults)
+  const payable = chosen ? chosen.total - saving + extrasMoney : 0
 
   function tryCode() {
     const found = findPromo(rates.promos ?? [], codeText)
@@ -139,6 +146,9 @@ export default function BookPage() {
         children: search.children,
         details: { idType: 'NIN', idNumber: '', nationality: '', phone: phone.trim(), specialRequests: requests.trim() },
         ...(promo ? { promo: { code: tidyCode(promo.code), saved: saving } } : {}),
+        // The reservation total always includes what is on the folio, so the room charge still reads
+        // correctly once these lines are there.
+        ...(picked.length > 0 ? { charges: chargesFor(picked, nights, search.adults, stamp()) } : {}),
       })
       // A code is counted when it is used, not when it is typed: a refused payment makes no booking.
       if (promo) {
@@ -159,10 +169,14 @@ export default function BookPage() {
     <Shell hotel={tenant.name}>
       {step !== 'done' && (
         <ol className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold">
-          {(['search', 'rooms', 'details', 'pay'] as Step[]).map((s, n) => {
-            const order: Step[] = ['search', 'rooms', 'details', 'pay']
+          {(offered.length > 0
+            ? (['search', 'rooms', 'extras', 'details', 'pay'] as Step[])
+            : (['search', 'rooms', 'details', 'pay'] as Step[])
+          ).map((s, n, order) => {
             const at = order.indexOf(step)
-            const label = ['Dates', 'Rooms', 'You', 'Payment'][n]
+            const label = (offered.length > 0
+              ? ['Dates', 'Rooms', 'Extras', 'You', 'Payment']
+              : ['Dates', 'Rooms', 'You', 'Payment'])[n]
             return (
               <li key={s} className="flex items-center gap-2">
                 <span
@@ -172,7 +186,7 @@ export default function BookPage() {
                 >
                   {label}
                 </span>
-                {n < 3 && <span className="text-ink/25">—</span>}
+                {n < order.length - 1 && <span className="text-ink/25">—</span>}
               </li>
             )
           })}
@@ -325,7 +339,7 @@ export default function BookPage() {
                         size="sm"
                         onClick={() => {
                           setChosen(o)
-                          setStep('details')
+                          setStep(offered.length > 0 ? 'extras' : 'details')
                         }}
                       >
                         Choose {plan.name.toLowerCase()}
@@ -340,6 +354,61 @@ export default function BookPage() {
             Prices are for the dates you chose and include every night of your stay. Nothing is held until the deposit
             is paid.
           </p>
+        </section>
+      )}
+
+      {step === 'extras' && chosen && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold text-ink">Anything else?</h2>
+          <Summary offer={chosen} search={search} nights={nights} rates={rates} perNight={perNight} />
+          <ul className="space-y-2">
+            {offered.map((a) => {
+              const on = extras.includes(a.id)
+              return (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setExtras(on ? extras.filter((x) => x !== a.id) : [...extras, a.id])}
+                    className={`flex w-full flex-wrap items-start justify-between gap-3 rounded-xl border p-3.5 text-left transition ${
+                      on ? 'border-brand bg-brand/[0.07] ring-1 ring-brand/30' : 'border-ink/10 bg-surface hover:border-brand/40'
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 font-semibold text-ink">
+                        <span
+                          className={`grid h-4 w-4 shrink-0 place-items-center rounded border text-[10px] font-bold ${
+                            on ? 'border-brand bg-brand text-white' : 'border-ink/25 text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        {a.name}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-ink/60">{a.blurb}</span>
+                    </span>
+                    <span className="text-right">
+                      <span className="block font-semibold tabular-nums text-ink">{ugx(priceOf(a, nights, search.adults))}</span>
+                      <span className="block text-xs text-ink/50">
+                        {ugx(a.price)} {PER_LABEL[a.per]}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="text-xs text-ink/55">
+            Extras are added to your bill at the hotel and are not part of the deposit.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setStep('details')}>
+              {picked.length === 0 ? 'No thank you' : `Continue with ${ugx(extrasMoney)} of extras`}
+            </Button>
+            <Button variant="ghost" onClick={() => setStep('rooms')}>
+              Back to the rooms
+            </Button>
+          </div>
         </section>
       )}
 
@@ -369,8 +438,8 @@ export default function BookPage() {
             <Button disabled={name.trim().length < 3 || phone.trim().length < 7} onClick={() => setStep('pay')}>
               Continue to payment
             </Button>
-            <Button variant="ghost" onClick={() => setStep('rooms')}>
-              Back to the rooms
+            <Button variant="ghost" onClick={() => setStep(offered.length > 0 ? 'extras' : 'rooms')}>
+              {offered.length > 0 ? 'Back to the extras' : 'Back to the rooms'}
             </Button>
           </div>
         </section>
@@ -423,13 +492,29 @@ export default function BookPage() {
           </div>
 
           <div className="rounded-xl border border-ink/10 bg-surface p-4">
-            {saving > 0 && (
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-ink/10 pb-2 text-sm">
-                <span className="text-ink/60">
-                  {ugx(chosen.total)} less {ugx(saving)}
-                </span>
-                <span className="font-semibold tabular-nums text-ink">{ugx(payable)}</span>
-              </div>
+            {(saving > 0 || extrasMoney > 0) && (
+              <dl className="mb-2 space-y-0.5 border-b border-ink/10 pb-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink/60">The room</dt>
+                  <dd className="tabular-nums text-ink/75">{ugx(chosen.total)}</dd>
+                </div>
+                {saving > 0 && (
+                  <div className="flex justify-between gap-3 text-good">
+                    <dt>{promo ? tidyCode(promo.code) : 'Code'}</dt>
+                    <dd className="tabular-nums">− {ugx(saving)}</dd>
+                  </div>
+                )}
+                {picked.map((a) => (
+                  <div key={a.id} className="flex justify-between gap-3">
+                    <dt className="text-ink/60">{a.name}</dt>
+                    <dd className="tabular-nums text-ink/75">{ugx(priceOf(a, nights, search.adults))}</dd>
+                  </div>
+                ))}
+                <div className="flex justify-between gap-3 pt-1 font-semibold text-ink">
+                  <dt>Altogether</dt>
+                  <dd className="tabular-nums">{ugx(payable)}</dd>
+                </div>
+              </dl>
             )}
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-sm text-ink/70">Deposit now</p>

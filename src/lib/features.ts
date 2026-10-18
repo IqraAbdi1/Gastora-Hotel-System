@@ -3,6 +3,8 @@ import { DEFAULT_EXPRESS_MAX } from './expressCheckout'
 import { DEFAULT_MESSAGING } from './messages'
 import type { MessagingSettings } from './messages'
 import { DEFAULT_EFRIS, DEFAULT_TAX } from './tax'
+import { DEFAULT_ADD_ONS } from './addOns'
+import type { AddOn } from './addOns'
 import type { TaxSettings } from './tax'
 
 export type FeatureKey =
@@ -348,6 +350,8 @@ export interface HotelOptions {
   expressMax: number
   /** The hour the day closes itself, when the night audit is on. */
   nightAuditAt: string
+  /** Extras the hotel sells beside the room, offered on its own booking page. */
+  addOns: AddOn[]
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -357,6 +361,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   nightAudit: true,
   loyalty: DEFAULT_LOYALTY,
   rates: DEFAULT_RATES,
+  addOns: DEFAULT_ADD_ONS,
   inspectionMode: 'spot',
   spotPercent: 20,
   alwaysInspectArrivals: true,

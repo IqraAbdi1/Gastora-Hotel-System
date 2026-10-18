@@ -15,6 +15,7 @@ import {
   roomTypeList,
 } from '../../lib/rates'
 import type { DepositMode, MealPlanSetting, RatesPolicy } from '../../lib/rates'
+import AddOnsCard from './AddOnsCard'
 import PromoCard from './PromoCard'
 import RateCalendarCard from './RateCalendarCard'
 import { useAuth } from '../auth/authContext'
@@ -111,6 +112,8 @@ export default function RatesPoliciesPage() {
         <RateCalendarCard rates={rates} set={set} />
 
         <PromoCard rates={rates} set={set} />
+
+        <AddOnsCard addOns={options.addOns ?? []} set={(next) => setOptions({ addOns: next })} />
 
         <Card title="Meal plans" icon="money" count={rates.plans.length} padded description="Added to the room rate, per night.">
           <div className="space-y-3">
