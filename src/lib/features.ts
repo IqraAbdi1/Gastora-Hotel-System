@@ -33,6 +33,7 @@ export type FeatureKey =
   | 'channels'
   | 'guestValue'
   | 'loyaltyPoints'
+  | 'guestPortal'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -145,6 +146,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
   },
   {
+    key: 'guestPortal',
+    label: 'Guest portal',
+    blurb:
+      "One page a guest opens from the link the hotel sent: their stay, their bill, the form before arrival, anything they want to ask for, and what the hotel can offer them - a better room when one is genuinely free, an early arrival, a later departure, the extras. Nothing is charged until somebody at the desk agrees to it.",
+  },
+  {
     key: 'guestValue',
     label: 'Guest value',
     blurb:
@@ -226,6 +233,7 @@ export const PLANS: {
       'channels',
       'guestValue',
       'loyaltyPoints',
+      'guestPortal',
     ],
   },
   {
@@ -258,6 +266,7 @@ export const PLANS: {
       'channels',
       'guestValue',
       'loyaltyPoints',
+      'guestPortal',
       'crossProperty',
     ],
   },
@@ -340,6 +349,8 @@ import type { RatesPolicy } from './rates'
 import { DEFAULT_RATES } from './rates'
 import type { LoyaltySettings } from './loyalty'
 import { DEFAULT_POINTS } from './points'
+import { DEFAULT_UPSELL } from './upsell'
+import type { UpsellSettings } from './upsell'
 import type { PointsSettings } from './points'
 import { DEFAULT_LOYALTY } from './loyalty'
 import { DEFAULT_AREAS, DEFAULT_SERVICE } from './cleaning'
@@ -367,6 +378,8 @@ export interface HotelOptions {
   loyalty: LoyaltySettings
   /** Points earned on room money, and what they are worth when spent. */
   points: PointsSettings
+  /** What the hotel offers a guest who is already booked, and at what price. */
+  upsell: UpsellSettings
   /** The hotel's own prices and booking rules. Company prices are separate, on each company account. */
   rates: RatesPolicy
   /** Corridors, the lobby, the pool: everything cleaned that is not a room. */
@@ -392,6 +405,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   nightAudit: true,
   loyalty: DEFAULT_LOYALTY,
   points: DEFAULT_POINTS,
+  upsell: DEFAULT_UPSELL,
   rates: DEFAULT_RATES,
   addOns: DEFAULT_ADD_ONS,
   inspectionMode: 'spot',

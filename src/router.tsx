@@ -7,6 +7,7 @@ import Root from './components/Root'
 import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import RevenuePage from './features/revenue/RevenuePage'
 import BookPage from './features/book/BookPage'
+import StayPage from './features/portal/StayPage'
 import ChannelsPage from './features/channels/ChannelsPage'
 import FeedbackPage from './features/feedback/FeedbackPage'
 import GuestsPage from './features/guests/GuestsPage'
@@ -64,6 +65,8 @@ export const router = createBrowserRouter([
       // The guest's own page. No sign-in, outside the app shell: it is opened from a link on a phone.
       { path: '/arrive/:token', element: <ArrivePage /> },
       { path: '/bill/:token', element: <BillPage /> },
+      // One page for the whole stay: the bill, the form before arrival, what they can ask for.
+      { path: '/stay/:token', element: <StayPage /> },
       // The hotel's own booking page, which a guest opens from the hotel's website.
       { path: '/book', element: <BookPage /> },
       { path: '/book/:slug', element: <BookPage /> },

@@ -17,6 +17,7 @@ import ShortageBanner from '../housekeeping/ShortageBanner'
 import AttentionPanel from './AttentionPanel'
 import CheckInPanel from './CheckInPanel'
 import ConfirmCallsCard from './ConfirmCallsCard'
+import GuestRequestsCard from './GuestRequestsCard'
 import ExpressCheckoutCard from './ExpressCheckoutCard'
 import ReservationPanel from './ReservationPanel'
 import SuggestionsPanel from './SuggestionsPanel'
@@ -316,6 +317,8 @@ export default function TodayPage() {
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="min-w-0 space-y-6 xl:col-span-2">
+          <GuestRequestsCard />
+
           <Card icon="arrival" title="Arrivals today" count={day.expected.length} description="Booked to arrive today and not yet checked in." padded={false}>
             <DataTable
               columns={arrivalColumns}

@@ -145,6 +145,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
           },
           loyalty: { ...DEFAULT_OPTIONS.loyalty, ...(saved.loyalty ?? {}) },
           points: { ...DEFAULT_OPTIONS.points, ...(saved.points ?? {}) },
+          upsell: { ...DEFAULT_OPTIONS.upsell, ...(saved.upsell ?? {}) },
           limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },
           service: { ...DEFAULT_OPTIONS.service, ...(saved.service ?? {}) },
         }
