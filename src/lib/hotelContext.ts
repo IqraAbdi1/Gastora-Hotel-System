@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { AuditRun } from './dayRun'
 import type { PreRegDetails } from './preRegistration'
+import type { RoutingRule } from './routing'
 import type { CallOutcome } from './confirmCalls'
 import type {
   Amendment,
@@ -51,6 +52,8 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** Standing instructions sending some of a guest's charges to another bill. */
+  setRouting: (reservationId: string, rules: RoutingRule[]) => void
   /** Put a name to one of a block's rooms, in advance or at the desk. */
   nameGroupRoom: (reservationId: string, guest: string, phone: string, guestId?: string) => void
   /** The room goes back on sale; the booking becomes a no-show with a record of why. */

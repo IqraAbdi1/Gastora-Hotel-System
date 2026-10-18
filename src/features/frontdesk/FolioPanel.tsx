@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { REFUSAL_NOTE, expressCheck, expressState } from '../../lib/expressCheckout'
+import { describeRule, newRuleId as newRoutingId } from '../../lib/routing'
 import StatusPill from '../../components/StatusPill'
 import { Button, Tabs } from '../../components/ui'
 import type { TabItem } from '../../components/ui'
 import { TODAY } from '../../data/sample'
-import { chargeCategories, folioOf, paymentMethods } from '../../lib/folio'
+import { chargeCategories, folioOf, paymentMethods, stamp } from '../../lib/folio'
 import { BILL_TO_SUMMARY, payerFor, splitFolio } from '../../lib/folioSplit'
 import { useCorporate } from '../corporate/corporateContext'
 import { useGroups } from '../groups/groupsContext'
@@ -31,7 +32,9 @@ const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0
 
 // One guest's folio. The parts sit on tabs, so each one fits on screen without scrolling.
 export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' }: Props) {
-  const { addCharge, addPayment, checkOut, reverseCharge, agreeExpress, cancelExpress } = useHotel()
+  const { addCharge, addPayment, checkOut, reverseCharge, agreeExpress, cancelExpress, setRouting, reservations } = useHotel()
+  const [routeCat, setRouteCat] = useState('Everything')
+  const [routeTo, setRouteTo] = useState('')
   const f = folioOf(r)
   const { byId } = useCorporate()
   const { byId: blockOf } = useGroups()
@@ -49,6 +52,8 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
   // Checked here so the desk only offers it to a guest it could actually charge.
   const expressNow = expressCheck(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined, options.expressMax)
   const express = expressState(r)
+  // Only somebody actually in the hotel can carry another guest's bill.
+  const others = reservations.filter((x) => x.status === 'in-house' && x.id !== r.id)
   const [printing, setPrinting] = useState(false)
   // The charge being corrected, with the reason and the manager who approved it.
   const [fixing, setFixing] = useState<string | null>(null)
@@ -209,6 +214,75 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
             )}
 
             <div>
+              <div className="mb-4 rounded-xl bg-ink/[0.03] p-3">
+                <p className="text-sm font-semibold text-ink">Where this guest's charges go</p>
+                {(r.routing ?? []).length === 0 ? (
+                  <p className="mt-0.5 text-xs text-ink/60">Everything stays on this bill.</p>
+                ) : (
+                  <ul className="mt-1 space-y-1 text-xs text-ink/75">
+                    {(r.routing ?? []).map((rule) => (
+                      <li key={rule.id} className="flex items-center justify-between gap-2">
+                        <span>
+                          {describeRule(rule)} <span className="text-ink/50">· {rule.by}, {rule.at}</span>
+                        </span>
+                        <button
+                          type="button"
+                          className="font-semibold text-bad"
+                          onClick={() => setRouting(r.id, (r.routing ?? []).filter((x) => x.id !== rule.id))}
+                        >
+                          Stop
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {live && others.length > 0 && (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                    <select value={routeCat} onChange={(e) => setRouteCat(e.target.value)} aria-label="Charges of this kind" className={field}>
+                      <option>Everything</option>
+                      {chargeCategories.map((cat) => (
+                        <option key={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <select value={routeTo} onChange={(e) => setRouteTo(e.target.value)} aria-label="Go to this guest" className={field}>
+                      <option value="">Choose a guest</option>
+                      {others.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.guest}
+                          {o.room ? ` · room ${o.room}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      disabled={!routeTo}
+                      onClick={() => {
+                        const to = others.find((o) => o.id === routeTo)
+                        if (!to) return
+                        setRouting(r.id, [
+                          ...(r.routing ?? []),
+                          {
+                            id: newRoutingId(r.routing ?? []),
+                            category: routeCat,
+                            toReservationId: to.id,
+                            toGuest: to.guest,
+                            at: stamp(),
+                            by: me,
+                          },
+                        ])
+                        setRouteTo('')
+                      }}
+                    >
+                      Route it
+                    </Button>
+                  </div>
+                )}
+                <p className="mt-1.5 text-xs text-ink/55">
+                  A charge is sent to the other bill as it is posted, carrying this guest's name, so nobody has to work out at checkout why
+                  somebody else's dinner is on it. A rule naming one kind beats a rule for everything.
+                </p>
+              </div>
+
               <p className={heading}>Charges</p>
               <dl className="mt-2 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
@@ -230,6 +304,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                         )}
                         <span className="block text-xs no-underline">
                           {c.at}
+                          {c.routedFrom && ` · for ${c.routedFrom.guest}${c.routedFrom.room ? `, room ${c.routedFrom.room}` : ''}`}
                           {c.reversedBy && ' · cancelled'}
                           {c.reverses && c.approvedBy && ` · ${c.reason} · approved by ${c.approvedBy}`}
                         </span>

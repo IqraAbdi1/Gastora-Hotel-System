@@ -1,5 +1,7 @@
 import { useBrowserSyncedState } from '../hooks/useBrowserSyncedState'
 import type { AuditRun } from '../lib/dayRun'
+import { targetFor } from '../lib/routing'
+import type { RoutingRule } from '../lib/routing'
 import { tokenFor } from '../lib/preRegistration'
 import type { PreRegDetails } from '../lib/preRegistration'
 import type { ReactNode } from 'react'
@@ -207,14 +209,24 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   }
 
   // A charge raises the total, so the balance and every screen that shows it stay correct.
+  /**
+   * Where a charge belongs is decided here, once, at the moment it is posted. A standing instruction
+   * sends it to the bill that agreed to pay it, carrying the name of the guest it was for, so nobody
+   * at checkout has to work out why the manager's bill has somebody else's dinner on it.
+   */
   function addCharge(reservationId: string, input: Omit<FolioCharge, 'id' | 'at'>) {
-    setReservations((list) =>
-      list.map((r) => {
-        if (r.id !== reservationId || r.status !== 'in-house') return r
-        const charge: FolioCharge = { ...input, id: `C-${(r.charges?.length ?? 0) + 1}`, at: stamp() }
+    setReservations((list) => {
+      const from = list.find((x) => x.id === reservationId)
+      const rule = from ? targetFor(from.routing, input.category) : undefined
+      const target = rule?.toReservationId ?? reservationId
+      const routedFrom =
+        rule && from ? { reservationId: from.id, guest: from.guest, room: from.room } : undefined
+      return list.map((r) => {
+        if (r.id !== target || r.status !== 'in-house') return r
+        const charge: FolioCharge = { ...input, id: `C-${(r.charges?.length ?? 0) + 1}`, at: stamp(), routedFrom }
         return { ...r, total: r.total + input.amount, charges: [...(r.charges ?? []), charge] }
-      }),
-    )
+      })
+    })
   }
 
   // A wrong charge is never deleted: a reversing line of the same amount is added next to it, both carrying
@@ -305,6 +317,11 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setReservations((list) =>
       list.map((r) => (r.id === reservationId && r.preReg ? { ...r, preReg: { ...r.preReg, acceptedAt: stamp(), acceptedBy: by } } : r)),
     )
+  }
+
+  /** A standing instruction that some of this guest's charges belong on another bill. */
+  function setRouting(reservationId: string, rules: RoutingRule[]) {
+    setReservations((list) => list.map((r) => (r.id === reservationId ? { ...r, routing: rules } : r)))
   }
 
   /** Somebody is put in one of a block's rooms, whether days ahead or at the desk. */
@@ -476,6 +493,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         submitPreReg,
         acceptPreReg,
         nameGroupRoom,
+        setRouting,
         releaseRoom,
         auditRuns,
         closeDay,

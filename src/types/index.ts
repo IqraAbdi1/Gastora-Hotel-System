@@ -2,8 +2,9 @@ import type { ConfirmCall } from '../lib/confirmCalls'
 import type { Express } from '../lib/expressCheckout'
 import type { Release } from '../lib/dayRun'
 import type { GroupLink } from '../lib/groups'
+import type { RoutingRule } from '../lib/routing'
 import type { PreReg } from '../lib/preRegistration'
-export type { PreReg, Express, Release, GroupLink }
+export type { PreReg, Express, Release, GroupLink, RoutingRule }
 
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
@@ -40,6 +41,8 @@ export type FolioCharge = {
   category: string
   description: string
   amount: number
+  /** Set when the charge was routed here from another stay, under that guest's instruction. */
+  routedFrom?: { reservationId: string; guest: string; room: string | null }
   /** Set on a reversing line: the id of the charge it cancels. The wrong line is never deleted. */
   reverses?: string
   /** Set on a charge that has been reversed, so the folio can grey it out. */
@@ -153,6 +156,8 @@ export type Reservation = {
   release?: Release
   /** This booking is one room of a block held under a group's name. */
   group?: GroupLink
+  /** Standing instructions sending some of this guest's charges to another bill. */
+  routing?: RoutingRule[]
 }
 export type RoomMove = {
   at: string
