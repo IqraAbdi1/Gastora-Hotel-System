@@ -121,7 +121,7 @@ export default function RevenuePage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Admin"
-        title="Revenue and pace"
+        title="Revenue management"
         description={`${tenant.name}. How fast the next ${AHEAD} nights are filling, against the way this hotel usually fills.`}
       />
 

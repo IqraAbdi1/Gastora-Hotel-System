@@ -72,7 +72,7 @@ export default function ApprovalsPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Manager"
-        title="Approvals to review"
+        title="Approvals"
         description="Money taken off folios and valuables released. Check the photo matches the name."
       />
 

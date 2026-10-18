@@ -109,7 +109,7 @@ export default function ChannelsPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Admin"
-        title="Channels"
+        title="Channel manager"
         description={`${tenant.name}. Where this hotel is sold other than its own desk and its own site.`}
         actions={
           <Button

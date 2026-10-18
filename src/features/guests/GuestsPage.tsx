@@ -129,7 +129,7 @@ export default function GuestsPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Front desk"
-        title="Guests"
+        title="Guest profiles"
         description="Everybody the hotel knows. Search by name, telephone or email."
         actions={<Button onClick={() => setCreating(true)}>New guest</Button>}
       />

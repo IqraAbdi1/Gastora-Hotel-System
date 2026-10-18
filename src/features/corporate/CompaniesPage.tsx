@@ -124,7 +124,7 @@ export default function CompaniesPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Front desk"
-        title="Companies"
+        title="Corporate accounts"
         description={`Company accounts, credit and agreed prices. Rules for this hotel: ${SIZE_LABEL[policy.size]}, set by Gastora.`}
         meta={<DataSourceBadge />}
         actions={

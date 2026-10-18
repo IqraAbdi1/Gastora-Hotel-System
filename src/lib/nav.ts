@@ -32,20 +32,20 @@ export const modules: NavModule[] = [
     { to: '/desk/folios', label: 'Folios' },
     { to: '/desk/groups', label: 'Groups', feature: 'groups' },
     { to: '/desk/sister-properties', label: 'Sister properties', feature: 'crossProperty' },
-    { to: '/desk/guests', label: 'Guests' },
-    { to: '/desk/feedback', label: 'What guests said' },
-    { to: '/desk/companies', label: 'Companies', badge: 'companies' },
+    { to: '/desk/guests', label: 'Guest profiles' },
+    { to: '/desk/feedback', label: 'Guest feedback' },
+    { to: '/desk/companies', label: 'Corporate accounts', badge: 'companies' },
     { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages' },
-    { to: '/desk/waiting-list', label: 'Waiting list', feature: 'waitlist' },
+    { to: '/desk/waiting-list', label: 'Waitlist', feature: 'waitlist' },
     { to: '/desk/documents', label: 'Guest documents' },
     { to: '/desk/lost-found', label: 'Lost and found' },
     { to: '/desk/night-audit', label: 'Night audit', option: 'nightAudit' },
   ]),
   module('housekeeping', 'Housekeeping', 'housekeeping', [
-    { to: '/housekeeping', label: 'Rooms', end: true, badge: 'toClean' },
+    { to: '/housekeeping', label: 'Room status', end: true, badge: 'toClean' },
     { to: '/housekeeping/tasks', label: 'Tasks', badge: 'openTasks' },
     { to: '/housekeeping/my-tasks', label: 'My tasks' },
-    { to: '/housekeeping/roster', label: 'Roster and record' },
+    { to: '/housekeeping/roster', label: 'Attendant roster' },
     { to: '/housekeeping/inspections', label: 'Inspections', badge: 'toInspect', feature: 'inspections' },
     { to: '/housekeeping/issues', label: 'Issues', badge: 'issues' },
     { to: '/housekeeping/lost-found', label: 'Lost and found' },
@@ -61,23 +61,23 @@ export const modules: NavModule[] = [
     { to: '/pos/orders', label: 'Orders' },
     { to: '/kitchen', label: 'Kitchen display' },
     { to: '/pos/menu', label: 'Menu management' },
-    { to: '/pos/recipes', label: 'Recipe & inventory mapping' },
+    { to: '/pos/recipes', label: 'Recipes and stock' },
   ]),
   module('inventory', 'Inventory', 'inventory', [
     { to: '/inventory/requests', label: 'Store requests', feature: 'supplyChain', badge: 'storeRequests', icon: 'procurement' },
     { to: '/procurement/requests', label: 'Supply requests', feature: 'requests', badge: 'requests' },
     { to: '/inventory', label: 'Stock', end: true, feature: 'stockControl' },
-    { to: '/inventory/receipts', label: 'Receipts', feature: 'stockControl' },
+    { to: '/inventory/receipts', label: 'Goods received', feature: 'stockControl' },
     { to: '/inventory/counts', label: 'Stock counts', feature: 'stockControl' },
-    { to: '/inventory/losses', label: 'Damaged & lost', feature: 'lossReports', badge: 'losses' },
-    { to: '/inventory/movements', label: 'Movements', feature: 'stockControl' },
+    { to: '/inventory/losses', label: 'Damage and loss', feature: 'lossReports', badge: 'losses' },
+    { to: '/inventory/movements', label: 'Stock movements', feature: 'stockControl' },
   ]),
   module('procurement', 'Procurement', 'procurement', [
     { to: '/procurement', label: 'Purchase orders', end: true, feature: 'supplyChain' },
     { to: '/procurement/audit', label: 'Audit log', feature: 'supplyChain' },
     { to: '/procurement/suppliers', label: 'Suppliers', feature: 'supplyChain' },
   ]),
-  module('hr', 'HR & Accounting', 'hr', [
+  module('hr', 'HR and accounting', 'hr', [
     { to: '/hr', label: 'Staff', end: true },
     { to: '/hr/payroll', label: 'Payroll' },
     { to: '/hr/ledger', label: 'Ledger' },
@@ -86,16 +86,18 @@ export const modules: NavModule[] = [
   module('admin', 'Admin', 'admin', [
     { to: '/admin', label: 'Hotel settings', end: true },
     { to: '/admin/taxes', label: 'Taxes and EFRIS', feature: 'taxLines' },
-    { to: '/admin/approvals', label: 'Approvals to review' },
+    { to: '/admin/approvals', label: 'Approvals' },
     { to: '/admin/policies', label: 'Rates and policies' },
-    { to: '/admin/revenue', label: 'Revenue and pace', feature: 'revenue' },
-    { to: '/admin/channels', label: 'Channels', feature: 'channels' },
+    { to: '/admin/revenue', label: 'Revenue management', feature: 'revenue' },
+    { to: '/admin/channels', label: 'Channel manager', feature: 'channels' },
   ]),
 ]
 
 // Separate apps, not hotel modules.
 export const otherApps = [
-  { to: '/guest', label: 'Guest portal' },
+  // The hotel's own booking page, as a guest meets it. The wider guest portal is not built yet, so this
+  // points at what exists rather than at a placeholder saying the words.
+  { to: '/book', label: 'Booking page', feature: 'bookingEngine' },
   { to: '/platform', label: 'Platform admin' },
 ]
 

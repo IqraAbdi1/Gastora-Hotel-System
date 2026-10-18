@@ -38,7 +38,7 @@ export default function FeedbackPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Front desk"
-        title="What guests said"
+        title="Guest feedback"
         description="Complaints, compliments and suggestions, with what was done about them."
         actions={<Button onClick={() => setLogging(true)}>Write one down</Button>}
       />

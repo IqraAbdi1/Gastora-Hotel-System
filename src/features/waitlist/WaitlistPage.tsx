@@ -69,7 +69,7 @@ export default function WaitlistPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Front desk"
-        title="Waiting list"
+        title="Waitlist"
         description="Guests the hotel could not take. When a room comes free, the system says whose it is."
         actions={<Button onClick={() => setAdding(true)}>Add someone</Button>}
       />

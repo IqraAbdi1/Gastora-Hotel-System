@@ -95,7 +95,7 @@ export default function RosterPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow="Housekeeping"
-        title="Roster and cleaning record"
+        title="Attendant roster"
         description="Who is on which room today, and who cleaned what. Useful when a guest asks about their room."
         meta={<Badge tone="neutral">{TODAY}</Badge>}
         actions={

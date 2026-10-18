@@ -465,7 +465,7 @@ export default function PosPage() {
                 : isPayments
                   ? 'Payment Processing'
                   : isRecipes
-                    ? 'Recipe & Inventory Mapping'
+                    ? 'Recipes and stock'
                     : 'Menus & new order'
         }
         description={
@@ -503,7 +503,7 @@ export default function PosPage() {
                 <option value="/pos/tables">Table Management</option>
                 <option value="/pos/menu">Menu Management</option>
                 <option value="/pos/payments">Payment Processing</option>
-                <option value="/pos/recipes">Recipe & Inventory Mapping</option>
+                <option value="/pos/recipes">Recipes and stock</option>
                 <option value="/kitchen">Kitchen Display System</option>
               </select>
             </label>
@@ -597,14 +597,14 @@ export default function PosPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-ink/50">Removing a menu item also removes its recipe mapping. Existing completed sales remain in history. To make an item available for checkout, configure its recipe on the Recipe & inventory mapping page.</p>
+          <p className="text-xs text-ink/50">Removing a menu item also removes its recipe mapping. Existing completed sales remain in history. To make an item available for checkout, configure its recipe on the Recipes and stock page.</p>
         </section>
       )}
 
       {isRecipes && (
         <section className="space-y-5 rounded-xl border border-black/5 bg-white p-4">
           <div>
-            <h2 className="text-lg font-bold">Recipe & inventory mapping</h2>
+            <h2 className="text-lg font-bold">Recipes and stock</h2>
             <p className="mt-1 text-sm text-ink/60">Choose a menu item and map every ingredient to the corresponding inventory stock item. Ingredients are deducted only after a successful completed checkout.</p>
           </div>
 

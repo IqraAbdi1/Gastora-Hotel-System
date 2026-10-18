@@ -108,13 +108,13 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
   },
   {
     key: 'preRegistration',
-    label: 'Fill in before arrival',
+    label: 'Online pre-registration',
     blurb:
       'The guest is sent a link the day before and fills in their own details from their phone. The desk checks what they sent against the ID instead of typing it. Needs guest messages.',
   },
   {
     key: 'waitlist',
-    label: 'Waiting list',
+    label: 'Waitlist',
     blurb:
       'Guests the hotel had to turn away are kept on a list. When a cancellation frees the room they asked for, the system says whose it is and the desk tells them. A room is offered, never held.',
   },
@@ -156,13 +156,13 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
   },
   {
     key: 'revenue',
-    label: 'Revenue and pace',
+    label: 'Revenue management',
     blurb:
       "How fast each night ahead is filling, measured against the way this hotel's own past nights filled by the same point. Shows what is on the books, what came in this week, and where a night is likely to finish. It needs the hotel's own history, so a new hotel sees it fill up over its first months.",
   },
   {
     key: 'idScan',
-    label: 'Read the ID',
+    label: 'ID scanning',
     blurb:
       "The front desk shows a national ID or passport to the camera and the check-in form fills itself from the strip on the card. Every field is checked against the card's own check digits and the receptionist confirms it. A driving permit has no strip and is still typed.",
   },
