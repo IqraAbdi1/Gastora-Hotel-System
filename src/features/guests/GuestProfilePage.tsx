@@ -8,6 +8,8 @@ import { useHotel } from '../../lib/hotelContext'
 import { benefitList, isSensitiveTag, loyaltyKnown, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
 import type { Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
+import { forGuest, KIND_TONE, STATE_TONE } from '../../lib/feedback'
+import { useFeedback } from '../feedback/useFeedback'
 import { useMessages } from '../messages/messagesContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
@@ -25,6 +27,7 @@ export default function GuestProfilePage() {
   const { guests, reservations } = useHotel()
   const { options, features } = useFeatures()
   const { messages } = useMessages()
+  const { feedback } = useFeedback()
   const { can } = useAuth()
   // The desk recognises and serves. The whole record belongs to whoever answers for the hotel.
   const full = can('seeGuestRecord')
@@ -64,6 +67,8 @@ export default function GuestProfilePage() {
   const next = known ? nextTier(history, options.loyalty) : null
   const owing = stays.reduce((n, r) => n + (r.status === 'cancelled' ? 0 : Math.max(0, r.total - r.paid)), 0)
   const tags = guest.preferences?.tags ?? []
+  // What this guest has said, so nobody walks up to them without knowing it went wrong last time.
+  const said = forGuest(feedback, guest.id, guest.name)
 
   const details: [string, string | undefined][] = [
     ['Telephone', guest.phone],
@@ -261,6 +266,30 @@ export default function GuestProfilePage() {
           </Card>
         )}
       </div>
+
+      {said.length > 0 && (
+        <Card title="What they have said" icon="alert" count={said.length} padded={false}>
+          <ul className="divide-y divide-ink/5">
+            {said.map((f) => (
+              <li key={f.id} className="p-3.5">
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <Badge tone={KIND_TONE[f.kind]} dot>
+                    {f.about}
+                  </Badge>
+                  <Badge tone={STATE_TONE[f.state]}>{f.state}</Badge>
+                  {f.rating !== undefined && <span className="text-xs text-ink/55">{f.rating} out of 5</span>}
+                </p>
+                <p className="mt-1 text-sm text-ink/80">{f.text}</p>
+                {f.resolution && <p className="mt-1 text-sm text-good">{f.resolution.text}</p>}
+                <p className="mt-0.5 text-xs text-ink/45">
+                  {f.at}
+                  {f.room ? ` · room ${f.room}` : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <RelationshipsCard guest={guest} />
 

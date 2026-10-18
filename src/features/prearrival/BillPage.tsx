@@ -4,6 +4,7 @@ import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { folioOf } from '../../lib/folio'
 import { useHotel } from '../../lib/hotelContext'
 import { tokenFor } from '../../lib/preRegistration'
+import GuestFeedbackForm from '../feedback/GuestFeedbackForm'
 import { useFeatures } from '../platform/featuresContext'
 
 // The guest's own copy of the bill, opened from the link in the message after an express checkout.
@@ -65,6 +66,8 @@ export default function BillPage() {
       <p className="mt-4 text-xs text-ink/55">
         Shown as at {TODAY}. If anything here is not as you expected, reply to the message and the hotel will look at it.
       </p>
+
+      <GuestFeedbackForm stay={stay} />
     </Shell>
   )
 }

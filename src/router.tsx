@@ -8,6 +8,7 @@ import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import RevenuePage from './features/revenue/RevenuePage'
 import BookPage from './features/book/BookPage'
 import ChannelsPage from './features/channels/ChannelsPage'
+import FeedbackPage from './features/feedback/FeedbackPage'
 import GuestsPage from './features/guests/GuestsPage'
 import GuestProfilePage from './features/guests/GuestProfilePage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
           { path: 'desk/companies', element: <CompaniesPage /> },
           { path: 'desk/documents', element: <GuestDocumentsPage /> },
           { path: 'desk/guests', element: <GuestsPage /> },
+          { path: 'desk/feedback', element: <FeedbackPage /> },
           { path: 'desk/guests/:guestId', element: <GuestProfilePage /> },
           { path: 'desk/lost-found', element: <LostFoundPage /> },
           { path: 'housekeeping/lost-found', element: <LostFoundPage /> },

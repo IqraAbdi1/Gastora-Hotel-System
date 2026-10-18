@@ -33,6 +33,7 @@ export const modules: NavModule[] = [
     { to: '/desk/groups', label: 'Groups', feature: 'groups' },
     { to: '/desk/sister-properties', label: 'Sister properties', feature: 'crossProperty' },
     { to: '/desk/guests', label: 'Guests' },
+    { to: '/desk/feedback', label: 'What guests said' },
     { to: '/desk/companies', label: 'Companies', badge: 'companies' },
     { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages' },
     { to: '/desk/waiting-list', label: 'Waiting list', feature: 'waitlist' },
