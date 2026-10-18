@@ -15,6 +15,7 @@
 // Pure rules only: no React.
 
 import { nightsOf } from './booking'
+import { nightlyOf } from './dashboard'
 import type { Reservation, Room } from '../types'
 
 /** A booking that counts as sold for a night: not cancelled, not a no-show, not the second guest in a share. */
@@ -131,6 +132,8 @@ export interface NightPace {
   /** Where the night is likely to finish if it fills the way this hotel usually fills. */
   forecast?: number
   verdict: PaceVerdict
+  /** Room money already sold for that night, at the prices those bookings were sold at. */
+  revenue: number
 }
 
 /**
@@ -173,6 +176,73 @@ export function paceForNight(
     normalShare,
     forecast,
     verdict,
+    revenue: revenueNight(reservations, date),
+  }
+}
+
+/**
+ * The room money on the books for one night, each stay counted at the price it was actually sold at
+ * rather than at today's rate. A rate rise does not retrospectively enrich a booking already taken.
+ */
+export function revenueNight(reservations: Reservation[], date: string): number {
+  let money = 0
+  for (const r of reservations) {
+    if (!sold(r)) continue
+    if (!(r.arrival <= date && date < r.departure)) continue
+    money += nightlyOf(r)
+  }
+  return money
+}
+
+export interface ForwardKpis {
+  roomsSold: number
+  roomNights: number
+  occupancy: number
+  revenue: number
+  /** The average price of the rooms sold. */
+  adr: number
+  /** That money spread over every room the hotel could have sold, sold or not. */
+  revpar: number
+}
+
+/** The three numbers a revenue manager lives by, for a stretch of nights. */
+export function kpisOfNights(nights: NightPace[]): ForwardKpis {
+  const roomsSold = nights.reduce((n, x) => n + x.onBooks, 0)
+  const roomNights = nights.reduce((n, x) => n + x.sellable, 0)
+  const revenue = nights.reduce((n, x) => n + x.revenue, 0)
+  return {
+    roomsSold,
+    roomNights,
+    occupancy: roomNights ? Math.round((roomsSold / roomNights) * 100) : 0,
+    revenue,
+    adr: roomsSold ? Math.round(revenue / roomsSold) : 0,
+    revpar: roomNights ? Math.round(revenue / roomNights) : 0,
+  }
+}
+
+/** The same three numbers for nights already gone, so forward can be read against achieved. */
+export function kpisBehind(
+  reservations: Reservation[],
+  rooms: Room[],
+  today: string,
+  back = 30,
+): ForwardKpis {
+  const sellable = rooms.filter((r) => r.status !== 'blocked').length
+  let roomsSold = 0
+  let revenue = 0
+  for (let i = 1; i <= back; i++) {
+    const night = addDays(today, -i)
+    roomsSold += soldNight(reservations, night)
+    revenue += revenueNight(reservations, night)
+  }
+  const roomNights = sellable * back
+  return {
+    roomsSold,
+    roomNights,
+    occupancy: roomNights ? Math.round((roomsSold / roomNights) * 100) : 0,
+    revenue,
+    adr: roomsSold ? Math.round(revenue / roomsSold) : 0,
+    revpar: roomNights ? Math.round(revenue / roomNights) : 0,
   }
 }
 
