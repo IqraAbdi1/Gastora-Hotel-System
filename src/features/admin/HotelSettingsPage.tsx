@@ -235,6 +235,29 @@ export default function HotelSettingsPage() {
         </p>
       </section>
 
+      {features.expressCheckout && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-4">
+          <h2 className="font-semibold text-ink">Leaving without stopping at the desk</h2>
+          <p className="mt-1 text-xs text-ink/60">
+            Rule: only a stay secured by a card or a company account can settle itself. A deposit already taken cannot be
+            charged again, so those guests always settle at the desk.
+          </p>
+          <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
+            Settle by itself up to (UGX)
+            <input
+              inputMode="numeric"
+              value={String(options.expressMax)}
+              onChange={(e) => setOptions({ expressMax: Number(e.target.value.replace(/\D/g, '')) || 0 })}
+              className={box}
+            />
+          </label>
+          <p className="mt-1 text-xs text-ink/55">
+            Above this a person looks at it before the guest leaves. 0 means no ceiling, which is a decision rather than
+            a setting: it says any bill at all may be charged with nobody watching.
+          </p>
+        </section>
+      )}
+
       <section className="rounded-xl border border-ink/10 bg-surface p-4">
         <h2 className="font-semibold text-ink">Guest records</h2>
         <p className="mt-1 text-xs text-ink/60">

@@ -42,7 +42,7 @@ export const reservations: Reservation[] = [
   { id: 'R-0911', guestId: 'G-4', guest: 'David Okello', roomType: 'Standard', room: '105', arrival: day(-20), departure: day(-18), status: 'checked-out', total: 300000, paid: 300000, source: 'front desk', checkedOutAt: `${day(-18)} 10:25` },
 
   { id: 'R-1042', guestId: 'G-1', guest: 'Amina Nakato', roomType: 'Deluxe', room: null, arrival: day(0), departure: day(2), status: 'booked', total: 520000, paid: 156000, source: 'online' },
-  { id: 'R-1044', guestId: 'G-2', guest: 'Grace Namukasa', roomType: 'Suite', room: null, arrival: day(0), departure: day(1), status: 'booked', total: 420000, paid: 126000, source: 'ota' },
+  { id: 'R-1044', guestId: 'G-2', guest: 'Grace Namukasa', roomType: 'Suite', room: null, arrival: day(0), departure: day(1), status: 'booked', total: 420000, paid: 126000, source: 'ota', guarantee: 'card' },
   { id: 'R-1045', guestId: 'G-3', guest: 'Moses Kato', roomType: 'Standard', room: null, arrival: day(0), departure: day(3), status: 'booked', total: 540000, paid: 50000, source: 'phone' },
   { id: 'R-1043', guestId: 'G-4', guest: 'David Okello', roomType: 'Standard', room: '102', arrival: day(-2), departure: day(1), status: 'in-house', total: 624000, paid: 162000, source: 'walk-in', guarantee: 'card' },
   { id: 'R-1052', guestId: 'G-10', guest: 'Ruth Nabirye', roomType: 'Deluxe', room: '204', arrival: day(-2), departure: day(0), status: 'in-house', total: 420000, paid: 126000, source: 'online', guarantee: 'card' },

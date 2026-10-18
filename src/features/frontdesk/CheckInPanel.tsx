@@ -13,6 +13,7 @@ import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { folioOf, paymentMethods } from '../../lib/folio'
 import { suggestedDeposit } from '../../lib/booking'
 import { useHotel } from '../../lib/hotelContext'
+import { expressCheck } from '../../lib/expressCheckout'
 import { idTypeFor } from '../../lib/mrz'
 import type { MrzRead } from '../../lib/mrz'
 import { stayTaxes } from '../../lib/tax'
@@ -74,8 +75,8 @@ function Row({ label, value, strong, tone }: { label: string; value: ReactNode; 
 // Check-in as a short wizard on its own page: guest, ID, room, payment, signature.
 // A stay billed to a company starts with the company check, because nothing else matters until it clears.
 export default function CheckInPanel({ reservation: initial, room: preferred, onClose }: Props) {
-  const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest, acceptPreReg } = useHotel()
-  const { tax, features } = useFeatures()
+  const { rooms, reservations, guests, checkIn, addPayment, addCharge, updateGuest, acceptPreReg, agreeExpress } = useHotel()
+  const { tax, features, options } = useFeatures()
   // Always read the latest booking, so the company checks show what was just confirmed.
   const r = reservations.find((x) => x.id === initial.id) ?? initial
   const { byId } = useCorporate()
@@ -146,6 +147,8 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const [marketingConsent, setMarketingConsent] = useState(pre?.marketingConsent ?? false)
   // Remembering a guest between stays is a programme they join, not something done to them quietly.
   const [loyaltyConsent, setLoyaltyConsent] = useState(pre?.loyaltyConsent ?? known?.loyaltyConsent ?? false)
+  // Offered only when there is something the hotel could actually charge on the morning.
+  const [wantsExpress, setWantsExpress] = useState(false)
   const [sensitiveConsent, setSensitiveConsent] = useState(known?.sensitiveConsent ?? false)
   const [method, setMethod] = useState(paymentMethods[0])
   const [payText, setPayText] = useState('')
@@ -195,6 +198,8 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
     setScanned({ source, lines: read.lines.join('\n'), idName: read.fullName })
     setScanOpen(false)
   }
+
+  const expressOk = expressCheck(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined, options.expressMax)
 
   function confirm() {
     checkIn(r.id, room, {
@@ -246,6 +251,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
     }
     // What the guest sent before arriving has now been seen against their ID by a person.
     if (r.preReg?.submittedAt && !r.preReg.acceptedAt) acceptPreReg(r.id, user?.name ?? 'Front desk')
+    if (wantsExpress && expressOk.ok) agreeExpress(r.id, user?.name ?? 'Front desk', 'desk')
     // Taxes are posted first, so the balance the payment is taken against is the full one.
     for (const l of taxes.onTop) addCharge(r.id, { category: l.category, description: l.label, amount: l.amount })
     // The payment goes on the folio straight after check-in, so the balance everywhere is right.
@@ -593,6 +599,15 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} className="mt-1" />
                       <span>The guest agrees to receive offers and news from the hotel (optional).</span>
                     </label>
+                    {features.expressCheckout && expressOk.ok && (
+                      <label className="mt-2 flex items-start gap-2 text-sm">
+                        <input type="checkbox" checked={wantsExpress} onChange={(e) => setWantsExpress(e.target.checked)} className="mt-1" />
+                        <span>
+                          <span className="font-medium">Leave without stopping at the desk.</span> On the morning they leave, the bill is charged
+                          to {expressOk.chargeTo} and sent to them, so they can simply go (optional).
+                        </span>
+                      </label>
+                    )}
 
                     <div className="mt-3 rounded-lg border border-ink/10 bg-canvas/60 p-2.5 text-xs text-ink/70">
                       <p className="font-semibold text-ink">What the hotel keeps, and why</p>

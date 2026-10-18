@@ -24,11 +24,7 @@ export interface Express {
   method?: string
 }
 
-export type ExpressRefusal =
-  | 'nothing to charge'
-  | 'company only covers the room'
-  | 'over the limit'
-  | 'not in house'
+export type ExpressRefusal = 'nothing to charge' | 'company only covers the room' | 'over the limit'
 
 export const REFUSAL_NOTE: Record<ExpressRefusal, string> = {
   'nothing to charge':
@@ -36,7 +32,6 @@ export const REFUSAL_NOTE: Record<ExpressRefusal, string> = {
   'company only covers the room':
     'The company pays the room but the guest owes extras, and there is no card on file for them.',
   'over the limit': 'The balance is above what this hotel allows to be settled without a person looking at it.',
-  'not in house': 'The guest is not in house.',
 }
 
 export interface ExpressCheck {
@@ -51,7 +46,8 @@ export interface ExpressCheck {
 }
 
 /**
- * Whether this stay can leave by itself, and what would happen if it did.
+ * Whether this stay can leave by itself, and what would happen if it did. Asked at check-in as well as
+ * on the morning, so it says nothing about where the guest is now - only about what can be charged.
  * `limit` is the most the hotel allows to be settled with nobody looking; 0 means no limit.
  */
 export function expressCheck(r: Reservation, accountName: string | undefined, limit: number): ExpressCheck {
@@ -62,7 +58,6 @@ export function expressCheck(r: Reservation, accountName: string | undefined, li
   const company = r.guarantee === 'company' || !!r.corporate
   const chargeTo = card ? 'the card on file' : company && guestOwed === 0 ? 'the company account' : ''
 
-  if (r.status !== 'in-house') return { ok: false, why: 'not in house', guestOwed, companyOwed, chargeTo }
   // Nothing owed by the guest is the simplest case of all: there is nothing to collect.
   if (guestOwed === 0) return { ok: true, guestOwed, companyOwed, chargeTo: companyOwed > 0 ? 'the company account' : 'nothing to collect' }
   if (!card) {
