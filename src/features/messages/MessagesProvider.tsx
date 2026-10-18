@@ -87,17 +87,18 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
           body,
           at: stamp(),
           // A message nobody can receive is kept, not hidden: the desk should see that it could not go.
-          status: allowed.ok ? (settings.autoSend ? 'sent' : 'queued') : 'failed',
-          sentAt: allowed.ok && settings.autoSend ? stamp() : undefined,
+          status: allowed.ok ? (input.sendNow || settings.autoSend ? 'sent' : 'queued') : 'failed',
+          sentAt: allowed.ok && (input.sendNow || settings.autoSend) ? stamp() : undefined,
           problem: allowed.why,
           reservationId: input.reservationId,
+          by: input.sendNow ? input.by : undefined,
           auto: input.auto ?? false,
         }
         return [created, ...list]
       })
       return created
     },
-    [detailsOf, reservations, settings],
+    [detailsOf, reservations, settings, tenant.name],
   )
 
   // What the rules say is due now. Written during render, the same way the day's cleaning is worked out,

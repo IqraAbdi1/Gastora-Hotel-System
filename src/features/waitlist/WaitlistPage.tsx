@@ -48,8 +48,11 @@ export default function WaitlistPage() {
 
   function tell(entry: WaitEntry) {
     offer(entry.id)
+    // Telling somebody is the message. Leaving it in an outbox would waste the two hours they are given.
     queue({
       kind: 'room now free',
+      sendNow: true,
+      by: me,
       to: entry.phone,
       guestName: entry.guestName,
       vars: {

@@ -31,12 +31,25 @@ export default function MessagesPage() {
   const { options, setOptions } = useFeatures()
   const { user } = useAuth()
   const [view, setView] = useState<View>('outbox')
+  const [find, setFind] = useState('')
+  const [kind, setKind] = useState<MessageKind | 'all'>('all')
 
   const settings = options.messaging ?? DEFAULT_MESSAGING
   const me = user?.staffName ?? user?.name ?? 'Front desk'
 
+  // Search first, then narrow by what the message is. A desk looking for one guest should not scroll.
+  const match = useMemo(() => {
+    const q = find.trim().toLowerCase()
+    return (m: GuestMessage) =>
+      (kind === 'all' || m.kind === kind) &&
+      (q === '' || m.guestName.toLowerCase().includes(q) || m.to.toLowerCase().includes(q) || m.body.toLowerCase().includes(q))
+  }, [find, kind])
+
   const sent = useMemo(() => messages.filter((m) => m.status === 'sent'), [messages])
   const failed = useMemo(() => messages.filter((m) => m.status === 'failed'), [messages])
+
+  const shownOutbox = useMemo(() => outbox.filter(match), [outbox, match])
+  const shownSent = useMemo(() => sent.filter(match), [sent, match])
 
   const patch = (next: Partial<typeof settings>) => setOptions({ messaging: { ...settings, ...next } })
 
@@ -74,13 +87,50 @@ export default function MessagesPage() {
         label="Messages view"
       />
 
+      {(view === 'outbox' || view === 'sent') && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={find}
+            onChange={(e) => setFind(e.target.value)}
+            placeholder="Search a guest, a number or anything in the message"
+            aria-label="Search the messages"
+            className="min-w-[16rem] flex-1 rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:border-brand focus:outline-none"
+          />
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as MessageKind | 'all')}
+            aria-label="Which message"
+            className="rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+          >
+            <option value="all">Every message</option>
+            {(Object.keys(KIND_LABEL) as MessageKind[]).map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+          {(find !== '' || kind !== 'all') && (
+            <button
+              type="button"
+              className="text-sm font-semibold text-brand"
+              onClick={() => {
+                setFind('')
+                setKind('all')
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {view === 'outbox' && (
         <Card title="Waiting to go" description="Check the wording, then send. Nothing goes out on its own unless the hotel has asked for that." padded>
-          {outbox.length === 0 ? (
-            <p className="text-sm text-ink/60">Nothing waiting. Messages appear here as bookings are made and guests arrive.</p>
+          {shownOutbox.length === 0 ? (
+            <p className="text-sm text-ink/60">{outbox.length === 0 ? 'Nothing waiting. Messages appear here as bookings are made and guests arrive.' : 'Nothing waiting matches that search.'}</p>
           ) : (
             <ul className="space-y-3">
-              {outbox.map((m) => (
+              {shownOutbox.map((m) => (
                 <li key={m.id} className="rounded-xl border border-ink/10 bg-canvas p-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="brand">{KIND_LABEL[m.kind]}</Badge>
@@ -120,11 +170,11 @@ export default function MessagesPage() {
 
       {view === 'sent' && (
         <Card title="Sent" description="The hotel's record of what the guest was told and when." padded>
-          {sent.length === 0 ? (
-            <p className="text-sm text-ink/60">Nothing has been sent yet.</p>
+          {shownSent.length === 0 ? (
+            <p className="text-sm text-ink/60">{sent.length === 0 ? 'Nothing has been sent yet.' : 'Nothing sent matches that search.'}</p>
           ) : (
             <ul className="space-y-2">
-              {[...sent].map((m) => (
+              {shownSent.map((m) => (
                 <li key={m.id} className="border-b border-ink/5 pb-2 last:border-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={statusTone[m.status]} dot>

@@ -11,6 +11,10 @@ export interface QueueInput {
   /** Written by a person instead of taken from the hotel's wording. */
   body?: string
   auto?: boolean
+  /** Send it as it is written, rather than leaving it in the outbox. */
+  sendNow?: boolean
+  /** Who is sending it, when it goes straight out. */
+  by?: string
 }
 
 export interface MessagesValue {

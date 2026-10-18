@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import IdPhotoInput from '../../components/IdPhotoInput'
 import IdScanSheet from '../../components/IdScanSheet'
 import type { ScanSource } from '../../components/IdScanSheet'
 import SignaturePad from '../../components/SignaturePad'
@@ -172,14 +171,14 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const valid: Record<string, boolean> = {
     company: true,
     details: phone.trim() !== '' && adults >= 1,
-    id: idNumber.trim() !== '' && !!idPhoto,
+    id: idNumber.trim() !== '',
     room: room !== '',
     payment: payOk,
     confirm: !!signature && termsAccepted,
   }
   const hint: Record<string, string> = {
     details: 'Enter the guest phone number to continue.',
-    id: 'Enter the ID number and add a photo of the ID.',
+    id: 'Enter the ID number to continue.',
     room: 'Choose a room to continue.',
     payment: 'The payment cannot be more than the balance.',
     confirm: 'Add the signature and accept the terms.',
@@ -512,15 +511,10 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       </Field>
                       <Field label="Nationality">{(id) => <Input id={id} value={nationality} onChange={(e) => setNationality(e.target.value)} />}</Field>
                     </div>
-                    <div className="mt-4">
-                      <p className="mb-1.5 text-sm font-medium text-ink/80">
-                        Photo of the ID <span className="text-bad">*</span>
-                      </p>
-                      <IdPhotoInput value={idPhoto} onChange={setIdPhoto} />
-                      <p className="mt-2 text-xs text-ink/55">
-                        The ID photo is personal data. In this prototype it is kept in memory only and disappears on refresh.
-                      </p>
-                    </div>
+                    <p className="mt-4 text-xs text-ink/55">
+                      The ID is checked against the guest in front of you. What the card reader captures is kept with the stay; the hotel does not
+                      keep a separate photograph.
+                    </p>
                     {scanOpen && <IdScanSheet photo={idPhoto} onUse={applyScan} onClose={() => setScanOpen(false)} />}
                   </Card>
                 )}
