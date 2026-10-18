@@ -8,6 +8,8 @@ import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import RevenuePage from './features/revenue/RevenuePage'
 import BookPage from './features/book/BookPage'
 import ChannelsPage from './features/channels/ChannelsPage'
+import GuestsPage from './features/guests/GuestsPage'
+import GuestProfilePage from './features/guests/GuestProfilePage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
 import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
@@ -86,6 +88,8 @@ export const router = createBrowserRouter([
           { path: 'desk/sister-properties', element: <CrsPage /> },
           { path: 'desk/companies', element: <CompaniesPage /> },
           { path: 'desk/documents', element: <GuestDocumentsPage /> },
+          { path: 'desk/guests', element: <GuestsPage /> },
+          { path: 'desk/guests/:guestId', element: <GuestProfilePage /> },
           { path: 'desk/lost-found', element: <LostFoundPage /> },
           { path: 'housekeeping/lost-found', element: <LostFoundPage /> },
           { path: 'desk/night-audit', element: <NightAuditPage /> },

@@ -1,117 +1,299 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import StatusPill from '../../components/StatusPill'
+import { Badge, Button, Card, DataTable, PageHeader, StatCard } from '../../components/ui'
+import type { Column } from '../../components/ui'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import { benefitList, isSensitiveTag, loyaltyKnown, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
+import type { Reservation } from '../../types'
+import { useMessages } from '../messages/messagesContext'
+import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
 
+/**
+ * One guest, gathered: who they are, what they have asked for, what they have spent, what they agreed
+ * to and when, what the hotel has sent them, and every stay.
+ *
+ * It is assembled from records the hotel already keeps rather than from a separate marketing store,
+ * which is what keeps it true. A profile that disagrees with the folios is worse than none.
+ */
 export default function GuestProfilePage() {
   const { guestId } = useParams()
   const { guests, reservations } = useHotel()
+  const { options, features } = useFeatures()
+  const { messages } = useMessages()
   const [editing, setEditing] = useState(false)
 
   const guest = guests.find((g) => g.id === guestId)
 
+  const stays = useMemo(
+    () =>
+      guest
+        ? reservations
+            .filter((r) => (r.guestId ? r.guestId === guest.id : r.guest === guest.name))
+            .sort((a, b) => b.arrival.localeCompare(a.arrival))
+        : [],
+    [guest, reservations],
+  )
+
+  const theirs = useMemo(() => {
+    const ids = new Set(stays.map((s) => s.id))
+    return messages.filter((m) => m.reservationId && ids.has(m.reservationId)).slice(0, 8)
+  }, [messages, stays])
+
   if (!guest) {
     return (
-      <section className="space-y-2">
-        <h1 className="text-2xl font-bold text-brand">Guest not found</h1>
-        <Link to="/guests" className="text-sm font-semibold text-brand">
-          Back to guests
+      <div className="space-y-3">
+        <PageHeader eyebrow="Front desk" title="Guest not found" />
+        <Link to="/desk/guests" className="text-sm font-semibold text-brand">
+          Back to the guests
         </Link>
-      </section>
+      </div>
     )
   }
 
-  // A booking belongs to this guest by id. Older bookings with no id match on the exact name.
-  const stays = reservations
-    .filter((r) => (r.guestId ? r.guestId === guest.id : r.guest === guest.name))
-    .sort((a, b) => b.arrival.localeCompare(a.arrival))
+  const history = stayHistory(guest, reservations)
+  const known = loyaltyKnown(guest)
+  const tier = known ? tierFor(history, options.loyalty) : null
+  const next = known ? nextTier(history, options.loyalty) : null
+  const owing = stays.reduce((n, r) => n + (r.status === 'cancelled' ? 0 : Math.max(0, r.total - r.paid)), 0)
+  const tags = guest.preferences?.tags ?? []
 
   const details: [string, string | undefined][] = [
-    ['Phone', guest.phone],
+    ['Telephone', guest.phone],
     ['Email', guest.email],
     ['Nationality', guest.nationality],
     ['Date of birth', guest.dateOfBirth ? dayMonth(guest.dateOfBirth) : undefined],
     ['Gender', guest.gender],
     ['Address', guest.address],
-    ['ID', guest.idNumber ? `${guest.idType ?? 'ID'} ending ${guest.idNumber.slice(-4)}` : undefined],
+    ['Identification', guest.idNumber ? `${guest.idType ?? 'ID'} ending ${guest.idNumber.slice(-4)}` : undefined],
+  ]
+
+  const columns: Column<Reservation>[] = [
+    {
+      key: 'stay',
+      header: 'Stay',
+      cell: (r) => (
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">
+            {dayMonth(r.arrival)} to {dayMonth(r.departure)}
+          </p>
+          <p className="text-xs text-ink/55">
+            {r.id} · {r.room ? `Room ${r.room}` : r.roomType}
+            {r.channel ? ` · ${r.channel.name}` : r.source ? ` · ${r.source}` : ''}
+          </p>
+        </div>
+      ),
+    },
+    { key: 'status', header: 'Status', cell: (r) => <StatusPill status={r.status} /> },
+    {
+      key: 'total',
+      header: 'Total',
+      align: 'right',
+      hideBelow: 'sm',
+      cell: (r) => <span className="tabular-nums">{ugx(r.total)}</span>,
+    },
+    {
+      key: 'balance',
+      header: 'Owing',
+      align: 'right',
+      cell: (r) => {
+        const balance = Math.max(0, r.total - r.paid)
+        return (
+          <span className={`tabular-nums ${balance > 0 && r.status !== 'cancelled' ? 'font-semibold text-bad' : 'text-ink/45'}`}>
+            {balance > 0 && r.status !== 'cancelled' ? ugx(balance) : '—'}
+          </span>
+        )
+      },
+    },
   ]
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <Link to="/guests" className="text-sm font-semibold text-brand">
-        Back to guests
-      </Link>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Front desk"
+        title={guest.name}
+        description={`${guest.id}${guest.phone ? ` · ${guest.phone}` : ''}`}
+        meta={
+          <div className="flex flex-wrap gap-2">
+            {guest.vip && <Badge tone="warn">VIP</Badge>}
+            {tier && <Badge tone="good">{tier.name}</Badge>}
+            {!known && <Badge tone="neutral">Not in the programme</Badge>}
+          </div>
+        }
+        actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">{guest.name}</h1>
-          {guest.vip && (
-            <span className="rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold text-warn">VIP</span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold"
-        >
-          Edit profile
-        </button>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Stays" icon="guests" value={String(history.stays)} hint={`${history.nights} nights altogether`} />
+        <StatCard label="Spent" icon="money" value={ugx(history.spent)} hint="Finished stays" />
+        <StatCard
+          label="Last here"
+          icon="calendar"
+          value={history.lastStay ? dayMonth(history.lastStay) : '—'}
+          hint={history.lastStay ? 'Departed' : 'Never stayed'}
+        />
+        <StatCard
+          label="Owing now"
+          icon="alert"
+          value={ugx(owing)}
+          hint={owing > 0 ? 'Across open stays' : 'Nothing outstanding'}
+          tone={owing > 0 ? 'bad' : 'good'}
+        />
       </div>
 
-      <section className="space-y-3 rounded-xl border border-ink/10 bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Details</p>
-        <dl className="space-y-2 text-sm">
-          {details.map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-4">
-              <dt className="text-ink/60">{label}</dt>
-              <dd className="text-right font-medium">{value ?? '-'}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card title="Who they are" icon="guests" padded>
+          <dl className="space-y-2 text-sm">
+            {details.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4">
+                <dt className="text-ink/60">{label}</dt>
+                <dd className="text-right font-medium text-ink/85">{value ?? '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
 
-      <section className="space-y-3 rounded-xl border border-ink/10 bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Stays</p>
-        {stays.length === 0 ? (
-          <p className="text-sm text-ink/60">No bookings for this guest yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/60">
-                <tr>
-                  <th className="py-2 pr-4">Booking</th>
-                  <th className="py-2 pr-4">Room</th>
-                  <th className="py-2 pr-4">Stay</th>
-                  <th className="py-2 pr-4">Status</th>
-                  <th className="py-2 text-right">Balance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink/10">
-                {stays.map((r) => {
-                  const balance = r.total - r.paid
-                  return (
-                    <tr key={r.id}>
-                      <td className="py-2 pr-4">{r.id}</td>
-                      <td className="py-2 pr-4">{r.room ?? r.roomType}</td>
-                      <td className="py-2 pr-4">
-                        {dayMonth(r.arrival)} to {dayMonth(r.departure)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <StatusPill status={r.status} />
-                      </td>
-                      <td className={`py-2 text-right font-medium ${balance > 0 ? 'text-bad' : 'text-good'}`}>
-                        {ugx(balance)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+        <Card title="What they like" icon="bed" padded description="Taken at check-in and kept between stays.">
+          {tags.length === 0 && !guest.preferences?.other ? (
+            <p className="text-sm text-ink/55">Nothing recorded yet.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((t) => (
+                  <span
+                    key={t}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${
+                      isSensitiveTag(t) ? 'bg-warn/10 text-warn ring-warn/30' : 'bg-brand/10 text-brand ring-brand/30'
+                    }`}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              {guest.preferences?.other && <p className="mt-2 text-sm text-ink/75">{guest.preferences.other}</p>}
+              {tags.some(isSensitiveTag) && (
+                <p className="mt-2 text-xs text-ink/55">
+                  The amber ones are dietary or access needs. The law treats those as sensitive, and the guest agreed
+                  to the hotel keeping them.
+                </p>
+              )}
+            </>
+          )}
+        </Card>
+
+        <Card title="What they agreed to" icon="check" padded description="Kept with the date it was given.">
+          <ul className="space-y-2 text-sm">
+            {[
+              ['Remembered between stays', guest.loyaltyConsent],
+              ['Offers and news', guest.marketingConsent],
+              ['Dietary and access needs kept', guest.sensitiveConsent],
+            ].map(([label, yes]) => (
+              <li key={String(label)} className="flex items-center justify-between gap-3">
+                <span className="text-ink/70">{label}</span>
+                <Badge tone={yes ? 'good' : 'neutral'} dot={!!yes}>
+                  {yes ? 'Agreed' : 'No'}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-ink/55">
+            {guest.consentAt ? `Last answered ${guest.consentAt}.` : 'Not answered yet.'} The booking, the
+            identification shown at check-in and the bills are kept whatever these say, because the law and the stay
+            require them.
+          </p>
+        </Card>
+
+        {options.loyalty.on && (
+          <Card title="The programme" icon="money" padded>
+            {!known ? (
+              <p className="text-sm text-ink/70">
+                This guest has not agreed to be remembered between stays, so they earn nothing and no tier is counted.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-ink/80">
+                  {tier ? (
+                    <>
+                      <strong>{tier.name}</strong> on {history.stays} stay{history.stays === 1 ? '' : 's'} and{' '}
+                      {history.nights} night{history.nights === 1 ? '' : 's'}.
+                    </>
+                  ) : (
+                    'No tier yet.'
+                  )}
+                </p>
+                {next && (
+                  <p className="mt-1 text-sm text-ink/65">
+                    {next.staysToGo > 0 && `${next.staysToGo} more stay${next.staysToGo === 1 ? '' : 's'}`}
+                    {next.staysToGo > 0 && next.nightsToGo > 0 && ' or '}
+                    {next.nightsToGo > 0 && `${next.nightsToGo} more night${next.nightsToGo === 1 ? '' : 's'}`}
+                    {' to reach '}
+                    {next.tier.name}.
+                  </p>
+                )}
+                {tier && benefitList(tier).length > 0 && (
+                  <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-ink/70">
+                    {benefitList(tier).map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </Card>
         )}
-      </section>
+      </div>
+
+      <Card title="Every stay" icon="calendar" count={stays.length} padded={false}>
+        <DataTable
+          columns={columns}
+          rows={stays}
+          rowKey={(r) => r.id}
+          empty={{ title: 'No stays yet', hint: 'A stay appears here as soon as a booking is made.' }}
+        />
+      </Card>
+
+      {features.guestMessages && (
+        <Card title="What the hotel has sent" icon="list" count={theirs.length} padded={false}>
+          {theirs.length === 0 ? (
+            <p className="p-4 text-sm text-ink/55">Nothing has been sent to this guest.</p>
+          ) : (
+            <ul className="divide-y divide-ink/5">
+              {theirs.map((m) => (
+                <li key={m.id} className="p-3.5">
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
+                    {m.kind}
+                    <Badge tone={m.status === 'sent' ? 'good' : m.status === 'cancelled' ? 'neutral' : 'warn'}>
+                      {m.status}
+                    </Badge>
+                  </p>
+                  <p className="mt-0.5 text-sm text-ink/70">{m.body}</p>
+                  <p className="mt-0.5 text-xs text-ink/45">
+                    {m.sentAt ?? m.at}
+                    {m.problem ? ` · ${m.problem}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      {(guest.notes ?? []).length > 0 && (
+        <Card title="Notes" icon="list" count={(guest.notes ?? []).length} padded>
+          <ul className="space-y-2 text-sm">
+            {(guest.notes ?? []).map((n) => (
+              <li key={n.id}>
+                <p className="text-ink/80">{n.text}</p>
+                <p className="text-xs text-ink/45">
+                  {n.by} · {n.at}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {editing && <GuestEditPanel guest={guest} onClose={() => setEditing(false)} />}
     </div>

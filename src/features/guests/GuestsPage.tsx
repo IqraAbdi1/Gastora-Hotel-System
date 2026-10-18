@@ -1,72 +1,170 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import FilterBar from '../../components/FilterBar'
+import { Badge, Button, Card, DataTable, PageHeader, StatCard } from '../../components/ui'
+import type { Column } from '../../components/ui'
+import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
+import { loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
+import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
 
+const PAGE = 12
+
+/**
+ * Everybody the hotel knows.
+ *
+ * Search first: a hotel of any size has more guests than anyone will scroll, and the question is always
+ * about one person. The list carries what a clerk needs to recognise them - how often they come, what
+ * they have spent, when they were last here - and the profile carries the rest.
+ */
 export default function GuestsPage() {
-  const { guests } = useHotel()
+  const { guests, reservations } = useHotel()
+  const { options } = useFeatures()
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
+  const [params, setParams] = useSearchParams()
   const [creating, setCreating] = useState(false)
 
-  const q = search.trim().toLowerCase()
-  const shown = guests.filter(
-    (g) => q === '' || g.name.toLowerCase().includes(q) || g.phone.replace(/\s/g, '').includes(q.replace(/\s/g, '')),
-  )
+  const q = params.get('q') ?? ''
+  const page = Math.max(0, Number(params.get('page') ?? 0) || 0)
+
+  function setParam(key: string, value: string, fallback = '') {
+    const next = new URLSearchParams(params)
+    if (value === fallback) next.delete(key)
+    else next.set(key, value)
+    if (key !== 'page') next.delete('page')
+    setParams(next, { replace: true })
+  }
+
+  const rows = useMemo(() => {
+    const text = q.trim().toLowerCase()
+    const bare = (s: string) => s.replace(/\s/g, '')
+    return guests
+      .filter(
+        (g) =>
+          text === '' ||
+          g.name.toLowerCase().includes(text) ||
+          bare(g.phone ?? '').includes(bare(text)) ||
+          (g.email ?? '').toLowerCase().includes(text),
+      )
+      .map((g) => ({ guest: g, history: stayHistory(g, reservations) }))
+      .sort((a, b) => (b.history.lastStay ?? '').localeCompare(a.history.lastStay ?? ''))
+  }, [guests, reservations, q])
+
+  const returning = rows.filter((r) => r.history.stays > 1).length
+  const vips = guests.filter((g) => g.vip).length
+  const spent = rows.reduce((n, r) => n + r.history.spent, 0)
+
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE))
+  const shown = rows.slice(page * PAGE, page * PAGE + PAGE)
+
+  type Row = (typeof rows)[number]
+  const columns: Column<Row>[] = [
+    {
+      key: 'name',
+      header: 'Guest',
+      cell: ({ guest, history }) => {
+        const tier = loyaltyKnown(guest) ? tierFor(history, options.loyalty) : null
+        return (
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 truncate font-semibold text-ink">
+              {guest.name}
+              {guest.vip && <Badge tone="warn">VIP</Badge>}
+              {tier && <Badge tone="good">{tier.name}</Badge>}
+            </p>
+            <p className="truncate text-xs text-ink/55">
+              {guest.phone}
+              {guest.email ? ` · ${guest.email}` : ''}
+            </p>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'stays',
+      header: 'Stays',
+      align: 'right',
+      cell: ({ history }) => (
+        <div>
+          <p className="tabular-nums text-ink/85">{history.stays}</p>
+          <p className="text-xs text-ink/50">
+            {history.nights} night{history.nights === 1 ? '' : 's'}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: 'spent',
+      header: 'Spent',
+      align: 'right',
+      hideBelow: 'sm',
+      cell: ({ history }) => <span className="tabular-nums">{ugx(history.spent)}</span>,
+    },
+    {
+      key: 'last',
+      header: 'Last here',
+      align: 'right',
+      hideBelow: 'md',
+      cell: ({ history }) => (
+        <span className="text-xs text-ink/60">{history.lastStay ? dayMonth(history.lastStay) : 'Never'}</span>
+      ),
+    },
+  ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Guests</h1>
-          <p className="text-sm text-ink/60">{guests.length} guests in total</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
-        >
-          New guest
-        </button>
-      </div>
-
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by name or phone"
-        className="w-full max-w-sm rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Front desk"
+        title="Guests"
+        description="Everybody the hotel knows. Search by name, telephone or email."
+        actions={<Button onClick={() => setCreating(true)}>New guest</Button>}
       />
 
-      <div className="overflow-x-auto rounded-xl border border-ink/10 bg-surface">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/60">
-            <tr>
-              <th className="px-4 py-3">Guest</th>
-              <th className="px-4 py-3">Phone</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Nationality</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/10">
-            {shown.map((g) => (
-              <tr key={g.id}>
-                <td className="px-4 py-3">
-                  <Link to={`/guests/${g.id}`} className="font-semibold text-brand">
-                    {g.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">{g.phone}</td>
-                <td className="px-4 py-3">{g.email ?? '-'}</td>
-                <td className="px-4 py-3">{g.nationality ?? '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {shown.length === 0 && <p className="p-4 text-sm text-ink/60">No guests match.</p>}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Guests" icon="guests" value={String(guests.length)} hint="On file" />
+        <StatCard label="Come back" icon="occupancy" value={String(returning)} hint="More than one stay" tone={returning > 0 ? 'good' : 'default'} />
+        <StatCard label="VIP" icon="alert" value={String(vips)} hint="Marked by the hotel" />
+        <StatCard label="Spent altogether" icon="money" value={ugx(spent)} hint="Finished stays" />
       </div>
 
+      <FilterBar query={q} onQuery={(v) => setParam('q', v)} placeholder="Search name, telephone or email" />
+
+      <Card title="Guests" icon="guests" count={rows.length} padded={false}>
+        <DataTable
+          columns={columns}
+          rows={shown}
+          rowKey={({ guest }) => guest.id}
+          onRowClick={({ guest }) => navigate(`/desk/guests/${guest.id}`)}
+          empty={{
+            title: q ? 'Nobody matches that' : 'No guests yet',
+            hint: q ? 'Try part of a name or the telephone number.' : 'A guest is created the first time somebody books.',
+          }}
+        />
+        {pages > 1 && (
+          <div className="flex items-center justify-between border-t border-ink/10 px-4 py-2.5 text-sm">
+            <span className="text-ink/60">
+              Page {page + 1} of {pages} · {rows.length} guests
+            </span>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setParam('page', String(page - 1), '0')}>
+                Previous
+              </Button>
+              <Button variant="ghost" size="sm" disabled={page >= pages - 1} onClick={() => setParam('page', String(page + 1), '0')}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
       {creating && (
-        <GuestEditPanel onClose={() => setCreating(false)} onSaved={(g) => navigate(`/guests/${g.id}`)} />
+        <GuestEditPanel
+          onClose={() => setCreating(false)}
+          onSaved={(g) => {
+            setCreating(false)
+            if (g?.id) navigate(`/desk/guests/${g.id}`)
+          }}
+        />
       )}
     </div>
   )
