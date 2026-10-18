@@ -101,6 +101,14 @@ export function tokenFor(reservationId: string, arrival: string): string {
 export const preRegLink = (origin: string, reservationId: string, arrival: string): string =>
   `${origin}/arrive/${tokenFor(reservationId, arrival)}`
 
+/** The guest's own page for the whole stay: the bill, the form, what they can ask for. */
+export const portalLink = (origin: string, reservationId: string, arrival: string): string =>
+  `${origin}/stay/${tokenFor(reservationId, arrival)}`
+
+/** Their bill, which is also where they say how the stay went. */
+export const billLink = (origin: string, reservationId: string, arrival: string): string =>
+  `${origin}/bill/${tokenFor(reservationId, arrival)}`
+
 /** The questions the guest is asked, in the order they are asked. */
 export const PRE_REG_FIELDS: { key: keyof PreRegDetails; label: string; required?: boolean }[] = [
   { key: 'idType', label: 'ID type', required: true },

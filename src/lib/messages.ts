@@ -101,6 +101,7 @@ export const PLACEHOLDERS: { key: string; meaning: string }[] = [
   { key: 'deposit', meaning: 'The deposit asked for' },
   { key: 'time', meaning: 'Check-in or check-out time, whichever the message is about' },
   { key: 'link', meaning: 'A link for the guest to open' },
+  { key: 'stay', meaning: "The guest's own page for this stay" },
   { key: 'hours', meaning: 'How long the guest has to answer, on a waiting-list offer' },
 ]
 
@@ -110,7 +111,7 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     label: 'Booking confirmed',
     blurb: 'Sent once, when the booking is made.',
     on: true,
-    text: 'Dear {guest}, your booking at {hotel} is confirmed for {arrival} to {departure}, {nights} night(s). We look forward to welcoming you.',
+    text: 'Dear {guest}, your booking at {hotel} is confirmed for {arrival} to {departure}, {nights} night(s). Everything about your stay is here: {stay}',
   },
   {
     kind: 'deposit reminder',

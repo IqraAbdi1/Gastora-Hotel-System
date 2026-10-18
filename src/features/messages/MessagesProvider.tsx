@@ -4,7 +4,7 @@ import { TODAY } from '../../data/sample'
 import { folioOf, stamp } from '../../lib/folio'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
-import { preRegLink, tokenFor } from '../../lib/preRegistration'
+import { billLink, portalLink, preRegLink } from '../../lib/preRegistration'
 import { depositFor, nightlyRate } from '../../lib/rates'
 import {
   DEFAULT_MESSAGING,
@@ -63,7 +63,8 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
           link: preRegLink(window.location.origin, r.id, r.arrival),
           // The same word, {link}, means the form before arrival and the bill afterwards. A hotel
           // writing its own wording should not have to know which.
-          billLink: `${window.location.origin}/bill/${tokenFor(r.id, r.arrival)}`,
+          billLink: billLink(window.location.origin, r.id, r.arrival),
+          stay: portalLink(window.location.origin, r.id, r.arrival),
         } as MessageVars,
       }
     },

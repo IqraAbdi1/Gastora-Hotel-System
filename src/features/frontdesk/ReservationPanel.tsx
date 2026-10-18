@@ -17,7 +17,7 @@ import { useCorporate } from '../corporate/corporateContext'
 import { useMessages } from '../messages/messagesContext'
 import { useHotel } from '../../lib/hotelContext'
 import { useFeatures } from '../platform/featuresContext'
-import { PRE_REG_LABEL, PRE_REG_TONE, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
+import { PRE_REG_LABEL, PRE_REG_TONE, portalLink, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
 import { SHARE_NOTE, legsOf } from '../../lib/sharing'
 import { KEY_STATE_LABEL, KEY_STATE_TONE } from '../../lib/keys'
 import { useAuth } from '../auth/authContext'
@@ -199,6 +199,36 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {features.guestPortal && r.status !== 'cancelled' && (
+          <div>
+            <p className={heading}>Their own page</p>
+            <p className="mt-1 text-sm text-ink/70">
+              One link holding their stay, their bill, the form before arrival and anything they want to ask for.
+              Send it with any message, or read it out over the telephone.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="text-sm font-semibold text-brand"
+                onClick={() => void navigator.clipboard?.writeText(portalLink(window.location.origin, r.id, r.arrival))}
+              >
+                Copy the link
+              </button>
+              <a
+                href={portalLink(window.location.origin, r.id, r.arrival)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-semibold text-ink/60"
+              >
+                Open it
+              </a>
+            </div>
+            <p className="mt-1 break-all text-xs text-ink/45">
+              {portalLink(window.location.origin, r.id, r.arrival)}
+            </p>
           </div>
         )}
 
