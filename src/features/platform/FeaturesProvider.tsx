@@ -26,7 +26,17 @@ import { FeaturesContext } from './featuresContext'
 import type { FeaturesValue } from './featuresContext'
 
 export default function FeaturesProvider({ children }: { children: ReactNode }) {
-  const [tenants, setTenants] = useBrowserSyncedState<Tenant[]>('gastora:platform:tenants', SAMPLE_TENANTS)
+  const [storedTenants, setTenants] = useBrowserSyncedState<Tenant[]>('gastora:platform:tenants', SAMPLE_TENANTS)
+  // A hotel saved in this browser last week has last week's shape, so anything Gastora has added since
+  // - the owner a hotel belongs to, for instance - is filled in from the sample it came from.
+  const tenants = useMemo(
+    () =>
+      storedTenants.map((t) => {
+        const original = SAMPLE_TENANTS.find((x) => x.id === t.id)
+        return original ? { ...original, ...t, group: t.group ?? original.group } : t
+      }),
+    [storedTenants],
+  )
   const [currentId, setCurrentId] = useState('t1')
   const [optionsById, setOptionsById] = useBrowserSyncedState<Record<string, HotelOptions>>('gastora:hotel:options', {})
   const [taxById, setTaxById] = useBrowserSyncedState<Record<string, TaxSettings>>('gastora:hotel:tax', SAMPLE_TAX)

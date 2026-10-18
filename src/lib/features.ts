@@ -26,6 +26,7 @@ export type FeatureKey =
   | 'expressCheckout'
   | 'groups'
   | 'roomKeys'
+  | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -131,6 +132,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       "The hotel's record of which key opens which room and until when, who cut it and whether it came back. The card itself is written by the door-lock vendor; this is the part that answers who could open a room on a given night.",
   },
   {
+    key: 'crossProperty',
+    label: 'Sister properties',
+    blurb:
+      'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -177,6 +184,7 @@ export const PLANS: {
       'expressCheckout',
       'groups',
       'roomKeys',
+      'crossProperty',
     ],
   },
   {
@@ -250,6 +258,11 @@ export interface Tenant {
   companySize: CompanySize
   /** Platform admin overrides on top of the plan. */
   overrides: Partial<Record<FeatureKey, boolean>>
+  /**
+   * The owner this hotel belongs to, when it is one of several. Properties sharing a group can see
+   * each other's free rooms and send each other bookings; they share nothing else.
+   */
+  group?: string
 }
 
 /** What this hotel can actually use right now. */
@@ -339,9 +352,9 @@ export const DEFAULT_OPTIONS: HotelOptions = {
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [
-  { id: 't1', name: 'Lakeview Grand Hotel', rooms: 120, plan: 'large', status: 'active', overrides: {}, companySize: 'large' },
+  { id: 't1', name: 'Lakeview Grand Hotel', rooms: 120, plan: 'large', status: 'active', overrides: {}, companySize: 'large', group: 'Lakeview Hotels' },
   { id: 't2', name: 'Mbale Town Inn', rooms: 18, plan: 'starter', status: 'active', overrides: {}, companySize: 'small' },
-  { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {}, companySize: 'medium' },
+  { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {}, companySize: 'medium', group: 'Lakeview Hotels' },
 ]
 
 /** Starting tax rules for the sample hotels. After this the hotel admin or owner changes them. */

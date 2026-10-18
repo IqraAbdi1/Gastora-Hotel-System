@@ -25,6 +25,7 @@ import ArrivePage from './features/prearrival/ArrivePage'
 import BillPage from './features/prearrival/BillPage'
 import WaitlistPage from './features/waitlist/WaitlistPage'
 import GroupsPage from './features/groups/GroupsPage'
+import CrsPage from './features/crs/CrsPage'
 import CompaniesPage from './features/corporate/CompaniesPage'
 import HousekeepingPage from './features/housekeeping/HousekeepingPage'
 import TasksPage from './features/housekeeping/TasksPage'
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
           { path: 'desk/messages', element: <MessagesPage /> },
           { path: 'desk/waiting-list', element: <WaitlistPage /> },
           { path: 'desk/groups', element: <GroupsPage /> },
+          { path: 'desk/sister-properties', element: <CrsPage /> },
           { path: 'desk/companies', element: <CompaniesPage /> },
           { path: 'desk/documents', element: <GuestDocumentsPage /> },
           { path: 'desk/lost-found', element: <LostFoundPage /> },
