@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom'
 import StatusPill from '../../components/StatusPill'
 import { Badge, Button, Card, DataTable, PageHeader, StatCard } from '../../components/ui'
 import type { Column } from '../../components/ui'
+import { TODAY } from '../../data/sample'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { benefitList, isSensitiveTag, loyaltyKnown, nextTier, stayHistory, tierFor } from '../../lib/loyalty'
 import type { Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { forGuest, KIND_TONE, STATE_TONE } from '../../lib/feedback'
+import { BAND_LABEL, BAND_RULE, BAND_TONE, sinceWords, valueOf } from '../../lib/guestValue'
 import { useFeedback } from '../feedback/useFeedback'
 import { useMessages } from '../messages/messagesContext'
 import { useFeatures } from '../platform/featuresContext'
@@ -69,6 +71,7 @@ export default function GuestProfilePage() {
   const tags = guest.preferences?.tags ?? []
   // What this guest has said, so nobody walks up to them without knowing it went wrong last time.
   const said = forGuest(feedback, guest.id, guest.name)
+  const value = valueOf(guest, reservations, feedback, TODAY)
 
   const details: [string, string | undefined][] = [
     ['Telephone', guest.phone],
@@ -134,6 +137,7 @@ export default function GuestProfilePage() {
             {guest.vip && <Badge tone="warn">VIP</Badge>}
             {tier && <Badge tone="good">{tier.name}</Badge>}
             {!known && <Badge tone="neutral">Not in the programme</Badge>}
+            {value.stays > 0 && <Badge tone={BAND_TONE[value.band]}>{BAND_LABEL[value.band]}</Badge>}
           </div>
         }
         actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>}
@@ -266,6 +270,57 @@ export default function GuestProfilePage() {
           </Card>
         )}
       </div>
+
+      {full && value.stays > 0 && (
+        <Card
+          title="What they are worth"
+          icon="money"
+          padded
+          description="Counted from what they actually paid. Nothing here guesses what they will spend next."
+        >
+          <div className="grid gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Paid altogether', value: ugx(value.paid), hint: `${value.stays} stays, ${value.nights} nights` },
+              { label: 'A year at this rate', value: ugx(value.perYear), hint: `Over ${value.monthsKnown} month${value.monthsKnown === 1 ? '' : 's'} of knowing them` },
+              { label: 'A night', value: ugx(value.perNight), hint: 'Average of what they paid' },
+              { label: 'Last here', value: sinceWords(value.daysSince), hint: value.lastStay ? dayMonth(value.lastStay) : '' },
+            ].map((cell) => (
+              <div key={cell.label} className="rounded-xl bg-linear-to-br from-brand/[0.06] to-surface p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink/50">{cell.label}</p>
+                <p className="mt-0.5 text-lg font-bold tabular-nums text-ink">{cell.value}</p>
+                <p className="text-xs text-ink/55">{cell.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-3 text-sm text-ink/75">
+            <Badge tone={BAND_TONE[value.band]}>{BAND_LABEL[value.band]}</Badge>{' '}
+            <span className="text-ink/60">{BAND_RULE[value.band]}</span>
+          </p>
+
+          {(value.fellThrough > 0 || value.complaints > 0 || value.owing > 0) && (
+            <ul className="mt-2 space-y-0.5 text-sm text-ink/70">
+              {value.fellThrough > 0 && (
+                <li>
+                  {value.fellThrough} booking{value.fellThrough === 1 ? '' : 's'} cancelled or never arrived.
+                </li>
+              )}
+              {value.complaints > 0 && (
+                <li>
+                  {value.complaints} complaint{value.complaints === 1 ? '' : 's'} raised.
+                </li>
+              )}
+              {value.owing > 0 && <li className="text-bad">{ugx(value.owing)} still owed across open stays.</li>}
+            </ul>
+          )}
+
+          <p className="mt-2 text-xs text-ink/55">
+            The yearly figure is money they have already paid, spread over the time the hotel has known them. It is
+            the fair way to compare a guest of five years with a guest of five months, but it is a rate, not a
+            promise: on a few months of history it moves a long way on one more stay.
+          </p>
+        </Card>
+      )}
 
       {said.length > 0 && (
         <Card title="What they have said" icon="alert" count={said.length} padded={false}>

@@ -8,8 +8,9 @@ import { addDays } from '../../lib/availability'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { reservationsNeedingAttention, summarizeDay, upcomingArrivals } from '../../lib/frontdesk'
 import { useHotel } from '../../lib/hotelContext'
+import { stayHistory } from '../../lib/loyalty'
 import { buildRuleSuggestions } from '../../lib/rules'
-import type { Reservation } from '../../types'
+import type { Guest, Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import ShortageBanner from '../housekeeping/ShortageBanner'
@@ -31,10 +32,25 @@ function PaymentBadge({ r }: { r: Reservation }) {
   return <Badge tone="warn">No deposit</Badge>
 }
 
-function GuestCell({ r }: { r: Reservation }) {
+/**
+ * A guest in a list. The marks beside the name are the two things worth knowing before anybody walks
+ * up: that the hotel has decided this guest is a VIP, and that they have been here before. A VIP flag
+ * nobody can see is a flag that does nothing.
+ */
+function GuestCell({ r, guests, reservations }: { r: Reservation; guests: Guest[]; reservations: Reservation[] }) {
+  const profile = guests.find((g) => (r.guestId ? g.id === r.guestId : g.name === r.guest))
+  const stays = profile ? stayHistory(profile, reservations, r.id).stays : 0
   return (
     <div className="min-w-0">
-      <p className="truncate font-semibold text-ink">{r.guest}</p>
+      <p className="flex flex-wrap items-center gap-1.5 truncate font-semibold text-ink">
+        {r.guest}
+        {profile?.vip && <Badge tone="warn">VIP</Badge>}
+        {stays > 0 && (
+          <Badge tone="good">
+            {stays === 1 ? 'Been before' : `${stays} stays`}
+          </Badge>
+        )}
+      </p>
       <p className="text-xs text-ink/55">{r.id}</p>
     </div>
   )
@@ -69,7 +85,7 @@ function SeeAll({ count, to, noun }: { count: number; to: string; noun: string }
 }
 
 export default function TodayPage() {
-  const { reservations, rooms } = useHotel()
+  const { reservations, rooms, guests } = useHotel()
   const { readyRooms, dismissReady } = useHousekeeping()
   const [checkIn, setCheckIn] = useState<{ id: string; room?: string } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -93,7 +109,7 @@ export default function TodayPage() {
   })
 
   const arrivalColumns: Column<Reservation>[] = [
-    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} /> },
+    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} guests={guests} reservations={reservations} /> },
     {
       key: 'room',
       header: 'Room',
@@ -140,7 +156,7 @@ export default function TodayPage() {
   ]
 
   const departureColumns: Column<Reservation>[] = [
-    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} /> },
+    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} guests={guests} reservations={reservations} /> },
     {
       key: 'room',
       header: 'Room',
@@ -175,7 +191,7 @@ export default function TodayPage() {
 
   const upcomingColumns: Column<Reservation>[] = [
     { key: 'day', header: 'Arrives', cell: (r) => <span className="font-medium">{dayLabel(r.arrival)}</span> },
-    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} /> },
+    { key: 'guest', header: 'Guest', cell: (r) => <GuestCell r={r} guests={guests} reservations={reservations} /> },
     { key: 'type', header: 'Room', hideBelow: 'md', cell: (r) => r.roomType },
     { key: 'pay', header: 'Payment', cell: (r) => <PaymentBadge r={r} /> },
   ]
