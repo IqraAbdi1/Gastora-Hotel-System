@@ -15,6 +15,7 @@ import {
   roomTypeList,
 } from '../../lib/rates'
 import type { DepositMode, MealPlanSetting, RatesPolicy } from '../../lib/rates'
+import RateCalendarCard from './RateCalendarCard'
 import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
 import { useHotel } from '../../lib/hotelContext'
@@ -104,6 +105,8 @@ export default function RatesPoliciesPage() {
             Changing a rate affects new bookings only. A booking already taken keeps the price it was sold at.
           </p>
         </Card>
+
+        <RateCalendarCard rates={rates} set={set} />
 
         <Card title="Meal plans" icon="money" count={rates.plans.length} padded description="Added to the room rate, per night.">
           <div className="space-y-3">

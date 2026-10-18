@@ -1,3 +1,4 @@
+import type { DayRate, RateSeason } from './rateCalendar'
 import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
@@ -47,6 +48,12 @@ export interface RatesPolicy {
   rules: RateRule[]
   /** Printed on the registration card. Empty means use the wording built from the hotel's times. */
   houseRules: string
+  /**
+   * The rate calendar. The published rate above is the base; these move it. Both are read in order and
+   * the first match wins, so a general December rate can have Christmas itself placed above it.
+   */
+  seasons: RateSeason[]
+  dayRates: DayRate[]
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -69,6 +76,14 @@ export const DEFAULT_RATES: RatesPolicy = {
   overbook: { Standard: 1, Deluxe: 1, Suite: 0 },
   rules: [],
   houseRules: '',
+  // Two examples, switched off. A hotel that has never set a season can see the shape of one and turn
+  // it on, and a demo that starts with them running would quote prices nobody asked for.
+  seasons: [
+    { id: 'season-1', name: 'December peak', from: '2026-12-15', to: '2027-01-05', how: 'percent', value: 25, on: false },
+  ],
+  dayRates: [
+    { id: 'day-1', name: 'Weekend', days: [5, 6], how: 'percent', value: 10, on: false },
+  ],
 }
 
 /** The wording a hotel starts with, built from its own check-in and check-out times. */

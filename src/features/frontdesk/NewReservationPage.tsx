@@ -7,7 +7,8 @@ import { addDays } from '../../lib/availability'
 import { dayMonth, ugx } from '../../lib/format'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
-import { depositForStay, freeByType, freeRooms, nightsOf, planFor, roomTypes, stayTotal } from '../../lib/booking'
+import { depositForStay, freeByType, freeRooms, nightlyForStay, nightsOf, planFor, roomTypes, stayTotalBetween } from '../../lib/booking'
+import { calendarInUse, DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
 import { RULE_LABEL, refusedBy } from '../../lib/rateRules'
 import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
 import { benefitList, loyaltyDiscount, loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
@@ -105,13 +106,16 @@ export function NewReservationForm({
     [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights],
   )
 
-  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotal(type, planId, nights, rates)) : 0
+  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotalBetween(type, planId, from, departure, rates)) : 0
 
   // A returning guest's reward. The room only, never on top of a company price, and only on finished stays.
   const history = useMemo(() => (selectedGuest ? stayHistory(selectedGuest, reservations) : null), [selectedGuest, reservations])
   // No programme, no profile: a guest who has not joined earns nothing and is not recognised.
   const tier = history && loyaltyKnown(selectedGuest) ? tierFor(history, loyalty) : null
-  const roomOnly = datesOk ? stayTotal(type, 'room-only', nights, rates) : 0
+  const roomOnly = datesOk ? stayTotalBetween(type, 'room-only', from, departure, rates) : 0
+  // Night by night, so a price the guest will query can be answered without opening the settings.
+  const perNight = datesOk ? priceNights(type, from, departure, rates) : []
+  const nightsDiffer = varies(perNight)
   const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
   const [useLoyalty, setUseLoyalty] = useState(true)
   const [loyaltyApproved, setLoyaltyApproved] = useState('')
@@ -119,7 +123,7 @@ export function NewReservationForm({
   const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
   // A company account and its LPO are themselves the guarantee, so the guest is not asked for a deposit too.
   const onCompany = !!company
-  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates)
+  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates, { arrival: from, departure })
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
   const matches = useMemo(
@@ -314,7 +318,9 @@ export function NewReservationForm({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {roomTypes.map((t) => {
                 const f = datesOk ? free[t] : 0
-                const price = rates.roomRates[t] + planFor(planId, rates).extraPerNight
+                const price = datesOk
+                  ? nightlyForStay(t, planId, from, departure, rates)
+                  : rates.roomRates[t] + planFor(planId, rates).extraPerNight
                 return (
                   <button
                     key={t}
@@ -328,7 +334,9 @@ export function NewReservationForm({
                     }`}
                   >
                     <p className="font-semibold">{t}</p>
-                    <p className="text-sm text-ink/60">{ugx(price)} per night</p>
+                    <p className="text-sm text-ink/60">
+                      {ugx(price)} per night{datesOk && calendarInUse(rates) ? ' on average' : ''}
+                    </p>
                     <div className="mt-2">
                       <Badge tone={!datesOk ? 'neutral' : f < 1 ? 'bad' : f <= 2 ? 'warn' : 'good'} dot>
                         {!datesOk ? 'Pick dates' : f < 1 ? 'Sold out' : `${f} free`}
@@ -648,6 +656,22 @@ export function NewReservationForm({
               {children > 0 && `, ${children} child${children === 1 ? '' : 'ren'}`}
             </p>
           </div>
+          {nightsDiffer && (
+            <div className="space-y-1 rounded-lg bg-brand/[0.06] p-2.5 text-xs">
+              <p className="font-semibold text-ink">These nights are not all the same price</p>
+              {perNight.map((n) => (
+                <p key={n.date} className="flex justify-between gap-3">
+                  <span className="text-ink/70">
+                    {DAY_SHORT[dayOf(n.date)]} {dayMonth(n.date)}
+                    {n.steps.length > 1 && <span className="text-ink/45"> · {n.steps[n.steps.length - 1].label}</span>}
+                  </span>
+                  <span className="tabular-nums text-ink/80">{ugx(n.rate)}</span>
+                </p>
+              ))}
+              <p className="text-ink/55">Room only. The meal plan is added on top of each night.</p>
+            </div>
+          )}
+
           <div className="space-y-1 border-t border-ink/10 pt-3 text-sm">
             {companyPlan && companyPlan.selected.length > 0 && (
               <>

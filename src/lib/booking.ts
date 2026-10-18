@@ -1,4 +1,5 @@
 import { DEPOSIT_RATE, ratePlans, roomRate } from '../data/rates'
+import { averageNightly, roomTotalFor } from './rateCalendar'
 import { depositFor, nightlyRate } from './rates'
 import type { RatesPolicy } from './rates'
 import { holdsRoom, isRoomFree } from './availability'
@@ -15,9 +16,40 @@ export function planFor(id: string, rates?: RatesPolicy) {
   return list.find((p) => p.id === id) ?? list[0]
 }
 
+/** The flat price of a stay: the published rate, times nights. Use it only where no dates are known. */
 export function stayTotal(type: Room['type'], planId: string, nights: number, rates?: RatesPolicy) {
   const rate = rates?.roomRates[type] ?? roomRate[type]
   return nights * (rate + planFor(planId, rates).extraPerNight)
+}
+
+/**
+ * What a stay on these dates costs, each night priced on its own through the rate calendar. This is the
+ * one to use wherever the dates are known, which is almost everywhere: the same room is not the same
+ * price in December as in April.
+ */
+export function stayTotalBetween(
+  type: Room['type'],
+  planId: string,
+  arrival: string,
+  departure: string,
+  rates?: RatesPolicy,
+) {
+  const nights = nightsOf(arrival, departure)
+  if (nights < 1) return 0
+  if (!rates) return stayTotal(type, planId, nights)
+  return roomTotalFor(type, arrival, departure, rates) + planFor(planId, rates).extraPerNight * nights
+}
+
+/** The average night of a stay, room plus meal plan. One number standing for nights that may differ. */
+export function nightlyForStay(
+  type: Room['type'],
+  planId: string,
+  arrival: string,
+  departure: string,
+  rates?: RatesPolicy,
+) {
+  if (!rates) return (roomRate[type] ?? 0) + planFor(planId).extraPerNight
+  return averageNightly(type, arrival, departure, rates) + planFor(planId, rates).extraPerNight
 }
 
 export function suggestedDeposit(total: number, percent?: number) {
@@ -31,9 +63,13 @@ export function depositForStay(
   planId: string,
   nights: number,
   rates?: RatesPolicy,
+  /** The dates, when they are known, so a December deposit follows the December rate. */
+  dates?: { arrival: string; departure: string },
 ): number {
   if (!rates) return suggestedDeposit(stayTotal(type, planId, nights, rates))
-  const nightly = nightlyRate(type, planFor(planId, rates).extraPerNight, rates)
+  const nightly = dates
+    ? nightlyForStay(type, planId, dates.arrival, dates.departure, rates)
+    : nightlyRate(type, planFor(planId, rates).extraPerNight, rates)
   return depositFor(nightly, nights, rates)
 }
 
