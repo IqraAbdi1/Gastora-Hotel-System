@@ -1,3 +1,4 @@
+import { DEFAULT_EXPRESS_MAX } from './expressCheckout'
 import { DEFAULT_MESSAGING } from './messages'
 import type { MessagingSettings } from './messages'
 import { DEFAULT_EFRIS, DEFAULT_TAX } from './tax'
@@ -21,6 +22,7 @@ export type FeatureKey =
   | 'guestMessages'
   | 'preRegistration'
   | 'waitlist'
+  | 'expressCheckout'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -108,6 +110,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'Guests the hotel had to turn away are kept on a list. When a cancellation frees the room they asked for, the system says whose it is and the desk tells them. A room is offered, never held.',
   },
   {
+    key: 'expressCheckout',
+    label: 'Express checkout',
+    blurb:
+      'A guest whose stay is secured by a card or a company account can leave without stopping at the desk. The bill settles itself against that, and a copy is sent to the guest. A guest with only a deposit, or nothing, still settles at the desk.',
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -130,7 +138,7 @@ export const PLANS: {
     id: 'starter',
     label: 'Starter',
     blurb: 'Small hotels. Core, simple supply requests and basic stock control.',
-    features: ['requests', 'stockControl', 'lossReports'],
+    features: ['requests', 'stockControl', 'lossReports', 'guestMessages'],
   },
   {
     id: 'standard',
@@ -151,6 +159,7 @@ export const PLANS: {
       'guestMessages',
       'preRegistration',
       'waitlist',
+      'expressCheckout',
     ],
   },
   {
@@ -175,6 +184,7 @@ export const PLANS: {
       'guestMessages',
       'preRegistration',
       'waitlist',
+      'expressCheckout',
     ],
   },
 ]
@@ -284,6 +294,8 @@ export interface HotelOptions {
   extraChecks: string[]
   /** The hotel's own wording for the messages a stay needs, and how they go out. */
   messaging: MessagingSettings
+  /** The most that may be settled by express checkout with nobody looking at it. 0 means no ceiling. */
+  expressMax: number
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -301,6 +313,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   service: DEFAULT_SERVICE,
   extraChecks: [],
   messaging: DEFAULT_MESSAGING,
+  expressMax: DEFAULT_EXPRESS_MAX,
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [

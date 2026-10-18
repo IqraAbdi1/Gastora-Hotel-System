@@ -16,6 +16,7 @@ import ShortageBanner from '../housekeeping/ShortageBanner'
 import AttentionPanel from './AttentionPanel'
 import CheckInPanel from './CheckInPanel'
 import ConfirmCallsCard from './ConfirmCallsCard'
+import ExpressCheckoutCard from './ExpressCheckoutCard'
 import ReservationPanel from './ReservationPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import TasksCard from './TasksCard'
@@ -334,6 +335,7 @@ export default function TodayPage() {
         </div>
 
         <div className="min-w-0 xl:sticky xl:top-6 xl:self-start">
+          <ExpressCheckoutCard />
           <ConfirmCallsCard />
           <TasksCard />
         </div>

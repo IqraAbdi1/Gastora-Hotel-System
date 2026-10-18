@@ -263,6 +263,29 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Express checkout. Agreeing is one step and leaving is another, deliberately: what the hotel can
+  // charge may have changed between the two, so the check is made again at the moment of leaving.
+  function agreeExpress(reservationId: string, by: string, via: 'desk' | 'guest') {
+    setReservations((list) =>
+      list.map((r) => (r.id === reservationId ? { ...r, express: { agreedAt: stamp(), agreedBy: by, agreedVia: via } } : r)),
+    )
+  }
+
+  function cancelExpress(reservationId: string) {
+    setReservations((list) => list.map((r) => (r.id === reservationId ? { ...r, express: undefined } : r)))
+  }
+
+  /** The guest leaves. The money is taken first, so a failure here never checks anybody out unpaid. */
+  function runExpress(reservationId: string, amount: number, method: string) {
+    if (amount > 0) addPayment(reservationId, { method, amount, reference: 'Express checkout' })
+    setReservations((list) =>
+      list.map((r) =>
+        r.id === reservationId && r.express ? { ...r, express: { ...r.express, doneAt: stamp(), chargedAmount: amount, method } } : r,
+      ),
+    )
+    checkOut(reservationId, 'Left without stopping at the desk')
+  }
+
   // BR-FO-06: the screen only allows this with no balance, or a manager's reason. The room goes dirty for housekeeping.
   function checkOut(reservationId: string, note?: string) {
     const r = reservations.find((x) => x.id === reservationId)
@@ -358,6 +381,9 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         openPreReg,
         submitPreReg,
         acceptPreReg,
+        agreeExpress,
+        cancelExpress,
+        runExpress,
         checkOut,
         setHousekeeping,
         setCorporate,

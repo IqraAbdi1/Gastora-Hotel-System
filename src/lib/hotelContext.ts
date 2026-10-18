@@ -43,6 +43,11 @@ export type HotelValue = {
   submitPreReg: (token: string, details: PreRegDetails) => void
   /** A member of staff checked what the guest sent against the ID in front of them. */
   acceptPreReg: (reservationId: string, by: string) => void
+  /** The guest asks to leave without stopping at the desk. */
+  agreeExpress: (reservationId: string, by: string, via: 'desk' | 'guest') => void
+  cancelExpress: (reservationId: string) => void
+  /** Take the money, then check them out. In that order. */
+  runExpress: (reservationId: string, amount: number, method: string) => void
   checkOut: (reservationId: string, note?: string) => void
   /** Moves an in-house guest to another room. The old room goes dirty, the new one becomes occupied. */
   moveRoom: (reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) => void

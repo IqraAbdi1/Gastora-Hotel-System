@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { REFUSAL_NOTE, expressCheck, expressState } from '../../lib/expressCheckout'
 import StatusPill from '../../components/StatusPill'
 import { Button, Tabs } from '../../components/ui'
 import type { TabItem } from '../../components/ui'
@@ -29,16 +30,20 @@ const digits = (s: string) => Number(s.replace(/\D/g, '')) || 0
 
 // One guest's folio. The parts sit on tabs, so each one fits on screen without scrolling.
 export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' }: Props) {
-  const { addCharge, addPayment, checkOut, reverseCharge } = useHotel()
+  const { addCharge, addPayment, checkOut, reverseCharge, agreeExpress, cancelExpress } = useHotel()
   const f = folioOf(r)
   const { byId } = useCorporate()
   // One stay, two bills when the company carries part of it. For an ordinary stay this is just the one bill.
   const s = splitFolio(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined)
   // The desk can only take money from the guest, so every balance the desk acts on is the guest's side.
   const owed = s.split ? s.guestBalance : f.balance
-  const { tax, stayTimes, tenant, options } = useFeatures()
+  const { tax, stayTimes, tenant, options, features } = useFeatures()
   const { record } = useApprovals()
   const { user } = useAuth()
+  const me = user?.staffName ?? user?.name ?? 'Front desk'
+  // Checked here so the desk only offers it to a guest it could actually charge.
+  const expressNow = expressCheck(r, r.corporate ? byId(r.corporate.accountId)?.name : undefined, options.expressMax)
+  const express = expressState(r)
   const [printing, setPrinting] = useState(false)
   // The charge being corrected, with the reason and the manager who approved it.
   const [fixing, setFixing] = useState<string | null>(null)
@@ -567,6 +572,36 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
             <Button className="w-full" onClick={confirmCheckOut} disabled={!canOut}>
               Check out and issue invoice
             </Button>
+            {features.expressCheckout && r.status === 'in-house' && (
+              <div className="rounded-xl bg-brand/[0.06] p-3">
+                <p className="text-sm font-semibold text-ink">Leaving without stopping at the desk</p>
+                {expressNow.ok ? (
+                  <>
+                    <p className="mt-0.5 text-xs text-ink/70">
+                      {expressNow.guestOwed > 0
+                        ? `On the morning they leave, ${ugx(expressNow.guestOwed)} goes to ${expressNow.chargeTo} and the bill is sent to them.`
+                        : 'There is nothing to collect from the guest, so they can simply go.'}
+                    </p>
+                    <div className="mt-2">
+                      {express === 'agreed' ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="text-xs font-semibold text-good">Agreed {r.express?.agreedAt}</span>
+                          <button type="button" className="text-xs font-semibold text-bad" onClick={() => cancelExpress(r.id)}>
+                            Cancel it
+                          </button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="secondary" onClick={() => agreeExpress(r.id, me, 'desk')}>
+                          The guest agrees
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-0.5 text-xs text-ink/70">{expressNow.why && REFUSAL_NOTE[expressNow.why]}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
