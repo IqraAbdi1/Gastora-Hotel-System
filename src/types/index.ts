@@ -189,7 +189,12 @@ export type Amendment = {
   waived: boolean
 }
 
-export type NewReservation = Omit<Reservation, 'id' | 'status' | 'details'>
+/**
+ * A booking being created. Identification is not part of it: the desk records that when it can see the
+ * guest. A booking made by the guest themselves may carry their own telephone and their own words about
+ * the stay, which is the one case where some of this is known before anybody arrives.
+ */
+export type NewReservation = Omit<Reservation, 'id' | 'status' | 'details'> & { details?: GuestDetails }
 
 export type GoAction = { kind: 'go'; label: string; to: string }
 

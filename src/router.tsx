@@ -6,6 +6,7 @@ import PagePlaceholder from './components/PagePlaceholder'
 import Root from './components/Root'
 import HotelSettingsPage from './features/admin/HotelSettingsPage'
 import RevenuePage from './features/revenue/RevenuePage'
+import BookPage from './features/book/BookPage'
 import TaxSettingsPage from './features/admin/TaxSettingsPage'
 import RatesPoliciesPage from './features/admin/RatesPoliciesPage'
 import NightAuditPage from './features/frontdesk/NightAuditPage'
@@ -59,6 +60,9 @@ export const router = createBrowserRouter([
       // The guest's own page. No sign-in, outside the app shell: it is opened from a link on a phone.
       { path: '/arrive/:token', element: <ArrivePage /> },
       { path: '/bill/:token', element: <BillPage /> },
+      // The hotel's own booking page, which a guest opens from the hotel's website.
+      { path: '/book', element: <BookPage /> },
+      { path: '/book/:slug', element: <BookPage /> },
       {
         path: '/',
         element: <AppShell />,

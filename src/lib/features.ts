@@ -27,6 +27,7 @@ export type FeatureKey =
   | 'groups'
   | 'roomKeys'
   | 'revenue'
+  | 'bookingEngine'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -139,6 +140,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
   },
   {
+    key: 'bookingEngine',
+    label: 'Booking page',
+    blurb:
+      "The hotel's own booking page, which guests open from the hotel's website. It sells under the hotel's own rules - the rate calendar, the closed dates, the real count of free rooms - and never oversells, because overbooking is a decision a person takes. Bookings land at the front desk marked as coming from the hotel's own site, which costs no commission.",
+  },
+  {
     key: 'revenue',
     label: 'Revenue and pace',
     blurb:
@@ -192,6 +199,7 @@ export const PLANS: {
       'groups',
       'roomKeys',
       'revenue',
+      'bookingEngine',
     ],
   },
   {
@@ -220,6 +228,7 @@ export const PLANS: {
       'groups',
       'roomKeys',
       'revenue',
+      'bookingEngine',
       'crossProperty',
     ],
   },
