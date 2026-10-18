@@ -100,7 +100,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
 
   /** Put the demonstration back to how it started, on this browser. */
   function resetDemo() {
-    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants', 'gastora:hotel:groups', 'gastora:hotel:channels', 'gastora:hotel:channelPushes', 'gastora:hotel:feedback', 'gastora:hotel:vouchers', 'gastora:hotel:guestRequests']) {
+    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants', 'gastora:hotel:groups', 'gastora:hotel:channels', 'gastora:hotel:channelPushes', 'gastora:hotel:feedback', 'gastora:hotel:vouchers', 'gastora:hotel:guestRequests', 'gastora:hotel:hkTasks', 'gastora:hotel:hkDetails', 'gastora:hotel:hkThreads', 'gastora:hotel:hkReadyAlerts', 'gastora:hotel:hkDeclined']) {
       try {
         window.localStorage.removeItem(key)
       } catch {

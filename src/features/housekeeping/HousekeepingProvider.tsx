@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
+import { useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import type { ReactNode } from 'react'
 import { PAST, TODAY, YESTERDAY } from '../../data/sample'
 import { useHotel } from '../../lib/hotelContext'
 import { floorOf } from '../../lib/rooms'
 import { useFeatures } from '../platform/featuresContext'
+import { HK_KEYS } from './hkStorage'
 import { HkContext } from './hkContext'
 import type { BlockKind, ExceptionKind, HkValue, NewTask } from './hkContext'
 import {
@@ -81,15 +83,15 @@ type Thread = { messages: RoomMessage[]; readyBy?: { time: string; taskId: numbe
 export default function HousekeepingProvider({ children }: { children: ReactNode }) {
   const { rooms, reservations, setHousekeeping } = useHotel()
   const { inspectionMode, options, features } = useFeatures()
-  const [tasks, setTasks] = useState<HkTask[]>([])
-  const [details, setDetails] = useState<Record<string, RoomDetails>>(() => seededHistory())
-  const [threads, setThreads] = useState<Record<string, Thread>>({})
+  const [tasks, setTasks] = useBrowserSyncedState<HkTask[]>(HK_KEYS.tasks, [])
+  const [details, setDetails] = useBrowserSyncedState<Record<string, RoomDetails>>(HK_KEYS.details, seededHistory())
+  const [threads, setThreads] = useBrowserSyncedState<Record<string, Thread>>(HK_KEYS.threads, {})
   // Rooms the front desk rushed that are now clean. They stay until the room is used or the alert is dismissed.
-  const [readyAlerts, setReadyAlerts] = useState<Record<string, string>>({})
+  const [readyAlerts, setReadyAlerts] = useBrowserSyncedState<Record<string, string>>(HK_KEYS.readyAlerts, {})
   const [syncKey, setSyncKey] = useState<string | null>(null)
   const [daySync, setDaySync] = useState<string | null>(null)
   // Days a guest refused the service, by room. Room 102 refused yesterday, so one more refusal escalates.
-  const [declinedDays, setDeclinedDays] = useState<Record<string, string[]>>(() => ({ '102': [YESTERDAY] }))
+  const [declinedDays, setDeclinedDays] = useBrowserSyncedState<Record<string, string[]>>(HK_KEYS.declined, { '102': [YESTERDAY] })
   // Counts rooms considered for a spot-check, so "1 in N" is steady and easy to demonstrate.
   const spotCounter = useRef(0)
 
