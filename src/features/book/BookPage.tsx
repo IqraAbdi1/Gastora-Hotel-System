@@ -19,6 +19,8 @@ import type { Offer, PayMethod, PayState, Search } from '../../lib/bookingEngine
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
+import { findPromo, promoProblem, promoSaving, tidyCode } from '../../lib/promos'
+import type { Promo } from '../../lib/promos'
 import { useFeatures } from '../platform/featuresContext'
 
 type Step = 'search' | 'rooms' | 'details' | 'pay' | 'done'
@@ -34,7 +36,7 @@ export default function BookPage() {
   const { slug = '' } = useParams()
   const [params] = useSearchParams()
   const { rooms, reservations, addReservation, addGuest } = useHotel()
-  const { tenant, options, features, stayTimes } = useFeatures()
+  const { tenant, options, features, stayTimes, setOptions } = useFeatures()
 
   const [step, setStep] = useState<Step>('search')
   const [search, setSearch] = useState<Search>({ arrival: TODAY, departure: '', adults: 2, children: 0 })
@@ -48,6 +50,9 @@ export default function BookPage() {
   const [method, setMethod] = useState<PayMethod>('MTN MoMo')
   const [pay, setPay] = useState<PayState>('idle')
   const [bookingId, setBookingId] = useState('')
+  const [codeText, setCodeText] = useState('')
+  const [promo, setPromo] = useState<Promo | null>(null)
+  const [codeSaid, setCodeSaid] = useState('')
 
   const rates = options.rates
   const problem = searchProblem(search, TODAY)
@@ -65,6 +70,29 @@ export default function BookPage() {
     () => (chosen && !problem ? priceNights(chosen.type, search.arrival, search.departure, rates, (d) => sold[d]) : []),
     [chosen, problem, search.arrival, search.departure, rates, sold],
   )
+
+  // What the code takes off, if one has been accepted and still applies to what is now chosen.
+  const saving = chosen && promo ? promoSaving(promo, chosen.total, nights) : 0
+  const payable = chosen ? chosen.total - saving : 0
+
+  function tryCode() {
+    const found = findPromo(rates.promos ?? [], codeText)
+    if (!found) {
+      setPromo(null)
+      setCodeSaid('We do not know that code. Check the spelling, or leave it empty.')
+      return
+    }
+    const why = chosen
+      ? promoProblem(found, { arrival: search.arrival, departure: search.departure, type: chosen.type, planId: chosen.planId }, TODAY)
+      : undefined
+    if (why) {
+      setPromo(null)
+      setCodeSaid(why)
+      return
+    }
+    setPromo(found)
+    setCodeSaid('')
+  }
 
   // The demonstration keeps one hotel's rooms, so another hotel's address cannot be served here.
   if (slug && slug !== slugOf(tenant.name)) {
@@ -102,7 +130,7 @@ export default function BookPage() {
         room: null,
         arrival: search.arrival,
         departure: search.departure,
-        total: chosen!.total,
+        total: payable,
         paid: chosen!.deposit,
         plan: chosen!.planId,
         guarantee: 'deposit',
@@ -110,7 +138,17 @@ export default function BookPage() {
         adults: search.adults,
         children: search.children,
         details: { idType: 'NIN', idNumber: '', nationality: '', phone: phone.trim(), specialRequests: requests.trim() },
+        ...(promo ? { promo: { code: tidyCode(promo.code), saved: saving } } : {}),
       })
+      // A code is counted when it is used, not when it is typed: a refused payment makes no booking.
+      if (promo) {
+        setOptions({
+          rates: {
+            ...rates,
+            promos: (rates.promos ?? []).map((x) => (x.id === promo.id ? { ...x, used: x.used + 1 } : x)),
+          },
+        })
+      }
       setBookingId(made.id)
       setPay('paid')
       setStep('done')
@@ -344,12 +382,61 @@ export default function BookPage() {
           <Summary offer={chosen} search={search} nights={nights} rates={rates} perNight={perNight} />
 
           <div className="rounded-xl border border-ink/10 bg-surface p-4">
+            <p className="text-sm font-semibold text-ink">Have a code?</p>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <div className="min-w-[12rem] flex-1">
+                <Field label="Promotional code">
+                  {(id) => (
+                    <Input
+                      id={id}
+                      value={codeText}
+                      onChange={(e) => setCodeText(e.target.value.toUpperCase())}
+                      placeholder="EARLYBIRD"
+                      disabled={pay === 'pending'}
+                    />
+                  )}
+                </Field>
+              </div>
+              <Button variant="secondary" disabled={!codeText.trim() || pay === 'pending'} onClick={tryCode}>
+                Use it
+              </Button>
+            </div>
+            {codeSaid && <p className="mt-2 text-sm text-bad">{codeSaid}</p>}
+            {promo && (
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-good">
+                <Badge tone="good" dot>
+                  {tidyCode(promo.code)}
+                </Badge>
+                {promo.name} · {ugx(saving)} off
+                <button
+                  type="button"
+                  className="font-semibold text-ink/50"
+                  onClick={() => {
+                    setPromo(null)
+                    setCodeText('')
+                  }}
+                >
+                  Remove
+                </button>
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-ink/10 bg-surface p-4">
+            {saving > 0 && (
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-ink/10 pb-2 text-sm">
+                <span className="text-ink/60">
+                  {ugx(chosen.total)} less {ugx(saving)}
+                </span>
+                <span className="font-semibold tabular-nums text-ink">{ugx(payable)}</span>
+              </div>
+            )}
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-sm text-ink/70">Deposit now</p>
               <p className="text-xl font-bold tabular-nums text-ink">{ugx(chosen.deposit)}</p>
             </div>
             <p className="mt-0.5 text-xs text-ink/55">
-              The rest, {ugx(chosen.total - chosen.deposit)}, is paid at the hotel.
+              The rest, {ugx(Math.max(0, payable - chosen.deposit))}, is paid at the hotel.
             </p>
 
             <div className="mt-3">
@@ -402,7 +489,7 @@ export default function BookPage() {
                 Check in from {stayTimes.checkInTime} on {dayMonth(search.arrival)}. Bring the identification you will
                 travel with.
               </li>
-              <li>{ugx(chosen.total - chosen.deposit)} is paid at the hotel.</li>
+              <li>{ugx(Math.max(0, payable - chosen.deposit))} is paid at the hotel.</li>
               <li>The hotel may send you a form to fill in before you arrive, so the desk is quicker.</li>
             </ul>
           </div>

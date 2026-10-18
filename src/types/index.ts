@@ -128,6 +128,8 @@ export type Reservation = {
   details?: GuestDetails
   /** The day the booking was taken. Without it there is no lead time and no pickup. */
   bookedAt?: string
+  /** The promotional code used, and what it took off, so a campaign can be counted afterwards. */
+  promo?: { code: string; saved: number }
   guestId?: string
   plan?: string
   guarantee?: GuaranteeType

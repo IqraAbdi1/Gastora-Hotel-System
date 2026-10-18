@@ -1,4 +1,5 @@
 import type { DayRate, OccupancyRate, RateOverride, RateSeason } from './rateCalendar'
+import type { Promo } from './promos'
 import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
@@ -58,6 +59,8 @@ export interface RatesPolicy {
   occupancyRates: OccupancyRate[]
   /** Prices a person set for one date, which beat every rule above. */
   overrides: RateOverride[]
+  /** Codes the hotel has given out, each with its own limits and its own tally. */
+  promos: Promo[]
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -92,6 +95,10 @@ export const DEFAULT_RATES: RatesPolicy = {
     { id: 'busy-1', name: 'Filling up', atLeast: 80, how: 'percent', value: 15, on: false },
   ],
   overrides: [],
+  // One example, switched off, so a hotel can see the shape of a code before writing its own.
+  promos: [
+    { id: 'promo-1', code: 'EARLYBIRD', name: 'Booked a month ahead', how: 'percent', value: 10, maxUses: 0, used: 0, minNights: 2, on: false },
+  ],
 }
 
 /** The wording a hotel starts with, built from its own check-in and check-out times. */
