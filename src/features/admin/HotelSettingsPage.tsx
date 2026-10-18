@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import Switch from '../../components/Switch'
+import { Button } from '../../components/ui'
+import { useHotel } from '../../lib/hotelContext'
 import { FEATURES } from '../../lib/features'
 import { AREA_FREQUENCY_LABEL, newAreaId } from '../../lib/cleaning'
 import type { AreaFrequency, CleaningArea } from '../../lib/cleaning'
@@ -10,6 +13,8 @@ const cell = 'min-w-0 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm
 
 export default function HotelSettingsPage() {
   const { tenant, features, options, setOptions, stayTimes, setStayTimes } = useFeatures()
+  const { resetDemo } = useHotel()
+  const [resetAt, setResetAt] = useState('')
 
   const patchArea = (id: string, patch: Partial<CleaningArea>) =>
     setOptions({ areas: options.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
@@ -491,6 +496,27 @@ export default function HotelSettingsPage() {
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-ink/10 bg-surface p-4 shadow-sm">
+        <p className="text-sm font-semibold text-ink">The demonstration</p>
+        <p className="mt-0.5 text-xs text-ink/60">
+          Bookings, rooms and guests are kept in this browser so that the guest's own pages - the pre-arrival form and the
+          bill - see what the front desk sees when they are opened in another tab. Two tabs on this machine share it; two
+          devices do not, which needs the real server.
+        </p>
+        <div className="mt-3">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              resetDemo()
+              setResetAt(new Date().toLocaleTimeString())
+            }}
+          >
+            Put the sample data back
+          </Button>
+          {resetAt && <span className="ml-3 text-xs text-good">Reset at {resetAt}</span>}
+        </div>
+      </section>
     </div>
   )
 }

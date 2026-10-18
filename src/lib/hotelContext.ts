@@ -48,6 +48,8 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** Put the demonstration back to how it started, on this browser. */
+  resetDemo: () => void
   checkOut: (reservationId: string, note?: string) => void
   /** Moves an in-house guest to another room. The old room goes dirty, the new one becomes occupied. */
   moveRoom: (reservationId: string, toRoom: string, entry: Omit<RoomMove, 'at'>) => void

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useBrowserSyncedState } from '../hooks/useBrowserSyncedState'
 import { tokenFor } from '../lib/preRegistration'
 import type { PreRegDetails } from '../lib/preRegistration'
 import type { ReactNode } from 'react'
@@ -73,11 +73,35 @@ function fakeFiscalCode(seed: string) {
   return `SIM-${String(h).padStart(10, '0')}`
 }
 
+const KEYS = {
+  reservations: 'gastora:hotel:reservations',
+  rooms: 'gastora:hotel:rooms',
+  guests: 'gastora:hotel:guests',
+} as const
+
 export default function HotelProvider({ children }: { children: ReactNode }) {
   const { tax } = useFeatures()
-  const [reservations, setReservations] = useState(start.reservations)
-  const [rooms, setRooms] = useState(start.rooms)
-  const [guests, setGuests] = useState<Guest[]>(start.guests)
+  // The hotel's own record is shared between tabs on this browser, because the guest's pages - the
+  // pre-arrival form and the bill - are opened from a link and are therefore never the tab the desk is
+  // working in. Browser-only: two tabs on one machine see each other, two devices do not. A real build
+  // replaces this with the server, and that is the same line that makes it work across devices.
+  const [reservations, setReservations] = useBrowserSyncedState(KEYS.reservations, start.reservations)
+  const [rooms, setRooms] = useBrowserSyncedState(KEYS.rooms, start.rooms)
+  const [guests, setGuests] = useBrowserSyncedState<Guest[]>(KEYS.guests, start.guests)
+
+  /** Put the demonstration back to how it started, on this browser. */
+  function resetDemo() {
+    for (const key of Object.values(KEYS)) {
+      try {
+        window.localStorage.removeItem(key)
+      } catch {
+        // Nothing stored to clear.
+      }
+    }
+    setReservations(start.reservations)
+    setRooms(start.rooms)
+    setGuests(start.guests)
+  }
 
   function checkIn(reservationId: string, roomNumber: string, details: GuestDetails) {
     setReservations((list) =>
@@ -381,6 +405,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         openPreReg,
         submitPreReg,
         acceptPreReg,
+        resetDemo,
         agreeExpress,
         cancelExpress,
         runExpress,
