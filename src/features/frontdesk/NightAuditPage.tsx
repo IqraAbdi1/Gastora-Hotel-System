@@ -24,7 +24,11 @@ export default function NightAuditPage() {
   const done = ran(auditRuns, TODAY)
 
   const report = auditReport(reservations, rooms, TODAY)
-  const blockers = report.items.filter((i) => i.severity === 'bad')
+  // Closing the day settles an arrival that never came - it becomes a no-show - so those do not block.
+  // A guest still in house past their departure is the opposite: the day cannot tell whether they
+  // extended or left without saying, and guessing would put a wrong figure in the hotel's own record.
+  const blockers = report.items.filter((i) => i.severity === 'bad' && i.kind !== 'not-arrived')
+  const closeSettles = report.items.filter((i) => i.kind === 'not-arrived')
   const ready = blockers.length === 0
   const open = openId ? reservations.find((r) => r.id === openId) : undefined
   const folio = openFolio ? reservations.find((r) => r.id === openFolio) : undefined
@@ -148,6 +152,12 @@ export default function NightAuditPage() {
               {done.departures === 1 ? '' : 's'}. {ugx(done.owed)} is carried into tomorrow. Check-out tomorrow is{' '}
               {stayTimes.checkOutTime}.
             </p>
+            {done.open > 0 && (
+              <p className="mt-1 text-xs text-warn">
+                {done.open} item{done.open === 1 ? '' : 's'} were still open when the day closed. They are above, and the morning shift deals
+                with them.
+              </p>
+            )}
             {done.noShows.length > 0 && (
               <p className="mt-1 text-xs text-ink/70">
                 {done.noShows.length} booking{done.noShows.length === 1 ? '' : 's'} that never arrived {done.noShows.length === 1 ? 'was' : 'were'}{' '}
@@ -163,13 +173,20 @@ export default function NightAuditPage() {
                 : 'Closing the day by itself is switched off for this hotel, so somebody runs it.'}
             </p>
             {!ready && (
+              <p className="mt-1 text-xs text-bad">
+                {blockers.length} item{blockers.length === 1 ? '' : 's'} above must be cleared first. A guest still in house past their departure
+                has either extended or left without saying, and only a person can tell which.
+              </p>
+            )}
+            {closeSettles.length > 0 && (
               <p className="mt-1 text-xs text-ink/60">
-                {blockers.length} red item{blockers.length === 1 ? '' : 's'} above. Closing the day records an arrival that never came as a
-                no-show, which is what clearing it means.
+                {closeSettles.length} arrival{closeSettles.length === 1 ? '' : 's'} that never came will be recorded as no-show
+                {closeSettles.length === 1 ? '' : 's'} by closing the day. Those do not need clearing by hand.
               </p>
             )}
             <div className="mt-3">
               <Button
+                disabled={!ready}
                 onClick={() =>
                   closeDay({
                     date: TODAY,
