@@ -4,6 +4,8 @@ import { TODAY } from '../../data/sample'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { nightlyRate } from '../../lib/rates'
+import DisplacementCard from './DisplacementCard'
+import type { GroupAsk } from '../../lib/displacement'
 import {
   BILLING_LABEL,
   BILLING_NOTE,
@@ -137,6 +139,15 @@ function NewGroupDialog({ onClose }: { onClose: () => void }) {
   )
 
   const rooms: GroupRooms[] = types.filter((t) => counts[t] > 0).map((t) => ({ type: t, count: counts[t] }))
+  // What the block is asking for, at the rates typed, so the cost of taking it can be weighed here
+  // rather than discovered in next month's figures.
+  const ask: GroupAsk[] = types
+    .filter((t) => counts[t] > 0)
+    .map((t) => ({
+      type: t,
+      count: counts[t],
+      rate: Number(rates[t].replace(/\D/g, '')) || nightlyRate(t, 0, options.rates),
+    }))
   const ok = name.trim().length >= 3 && organiser.trim() !== '' && rooms.length > 0 && departure > arrival
 
   function pickBilling(next: GroupBilling) {
@@ -297,6 +308,10 @@ function NewGroupDialog({ onClose }: { onClose: () => void }) {
           <p className="mt-1 text-xs text-ink/55">Everything not ticked follows the guest and is settled at the desk when they leave.</p>
         </div>
       )}
+
+      <div className="mt-4">
+        <DisplacementCard ask={ask} arrival={arrival} departure={departure} />
+      </div>
 
       <div className="mt-4">
         <Field label="Anything the desk should know">

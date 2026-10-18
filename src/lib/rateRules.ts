@@ -59,8 +59,11 @@ const applies = (rule: RateRule, type: Room['type'], planId?: string) =>
 /** Every night of a stay, the last one excluded: a guest leaving on the 5th did not sleep on the 5th. */
 export function nightsOfStay(arrival: string, departure: string): string[] {
   const out: string[] = []
-  let cursor = Date.parse(`${arrival}T00:00:00`)
-  const end = Date.parse(`${departure}T00:00:00`)
+  // Parsed and formatted in UTC throughout. Parsing local midnight and formatting with toISOString
+  // reads back the day before anywhere east of Greenwich, and Kampala is three hours east: every
+  // closed date and every night of a stay would land one day early.
+  let cursor = Date.parse(`${arrival}T00:00:00Z`)
+  const end = Date.parse(`${departure}T00:00:00Z`)
   if (Number.isNaN(cursor) || Number.isNaN(end)) return out
   while (cursor < end && out.length < 400) {
     out.push(new Date(cursor).toISOString().slice(0, 10))
