@@ -26,6 +26,7 @@ export type FeatureKey =
   | 'expressCheckout'
   | 'groups'
   | 'roomKeys'
+  | 'revenue'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -138,6 +139,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       'For an owner with more than one hotel. A property that is full can send the booking to a sister property instead of losing the guest. They see each other\u2019s free rooms and nothing else: not guests, not folios, not takings.',
   },
   {
+    key: 'revenue',
+    label: 'Revenue and pace',
+    blurb:
+      "How fast each night ahead is filling, measured against the way this hotel's own past nights filled by the same point. Shows what is on the books, what came in this week, and where a night is likely to finish. It needs the hotel's own history, so a new hotel sees it fill up over its first months.",
+  },
+  {
     key: 'idScan',
     label: 'Read the ID',
     blurb:
@@ -184,7 +191,7 @@ export const PLANS: {
       'expressCheckout',
       'groups',
       'roomKeys',
-      'crossProperty',
+      'revenue',
     ],
   },
   {
@@ -212,6 +219,8 @@ export const PLANS: {
       'expressCheckout',
       'groups',
       'roomKeys',
+      'revenue',
+      'crossProperty',
     ],
   },
 ]

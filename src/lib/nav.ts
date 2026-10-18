@@ -86,6 +86,7 @@ export const modules: NavModule[] = [
     { to: '/admin/taxes', label: 'Taxes and EFRIS', feature: 'taxLines' },
     { to: '/admin/approvals', label: 'Approvals to review' },
     { to: '/admin/policies', label: 'Rates and policies' },
+    { to: '/admin/revenue', label: 'Revenue and pace', feature: 'revenue' },
   ]),
 ]
 

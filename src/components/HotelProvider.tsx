@@ -129,7 +129,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   }
 
   function addReservation(input: NewReservation) {
-    const created: Reservation = { ...input, id: nextId(reservations), status: 'booked' }
+    const created: Reservation = { bookedAt: TODAY, ...input, id: nextId(reservations), status: 'booked' }
     setReservations((list) => [...list, created])
     return created
   }
@@ -144,7 +144,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setReservations((list) => {
       const made: Reservation[] = []
       for (const input of inputs) {
-        made.push({ ...input, id: nextId([...list, ...made]), status: 'booked' })
+        made.push({ bookedAt: TODAY, ...input, id: nextId([...list, ...made]), status: 'booked' })
       }
       return [...list, ...made]
     })

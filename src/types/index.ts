@@ -126,6 +126,8 @@ export type Reservation = {
   total: number
   paid: number
   details?: GuestDetails
+  /** The day the booking was taken. Without it there is no lead time and no pickup. */
+  bookedAt?: string
   guestId?: string
   plan?: string
   guarantee?: GuaranteeType
