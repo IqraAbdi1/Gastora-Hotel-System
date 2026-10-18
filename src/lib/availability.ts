@@ -40,3 +40,32 @@ export function addDays(iso: string, days: number) {
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
 }
+/**
+ * How full the house is on each night, as a percentage of the rooms that can be sold.
+ *
+ * This is the whole hotel, every room type together, because that is the number a hotelier prices on:
+ * the Deluxe rate rises because the hotel is filling, not because four Deluxes went. Blocked rooms are
+ * not counted on either side - a room out of order is not an empty room the hotel failed to sell.
+ *
+ * The stay being quoted is not in here, so a quote does not raise its own price.
+ */
+export function soldByNight(
+  rooms: Room[],
+  reservations: Reservation[],
+  from: string,
+  to: string,
+): Record<string, number> {
+  const sellable = rooms.filter((r) => r.status !== 'blocked').length
+  const out: Record<string, number> = {}
+  if (sellable === 0) return out
+  for (let d = from; d < to; d = new Date(Date.parse(`${d}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)) {
+    let held = 0
+    for (const r of reservations) {
+      if (!holdsRoom(r)) continue
+      if (r.arrival <= d && d < r.departure) held += 1
+    }
+    out[d] = Math.min(100, Math.round((held / sellable) * 100))
+    if (Object.keys(out).length > 400) break
+  }
+  return out
+}

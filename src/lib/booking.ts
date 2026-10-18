@@ -1,5 +1,6 @@
 import { DEPOSIT_RATE, ratePlans, roomRate } from '../data/rates'
 import { averageNightly, roomTotalFor } from './rateCalendar'
+import type { SoldOn } from './rateCalendar'
 import { depositFor, nightlyRate } from './rates'
 import type { RatesPolicy } from './rates'
 import { holdsRoom, isRoomFree } from './availability'
@@ -33,11 +34,13 @@ export function stayTotalBetween(
   arrival: string,
   departure: string,
   rates?: RatesPolicy,
+  /** How full the house is each night, when the hotel prices on occupancy. */
+  soldOn?: SoldOn,
 ) {
   const nights = nightsOf(arrival, departure)
   if (nights < 1) return 0
   if (!rates) return stayTotal(type, planId, nights)
-  return roomTotalFor(type, arrival, departure, rates) + planFor(planId, rates).extraPerNight * nights
+  return roomTotalFor(type, arrival, departure, rates, soldOn) + planFor(planId, rates).extraPerNight * nights
 }
 
 /** The average night of a stay, room plus meal plan. One number standing for nights that may differ. */
@@ -47,9 +50,10 @@ export function nightlyForStay(
   arrival: string,
   departure: string,
   rates?: RatesPolicy,
+  soldOn?: SoldOn,
 ) {
   if (!rates) return (roomRate[type] ?? 0) + planFor(planId).extraPerNight
-  return averageNightly(type, arrival, departure, rates) + planFor(planId, rates).extraPerNight
+  return averageNightly(type, arrival, departure, rates, soldOn) + planFor(planId, rates).extraPerNight
 }
 
 export function suggestedDeposit(total: number, percent?: number) {
@@ -65,10 +69,11 @@ export function depositForStay(
   rates?: RatesPolicy,
   /** The dates, when they are known, so a December deposit follows the December rate. */
   dates?: { arrival: string; departure: string },
+  soldOn?: SoldOn,
 ): number {
   if (!rates) return suggestedDeposit(stayTotal(type, planId, nights, rates))
   const nightly = dates
-    ? nightlyForStay(type, planId, dates.arrival, dates.departure, rates)
+    ? nightlyForStay(type, planId, dates.arrival, dates.departure, rates, soldOn)
     : nightlyRate(type, planFor(planId, rates).extraPerNight, rates)
   return depositFor(nightly, nights, rates)
 }

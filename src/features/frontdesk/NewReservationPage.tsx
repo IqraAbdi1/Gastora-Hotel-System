@@ -9,6 +9,7 @@ import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { depositForStay, freeByType, freeRooms, nightlyForStay, nightsOf, planFor, roomTypes, stayTotalBetween } from '../../lib/booking'
 import { calendarInUse, DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
+import { soldByNight } from '../../lib/availability'
 import { RULE_LABEL, refusedBy } from '../../lib/rateRules'
 import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
 import { benefitList, loyaltyDiscount, loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
@@ -81,6 +82,14 @@ export function NewReservationForm({
   const free = useMemo(() => freeByType(rooms, reservations, from, departure), [rooms, reservations, from, departure])
   const typeFree = datesOk ? free[type] : 0
   // Refused before anything else: a date the hotel has closed is not a question of availability.
+  // How full the house already is on each of these nights. The booking being quoted is not in it, so a
+  // quote never raises its own price.
+  const sold = useMemo(
+    () => (datesOk ? soldByNight(rooms, reservations, from, departure) : {}),
+    [datesOk, rooms, reservations, from, departure],
+  )
+  const soldOn = (date: string) => sold[date]
+
   const refusal = datesOk
     ? refusedBy(rates.rules, type, from, departure, planId, planFor(planId, rates).name)
     : undefined
@@ -115,15 +124,19 @@ export function NewReservationForm({
     [company, companyAccount, datesOk, policy, reservations, type, planId, from, departure, nights, rates],
   )
 
-  const beforeLoyalty = datesOk ? (companyPlan ? companyPlan.chargedTotal : stayTotalBetween(type, planId, from, departure, rates)) : 0
+  const beforeLoyalty = datesOk
+    ? companyPlan
+      ? companyPlan.chargedTotal
+      : stayTotalBetween(type, planId, from, departure, rates, soldOn)
+    : 0
 
   // A returning guest's reward. The room only, never on top of a company price, and only on finished stays.
   const history = useMemo(() => (selectedGuest ? stayHistory(selectedGuest, reservations) : null), [selectedGuest, reservations])
   // No programme, no profile: a guest who has not joined earns nothing and is not recognised.
   const tier = history && loyaltyKnown(selectedGuest) ? tierFor(history, loyalty) : null
-  const roomOnly = datesOk ? stayTotalBetween(type, 'room-only', from, departure, rates) : 0
+  const roomOnly = datesOk ? stayTotalBetween(type, 'room-only', from, departure, rates, soldOn) : 0
   // Night by night, so a price the guest will query can be answered without opening the settings.
-  const perNight = datesOk ? priceNights(type, from, departure, rates) : []
+  const perNight = datesOk ? priceNights(type, from, departure, rates, soldOn) : []
   const nightsDiffer = varies(perNight)
   const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
   const [useLoyalty, setUseLoyalty] = useState(true)
@@ -132,7 +145,7 @@ export function NewReservationForm({
   const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
   // A company account and its LPO are themselves the guarantee, so the guest is not asked for a deposit too.
   const onCompany = !!company
-  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates, { arrival: from, departure })
+  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates, { arrival: from, departure }, soldOn)
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
   const matches = useMemo(
@@ -328,7 +341,7 @@ export function NewReservationForm({
               {roomTypes.map((t) => {
                 const f = datesOk ? free[t] : 0
                 const price = datesOk
-                  ? nightlyForStay(t, planId, from, departure, rates)
+                  ? nightlyForStay(t, planId, from, departure, rates, soldOn)
                   : rates.roomRates[t] + planFor(planId, rates).extraPerNight
                 return (
                   <button

@@ -8,11 +8,14 @@ import {
   dayOf,
   describeMove,
   newDayRateId,
+  newOccupancyRateId,
   newSeasonId,
   priceNights,
   nextDay,
 } from '../../lib/rateCalendar'
-import type { DayRate, Move, RateSeason } from '../../lib/rateCalendar'
+import type { DayRate, Move, OccupancyRate, RateSeason } from '../../lib/rateCalendar'
+import { soldByNight } from '../../lib/availability'
+import { useHotel } from '../../lib/hotelContext'
 import { roomTypeList } from '../../lib/rates'
 import type { RatesPolicy } from '../../lib/rates'
 import type { Room } from '../../types'
@@ -41,19 +44,25 @@ export default function RateCalendarCard({
   rates: RatesPolicy
   set: (patch: Partial<RatesPolicy>) => void
 }) {
+  const { rooms, reservations } = useHotel()
   const [type, setType] = useState<Room['type']>('Standard')
   const seasons = rates.seasons ?? []
   const dayRates = rates.dayRates ?? []
+  const busy = rates.occupancyRates ?? []
 
   const setSeason = (id: string, patch: Partial<RateSeason>) =>
     set({ seasons: seasons.map((s) => (s.id === id ? { ...s, ...patch } : s)) })
   const setDay = (id: string, patch: Partial<DayRate>) =>
     set({ dayRates: dayRates.map((d) => (d.id === id ? { ...d, ...patch } : d)) })
+  const setBusy = (id: string, patch: Partial<OccupancyRate>) =>
+    set({ occupancyRates: busy.map((o) => (o.id === id ? { ...o, ...patch } : o)) })
 
   // Fourteen nights from today: long enough to show a weekend rule working, short enough to read.
   let end = TODAY
   for (let i = 0; i < 14; i++) end = nextDay(end)
-  const preview = priceNights(type, TODAY, end, rates)
+  // The preview prices real nights against the bookings the hotel actually holds, not a guess.
+  const sold = soldByNight(rooms, reservations, TODAY, end)
+  const preview = priceNights(type, TODAY, end, rates, (d) => sold[d])
   const flat = (rates.roomRates[type] ?? 0) * preview.length
   const withCalendar = preview.reduce((n, p) => n + p.rate, 0)
 
@@ -273,6 +282,103 @@ export default function RateCalendarCard({
         </section>
 
         <section className="border-t border-ink/10 pt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-medium text-ink/80">When the house is filling</p>
+            <span className="text-xs text-ink/55">The whole hotel that night, not the room type.</span>
+          </div>
+          <p className="mt-0.5 text-xs text-ink/55">
+            The last room of the night is worth more than the first, and a hotel that charges the same for both is
+            giving the difference away. The highest step that the night reaches is the one that applies.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {busy.map((o) => (
+              <li key={o.id} className="rounded-lg border border-ink/10 p-2.5">
+                <div className="grid gap-2 sm:grid-cols-[1fr_7rem_6rem_7rem_6rem]">
+                  <Input
+                    value={o.name}
+                    onChange={(e) => setBusy(o.id, { name: e.target.value })}
+                    aria-label="Occupancy step name"
+                    placeholder="Filling up"
+                  />
+                  <select
+                    value={o.type ?? ''}
+                    onChange={(e) => setBusy(o.id, { type: (e.target.value || undefined) as Room['type'] })}
+                    aria-label={`${o.name} room type`}
+                    className={box}
+                  >
+                    <option value="">Every type</option>
+                    {roomTypeList.map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                  <Input
+                    inputMode="numeric"
+                    className="tabular-nums"
+                    value={String(o.atLeast)}
+                    onChange={(e) => setBusy(o.id, { atLeast: Math.min(100, Math.max(0, num(e.target.value))) })}
+                    aria-label={`${o.name} percent sold`}
+                  />
+                  <select
+                    value={o.how}
+                    onChange={(e) => setBusy(o.id, { how: e.target.value as Move })}
+                    aria-label={`${o.name} how`}
+                    className={box}
+                  >
+                    {MOVES.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    inputMode="numeric"
+                    className="tabular-nums"
+                    value={String(o.value)}
+                    onChange={(e) => setBusy(o.id, { value: num(e.target.value) })}
+                    aria-label={`${o.name} value`}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <span className="text-ink/60">
+                    {o.type ?? 'Every type'} · from {o.atLeast}% sold · {describeMove(o)}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-ink/70">
+                      <input type="checkbox" checked={o.on} onChange={(e) => setBusy(o.id, { on: e.target.checked })} />
+                      On
+                    </label>
+                    <button
+                      type="button"
+                      className="font-semibold text-bad"
+                      onClick={() => set({ occupancyRates: busy.filter((x) => x.id !== o.id) })}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+            {busy.length === 0 && <li className="text-xs text-ink/55">The rate does not move with how full the hotel is.</li>}
+          </ul>
+          <div className="mt-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                set({
+                  occupancyRates: [
+                    ...busy,
+                    { id: newOccupancyRateId(busy), name: '', atLeast: 80, how: 'percent', value: 15, on: false },
+                  ],
+                })
+              }
+            >
+              Add a step
+            </Button>
+          </div>
+        </section>
+
+        <section className="border-t border-ink/10 pt-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <p className="text-sm font-medium text-ink/80">The next fourteen nights</p>
             <Field label="Room type">
@@ -290,6 +396,7 @@ export default function RateCalendarCard({
               <li key={p.date} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <span className="text-ink/70">
                   {DAY_SHORT[dayOf(p.date)]} {dayMonth(p.date)}
+                  {p.sold !== undefined && <span className="ml-2 text-xs text-ink/45">{p.sold}% sold</span>}
                   {p.steps.length > 1 && (
                     <span className="ml-2 text-xs text-ink/50">{p.steps.slice(1).map((x) => x.label).join(' → ')}</span>
                   )}

@@ -13,6 +13,14 @@
 //      The first matching rule wins. Day rules never stack with each other, for the same reason a
 //      company may only have one discount: two of them applied together is a number nobody can explain
 //      to a guest.
+//   3. An OCCUPANCY step then moves it again, once the house is filling. This is the one layer that
+//      depends on something other than the calendar - how much of the hotel is already sold that night -
+//      so the caller hands it in. A hotel that does not price on occupancy passes nothing and nothing
+//      changes.
+//
+// Occupancy is the whole house, not the room type. A hotelier raises the Deluxe rate because the hotel
+// is filling, not because four Deluxes went: the guest who cannot find a Standard is the one who ends up
+// paying for a Deluxe.
 //
 // Every price this file works out comes with the steps that made it, because a rate nobody can explain
 // is a rate the front desk will not defend when a guest argues.
@@ -49,6 +57,12 @@ export interface RateSeason extends Moves {
 /** Days of the week that cost more or less than the rest. 0 is Sunday. */
 export interface DayRate extends Moves {
   days: number[]
+}
+
+/** A step that applies once the house is at least this full for that night. */
+export interface OccupancyRate extends Moves {
+  /** Percent of the sellable rooms already sold, 0 to 100. */
+  atLeast: number
 }
 
 export const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -89,16 +103,23 @@ export interface NightPrice {
   steps: NightStep[]
   season?: RateSeason
   dayRate?: DayRate
+  occupancyRate?: OccupancyRate
+  /** How full the house was when this price was worked out, where that was known. */
+  sold?: number
 }
 
 export interface RateCalendar {
   roomRates: Record<Room['type'], number>
   seasons: RateSeason[]
   dayRates: DayRate[]
+  occupancyRates: OccupancyRate[]
 }
 
+/** How full the house is on a given night, as a percentage. Nothing known means no occupancy step. */
+export type SoldOn = (date: string) => number | undefined
+
 /** The room price for one night, with the reasoning kept. The meal plan is added by the caller. */
-export function priceNight(type: Room['type'], date: string, c: RateCalendar): NightPrice {
+export function priceNight(type: Room['type'], date: string, c: RateCalendar, soldOn?: SoldOn): NightPrice {
   const base = c.roomRates[type] ?? 0
   const steps: NightStep[] = [{ label: 'Published rate', rate: base }]
   let rate = base
@@ -116,37 +137,71 @@ export function priceNight(type: Room['type'], date: string, c: RateCalendar): N
     steps.push({ label: `${dayRate.name} (${describeMove(dayRate)})`, rate })
   }
 
-  return { date, rate, steps, season, dayRate }
+  // Last, and only when the caller knows how full the house is. The steps are ordered highest first,
+  // so a hotel can set 90% above 70% and have the higher one win.
+  const sold = soldOn?.(date)
+  let occupancyRate: OccupancyRate | undefined
+  if (sold !== undefined) {
+    occupancyRate = [...(c.occupancyRates ?? [])]
+      .filter((o) => covers(o, type))
+      .sort((a, b) => b.atLeast - a.atLeast)
+      .find((o) => sold >= o.atLeast)
+    if (occupancyRate) {
+      rate = applyMove(rate, occupancyRate)
+      steps.push({ label: `${occupancyRate.name} (${Math.round(sold)}% sold, ${describeMove(occupancyRate)})`, rate })
+    }
+  }
+
+  return { date, rate, steps, season, dayRate, occupancyRate, sold }
 }
 
 /** Every night of a stay. Arrival counts, the departure day does not: nobody sleeps on it. */
-export function priceNights(type: Room['type'], arrival: string, departure: string, c: RateCalendar): NightPrice[] {
+export function priceNights(
+  type: Room['type'],
+  arrival: string,
+  departure: string,
+  c: RateCalendar,
+  soldOn?: SoldOn,
+): NightPrice[] {
   const out: NightPrice[] = []
   for (let d = arrival; d < departure; d = nextDay(d)) {
-    out.push(priceNight(type, d, c))
+    out.push(priceNight(type, d, c, soldOn))
     if (out.length > 370) break
   }
   return out
 }
 
 /** What the room alone comes to over the stay, before any meal plan or discount. */
-export const roomTotalFor = (type: Room['type'], arrival: string, departure: string, c: RateCalendar): number =>
-  priceNights(type, arrival, departure, c).reduce((n, p) => n + p.rate, 0)
+export const roomTotalFor = (
+  type: Room['type'],
+  arrival: string,
+  departure: string,
+  c: RateCalendar,
+  soldOn?: SoldOn,
+): number => priceNights(type, arrival, departure, c, soldOn).reduce((n, p) => n + p.rate, 0)
 
 /**
  * The average night of a stay, which is what goes on screen when one number has to stand for the whole
  * stay. It is an average, not the price of any particular night, and anywhere it is shown the nights
  * themselves are one click away.
  */
-export function averageNightly(type: Room['type'], arrival: string, departure: string, c: RateCalendar): number {
-  const nights = priceNights(type, arrival, departure, c)
+export function averageNightly(
+  type: Room['type'],
+  arrival: string,
+  departure: string,
+  c: RateCalendar,
+  soldOn?: SoldOn,
+): number {
+  const nights = priceNights(type, arrival, departure, c, soldOn)
   if (nights.length === 0) return c.roomRates[type] ?? 0
   return Math.round(nights.reduce((n, p) => n + p.rate, 0) / nights.length)
 }
 
 /** Whether the calendar changes anything at all, so screens can stay quiet in a hotel that has no seasons. */
 export const calendarInUse = (c: RateCalendar): boolean =>
-  (c.seasons ?? []).some((s) => s.on) || (c.dayRates ?? []).some((d) => d.on)
+  (c.seasons ?? []).some((s) => s.on) ||
+  (c.dayRates ?? []).some((d) => d.on) ||
+  (c.occupancyRates ?? []).some((o) => o.on)
 
 /** True when the nights of a stay are not all the same price, which is when a breakdown is worth showing. */
 export function varies(nights: NightPrice[]): boolean {
@@ -163,4 +218,10 @@ export function newDayRateId(list: DayRate[]): string {
   let n = list.length + 1
   while (list.some((x) => x.id === `day-${n}`)) n += 1
   return `day-${n}`
+}
+
+export function newOccupancyRateId(list: OccupancyRate[]): string {
+  let n = list.length + 1
+  while (list.some((x) => x.id === `busy-${n}`)) n += 1
+  return `busy-${n}`
 }

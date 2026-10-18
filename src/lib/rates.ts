@@ -1,4 +1,4 @@
-import type { DayRate, RateSeason } from './rateCalendar'
+import type { DayRate, OccupancyRate, RateSeason } from './rateCalendar'
 import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
@@ -54,6 +54,8 @@ export interface RatesPolicy {
    */
   seasons: RateSeason[]
   dayRates: DayRate[]
+  /** Steps that move the rate once the house is filling for that night. */
+  occupancyRates: OccupancyRate[]
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -83,6 +85,9 @@ export const DEFAULT_RATES: RatesPolicy = {
   ],
   dayRates: [
     { id: 'day-1', name: 'Weekend', days: [5, 6], how: 'percent', value: 10, on: false },
+  ],
+  occupancyRates: [
+    { id: 'busy-1', name: 'Filling up', atLeast: 80, how: 'percent', value: 15, on: false },
   ],
 }
 
