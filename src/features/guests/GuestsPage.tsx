@@ -9,6 +9,9 @@ import { loyaltyKnown, stayHistory, tierFor } from '../../lib/loyalty'
 import { useAuth } from '../auth/authContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
+import MergeDialog from './MergeDialog'
+import { duplicatePairs } from '../../lib/mergeGuests'
+import type { DuplicatePair } from '../../lib/mergeGuests'
 
 const PAGE = 12
 
@@ -27,6 +30,7 @@ export default function GuestsPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [creating, setCreating] = useState(false)
+  const [joining, setJoining] = useState<DuplicatePair | null>(null)
 
   const q = params.get('q') ?? ''
   const page = Math.max(0, Number(params.get('page') ?? 0) || 0)
@@ -54,6 +58,9 @@ export default function GuestsPage() {
       .sort((a, b) => (b.history.lastStay ?? '').localeCompare(a.history.lastStay ?? ''))
   }, [guests, reservations, q])
 
+  // Narrow on purpose: same telephone or the same name written the same way. A looser rule would bury
+  // the real duplicates under a list of common surnames.
+  const dupes = useMemo(() => (full ? duplicatePairs(guests) : []), [guests, full])
   const returning = rows.filter((r) => r.history.stays > 1).length
   const vips = guests.filter((g) => g.vip).length
   const spent = rows.reduce((n, r) => n + r.history.spent, 0)
@@ -138,6 +145,35 @@ export default function GuestsPage() {
         )}
       </div>
 
+      {dupes.length > 0 && (
+        <Card
+          title="Possibly the same person"
+          icon="alert"
+          count={dupes.length}
+          padded
+          description="One guest recorded twice splits their history and their tier, and counts them twice in every figure."
+        >
+          <ul className="space-y-2">
+            {dupes.map((d) => (
+              <li
+                key={`${d.a.id}-${d.b.id}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/10 p-3 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium text-ink">{d.a.name}</span>
+                  <span className="mx-2 text-ink/40">and</span>
+                  <span className="font-medium text-ink">{d.b.name}</span>
+                  <span className="ml-2 text-xs text-ink/55">{d.reason}</span>
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => setJoining(d)}>
+                  Look at them
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <FilterBar query={q} onQuery={(v) => setParam('q', v)} placeholder="Search name, telephone or email" />
 
       <Card title="Guests" icon="guests" count={rows.length} padded={false}>
@@ -167,6 +203,15 @@ export default function GuestsPage() {
           </div>
         )}
       </Card>
+
+      {joining && (
+        <MergeDialog
+          a={joining.a}
+          b={joining.b}
+          onClose={() => setJoining(null)}
+          onMerged={(keptId) => navigate(`/desk/guests/${keptId}`)}
+        />
+      )}
 
       {creating && (
         <GuestEditPanel

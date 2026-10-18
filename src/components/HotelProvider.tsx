@@ -160,6 +160,24 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setGuests((list) => list.map((guest) => guest.id === guestId ? { ...guest, ...patch } : guest))
   }
 
+  /**
+   * Two records of one person become one.
+   *
+   * The bookings move first and the record goes second, so there is no moment at which a booking
+   * points at a guest who is no longer there. The name on an old booking is left as it was written:
+   * that is what the guest was called that night, and rewriting history to tidy a spelling would make
+   * the folios disagree with the invoices already printed.
+   */
+  function mergeGuests(keepId: string, dropId: string, result: Guest, dropName: string) {
+    if (keepId === dropId) return
+    setReservations((list) =>
+      // An older booking may carry no guest id at all, in which case the name it was written under is
+      // the only link there is - and it is the name of the record being dropped, not the one being kept.
+      list.map((r) => (r.guestId === dropId || (!r.guestId && r.guest === dropName) ? { ...r, guestId: keepId } : r)),
+    )
+    setGuests((list) => list.filter((g) => g.id !== dropId).map((g) => (g.id === keepId ? result : g)))
+  }
+
   function amendReservation(reservationId: string, patch: AmendPatch, entry: Amendment) {
     setReservations((list) =>
       list.map((r) =>
@@ -585,6 +603,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         addReservations,
         addGuest,
         updateGuest,
+        mergeGuests,
         amendReservation,
         cancelReservation,
         addCharge,

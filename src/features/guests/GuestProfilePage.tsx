@@ -11,6 +11,7 @@ import { useAuth } from '../auth/authContext'
 import { useMessages } from '../messages/messagesContext'
 import { useFeatures } from '../platform/featuresContext'
 import GuestEditPanel from './GuestEditPanel'
+import RelationshipsCard from './RelationshipsCard'
 
 /**
  * One guest, gathered: who they are, what they have asked for, what they have spent, what they agreed
@@ -260,6 +261,8 @@ export default function GuestProfilePage() {
           </Card>
         )}
       </div>
+
+      <RelationshipsCard guest={guest} />
 
       <Card title="Every stay" icon="calendar" count={stays.length} padded={false}>
         <DataTable

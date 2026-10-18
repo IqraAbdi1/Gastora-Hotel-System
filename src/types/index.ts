@@ -82,6 +82,23 @@ export type GuaranteeType = 'deposit' | 'card' | 'company' | 'none'
 
 export type GuestNote = { id: string; at: string; by: string; text: string }
 
+/**
+ * Who a guest belongs with.
+ *
+ * A household is another guest: a spouse, a parent, the colleague they always share a booking with.
+ * A company or an agent is an account, and is why somebody else may be paying.
+ */
+export type GuestLink = {
+  id: string
+  kind: 'household' | 'company' | 'agent'
+  /** The other guest's id, or the corporate account's id. */
+  targetId: string
+  /** The name as it was when the link was made, so a removed account still reads sensibly. */
+  name: string
+  /** "Wife", "Son", "Travels with" - the hotel's own word for it. */
+  relation?: string
+}
+
 export type GuestPreferences = {
   room?: string
   bed?: string
@@ -113,6 +130,8 @@ export type Guest = {
   consentAt?: string
   preferences?: GuestPreferences
   notes?: GuestNote[]
+  /** Households, companies and agents this guest belongs with. */
+  links?: GuestLink[]
 }
 
 export type Reservation = {

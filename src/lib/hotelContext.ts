@@ -31,6 +31,8 @@ export type HotelValue = {
   /** Several at once, for a block of rooms held under one name. */
   addReservations: (inputs: NewReservation[]) => void
   addGuest: (input: Omit<Guest, 'id'>) => Guest
+  /** Join two records of the same person: the bookings move, the kept record becomes `result`. */
+  mergeGuests: (keepId: string, dropId: string, result: Guest, dropName: string) => void
   updateGuest: (guestId: string, patch: Partial<Omit<Guest, 'id'>>) => void
   amendReservation: (reservationId: string, patch: AmendPatch, entry: Amendment) => void
   cancelReservation: (reservationId: string, patch: CancelPatch, entry: Cancellation) => void
