@@ -4,7 +4,7 @@ import { TODAY } from '../../data/sample'
 import { folioOf, stamp } from '../../lib/folio'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
-import { preRegLink } from '../../lib/preRegistration'
+import { preRegLink, tokenFor } from '../../lib/preRegistration'
 import { depositFor, nightlyRate } from '../../lib/rates'
 import {
   DEFAULT_MESSAGING,
@@ -16,7 +16,7 @@ import {
   newMessageId,
   templateFor,
 } from '../../lib/messages'
-import type { DueInput, GuestMessage, MessageVars } from '../../lib/messages'
+import type { DueInput, GuestMessage, MessageKind, MessageVars } from '../../lib/messages'
 import type { Reservation } from '../../types'
 import { useFeatures } from '../platform/featuresContext'
 import { MessagesContext } from './messagesContext'
@@ -61,10 +61,26 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
           deposit: ugx(depositFor(nightly, nights, rates)),
           time: r.status === 'in-house' ? stayTimes.checkOutTime : r.status === 'booked' && r.paid === 0 ? rates.releaseTime : stayTimes.checkInTime,
           link: preRegLink(window.location.origin, r.id, r.arrival),
+          // The same word, {link}, means the form before arrival and the bill afterwards. A hotel
+          // writing its own wording should not have to know which.
+          billLink: `${window.location.origin}/bill/${tokenFor(r.id, r.arrival)}`,
         } as MessageVars,
       }
     },
     [guests, rates, stayTimes, tenant.name],
+  )
+
+  /**
+   * The stay's details, pointed at the right place for this message.
+   *
+   * {link} means the form before arrival and the bill afterwards, because a hotel writing its own
+   * wording should not have to know which. This lives in one place because there are two paths that
+   * write a message - the clock and a person - and a rule kept in only one of them drifts.
+   */
+  const varsFor = useCallback(
+    (kind: MessageKind, vars: MessageVars): MessageVars =>
+      (kind === 'how was it' || kind === 'bill sent') && vars.billLink ? { ...vars, link: vars.billLink } : vars,
+    [],
   )
 
   const queue = useCallback(
@@ -74,7 +90,9 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
       const to = input.to ?? d?.phone ?? ''
       const allowed = mayReceive(input.kind, to, input.to ? true : d?.marketingConsent)
       const template = templateFor(settings.templates, input.kind)
-      const body = input.body ?? fillTemplate(template?.text ?? '', { hotel: tenant.name, ...(d?.vars ?? {}), ...(input.vars ?? {}) })
+      // After the stay, {link} is the guest's own bill, which is where they say how it went.
+      const vars: MessageVars = { hotel: tenant.name, ...varsFor(input.kind, d?.vars ?? {}), ...(input.vars ?? {}) }
+      const body = input.body ?? fillTemplate(template?.text ?? '', vars)
       if (body.trim() === '') return null
       let created: GuestMessage | null = null
       setMessages((list) => {
@@ -101,7 +119,7 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
       })
       return created
     },
-    [detailsOf, reservations, settings, tenant.name],
+    [detailsOf, reservations, settings, tenant.name, varsFor],
   )
 
   // What the rules say is due now. Written during render, the same way the day's cleaning is worked out,
@@ -142,7 +160,7 @@ export default function MessagesProvider({ children }: { children: ReactNode }) 
           channel: settings.channel,
           to: details.phone,
           guestName: r.guest,
-          body: fillTemplate(template.text, details.vars),
+          body: fillTemplate(template.text, varsFor(d.kind, details.vars)),
           at: stamp(),
           status: allowed.ok ? (settings.autoSend ? 'sent' : 'queued') : 'failed',
           sentAt: allowed.ok && settings.autoSend ? stamp() : undefined,

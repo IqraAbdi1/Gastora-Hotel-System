@@ -19,11 +19,13 @@ export type MessageKind =
   | 'deposit reminder'
   | 'before arrival'
   | 'room ready'
+  | 'mid stay'
   | 'before checkout'
   | 'bill sent'
   | 'room now free'
   | 'room released'
   | 'thank you'
+  | 'how was it'
 
 export type MessageStatus = 'queued' | 'sent' | 'failed' | 'cancelled'
 
@@ -35,11 +37,14 @@ export const MESSAGE_BASIS: Record<MessageKind, MessageBasis> = {
   'deposit reminder': 'the stay',
   'before arrival': 'the stay',
   'room ready': 'the stay',
+  'mid stay': 'the stay',
   'before checkout': 'the stay',
   'bill sent': 'the stay',
   'room now free': 'the stay',
   'room released': 'the stay',
   'thank you': 'marketing',
+  // Asking a guest how their own stay was is part of that stay, not an advertisement.
+  'how was it': 'the stay',
 }
 
 export const BASIS_NOTE: Record<MessageBasis, string> = {
@@ -129,6 +134,13 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     text: 'Dear {guest}, your room at {hotel} is ready. Check-in is from {time}. We will see you soon.',
   },
   {
+    kind: 'mid stay',
+    label: 'Halfway through',
+    blurb: 'Sent in the middle of a stay of three nights or more, so anything wrong can still be put right while the guest is here.',
+    on: true,
+    text: 'Dear {guest}, we hope all is well in room {room}. If there is anything you need, reply to this message or call the front desk.',
+  },
+  {
     kind: 'before checkout',
     label: 'Before checkout',
     blurb: 'Sent the evening before departure.',
@@ -162,6 +174,14 @@ export const DEFAULT_TEMPLATES: MessageTemplate[] = [
     blurb: 'Sent a day after departure. This one is marketing, so only to guests who agreed.',
     on: false,
     text: 'Dear {guest}, thank you for staying at {hotel}. We would be glad to welcome you again.',
+  },
+  {
+    kind: 'how was it',
+    label: 'How was it',
+    blurb:
+      'Sent two days after departure, carrying the link to the guest\u2019s own bill where they can say how it went. Asking a guest about their own stay is part of that stay, so it needs no marketing permission.',
+    on: true,
+    text: 'Dear {guest}, we hope you travelled well. If you have a moment, tell us how your stay at {hotel} was: {link}',
   },
 ]
 
@@ -291,12 +311,28 @@ export function dueForStay(r: DueInput, today: string, settings: MessagingSettin
     }
   }
 
+  // Halfway through a stay long enough for something to go wrong and still be put right. A one or two
+  // night stay is over before a message like this would help, so it is not sent.
+  if (r.status === 'in-house' && on('mid stay') && fresh('mid stay')) {
+    const nights = daysBetween(r.arrival, r.departure)
+    const soFar = daysBetween(r.arrival, today)
+    if (nights >= 3 && soFar >= Math.floor(nights / 2) && toDeparture >= 1) {
+      out.push({ kind: 'mid stay', reservationId: r.id, why: `Night ${soFar} of ${nights}, with time to put anything right.` })
+    }
+  }
+
   if (r.status === 'in-house' && on('before checkout') && fresh('before checkout') && toDeparture <= 1 && toDeparture >= 0) {
     out.push({ kind: 'before checkout', reservationId: r.id, why: toDeparture === 0 ? 'Leaving today.' : 'Leaving tomorrow.' })
   }
 
   if (r.status === 'checked-out' && on('thank you') && fresh('thank you') && daysBetween(r.departure, today) === 1) {
     out.push({ kind: 'thank you', reservationId: r.id, why: 'Left yesterday.' })
+  }
+
+  // Two days after leaving: late enough that the journey is over, early enough that the stay is still
+  // remembered. Deliberately after the thank you, so the two do not arrive together.
+  if (r.status === 'checked-out' && on('how was it') && fresh('how was it') && daysBetween(r.departure, today) === 2) {
+    out.push({ kind: 'how was it', reservationId: r.id, why: 'Left two days ago.' })
   }
 
   return out
@@ -313,9 +349,40 @@ export const KIND_LABEL: Record<MessageKind, string> = {
   'deposit reminder': 'Deposit reminder',
   'before arrival': 'Before you arrive',
   'room ready': 'Room ready',
+  'mid stay': 'Halfway through',
   'before checkout': 'Before checkout',
   'bill sent': 'Bill sent',
   'room now free': 'A room has come free',
   'room released': 'Room released',
   'thank you': 'After the stay',
+  'how was it': 'How was it',
 }
+
+/** The three parts of a stay a journey is built from, and what each is for. */
+export type Stage = 'before' | 'during' | 'after'
+
+export const STAGE_LABEL: Record<Stage, string> = {
+  before: 'Before they arrive',
+  during: 'While they are here',
+  after: 'After they leave',
+}
+
+export const STAGE_NOTE: Record<Stage, string> = {
+  before: 'Securing the booking and saving time at the desk.',
+  during: 'Catching anything that is wrong while it can still be put right.',
+  after: 'Thanking them, and asking how it went.',
+}
+
+/** Which part of the stay each message belongs to, and when in that part it goes. */
+export const JOURNEY: { kind: MessageKind; stage: Stage; when: string }[] = [
+  { kind: 'booking confirmed', stage: 'before', when: 'As soon as the booking is made' },
+  { kind: 'deposit reminder', stage: 'before', when: 'While a deposit is still owed' },
+  { kind: 'before arrival', stage: 'before', when: 'The day before arrival' },
+  { kind: 'room ready', stage: 'before', when: 'Arrival day, once the room is clean' },
+  { kind: 'mid stay', stage: 'during', when: 'Halfway through a stay of three nights or more' },
+  { kind: 'room now free', stage: 'during', when: 'When a room the guest waited for comes free' },
+  { kind: 'before checkout', stage: 'during', when: 'The day before they leave' },
+  { kind: 'bill sent', stage: 'after', when: 'When the bill is settled' },
+  { kind: 'thank you', stage: 'after', when: 'The day after they leave' },
+  { kind: 'how was it', stage: 'after', when: 'Two days after they leave' },
+]

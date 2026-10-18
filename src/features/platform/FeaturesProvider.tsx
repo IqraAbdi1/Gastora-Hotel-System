@@ -133,7 +133,16 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
           ...DEFAULT_OPTIONS,
           ...saved,
           rates: { ...DEFAULT_OPTIONS.rates, ...(saved.rates ?? {}) },
-          messaging: { ...DEFAULT_OPTIONS.messaging, ...(saved.messaging ?? {}) },
+          messaging: {
+            ...DEFAULT_OPTIONS.messaging,
+            ...(saved.messaging ?? {}),
+            // Templates are merged one by one rather than wholesale. A hotel that saved its wording
+            // before a new message existed would otherwise never receive the new one, and the message
+            // would quietly fail to be written at all because it has no text.
+            templates: DEFAULT_OPTIONS.messaging.templates.map(
+              (base) => saved.messaging?.templates?.find((t) => t.kind === base.kind) ?? base,
+            ),
+          },
           loyalty: { ...DEFAULT_OPTIONS.loyalty, ...(saved.loyalty ?? {}) },
           points: { ...DEFAULT_OPTIONS.points, ...(saved.points ?? {}) },
           limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Badge, Button, Card, Field, Input, PageHeader, Segmented, Select, StatCard, Textarea } from '../../components/ui'
 import { useAuth } from '../auth/authContext'
+import JourneyCard from './JourneyCard'
 import { useFeatures } from '../platform/featuresContext'
 import {
   BASIS_NOTE,
@@ -193,6 +194,8 @@ export default function MessagesPage() {
           )}
         </Card>
       )}
+
+      {view === 'wording' && <JourneyCard settings={settings} />}
 
       {view === 'wording' && (
         <Card

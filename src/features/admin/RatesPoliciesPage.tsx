@@ -30,7 +30,7 @@ const num = (s: string) => Number(s.replace(/[^\d]/g, '')) || 0
  * A company's agreed prices are not here: they belong to that company's account, under Companies.
  */
 export default function RatesPoliciesPage() {
-  const { tenant, options, setOptions, stayTimes } = useFeatures()
+  const { tenant, options, setOptions, stayTimes, features } = useFeatures()
   const { can } = useAuth()
   const { accounts } = useCorporate()
   const { reservations } = useHotel()
@@ -111,9 +111,13 @@ export default function RatesPoliciesPage() {
 
         <RateCalendarCard rates={rates} set={set} />
 
-        <PromoCard rates={rates} set={set} />
+        {/* Codes and extras are sold on the hotel's own booking page, so a hotel without one would be
+            setting up something it cannot offer. */}
+        {features.bookingEngine && <PromoCard rates={rates} set={set} />}
 
-        <AddOnsCard addOns={options.addOns ?? []} set={(next) => setOptions({ addOns: next })} />
+        {features.bookingEngine && (
+          <AddOnsCard addOns={options.addOns ?? []} set={(next) => setOptions({ addOns: next })} />
+        )}
 
         <Card title="Meal plans" icon="money" count={rates.plans.length} padded description="Added to the room rate, per night.">
           <div className="space-y-3">
