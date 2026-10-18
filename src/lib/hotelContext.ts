@@ -52,6 +52,10 @@ export type HotelValue = {
   cancelExpress: (reservationId: string) => void
   /** Take the money, then check them out. In that order. */
   runExpress: (reservationId: string, amount: number, method: string) => void
+  /** A second guest in the same room, with a bill of their own. */
+  addShare: (reservationId: string, guest: string, phone: string, splitRoom: boolean) => void
+  /** The rest of the stay moves to another room from this date. */
+  splitStay: (reservationId: string, fromDate: string, toRoomType: Room['type'], toRoom: string | null) => void
   /** Standing instructions sending some of a guest's charges to another bill. */
   setRouting: (reservationId: string, rules: RoutingRule[]) => void
   /** Put a name to one of a block's rooms, in advance or at the desk. */

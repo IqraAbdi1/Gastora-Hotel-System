@@ -319,6 +319,78 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  /**
+   * A second guest in the same room, with their own bill. Their booking holds no room: the room is
+   * already held by the person they are sharing with.
+   */
+  function addShare(reservationId: string, guest: string, phone: string, splitRoom: boolean): void {
+    setReservations((list) => {
+      const host = list.find((x) => x.id === reservationId)
+      if (!host || !host.room) return list
+      const id = nextId(list)
+      const half = splitRoom ? Math.round(host.total / 2) : 0
+      const sharer: Reservation = {
+        id,
+        guest: guest.trim(),
+        roomType: host.roomType,
+        room: host.room,
+        arrival: host.arrival,
+        departure: host.departure,
+        status: host.status,
+        total: half,
+        paid: 0,
+        share: { withReservationId: host.id, withGuest: host.guest, primary: false, splitRoom },
+        ...(phone.trim() ? { details: { idType: 'NIN' as const, idNumber: '', nationality: '', specialRequests: '', phone: phone.trim() } } : {}),
+      }
+      return list.map((r) =>
+        r.id === host.id
+          ? {
+              ...r,
+              total: splitRoom ? r.total - half : r.total,
+              share: { withReservationId: id, withGuest: sharer.guest, primary: true, splitRoom },
+            }
+          : r,
+      ).concat(sharer)
+    })
+  }
+
+  /**
+   * The rest of a stay, in another room. Two bookings end to end rather than one booking pretending to
+   * be in two places, so availability counts each room on the nights it is actually used.
+   */
+  function splitStay(reservationId: string, fromDate: string, toRoomType: Room['type'], toRoom: string | null): void {
+    setReservations((list) => {
+      const first = list.find((x) => x.id === reservationId)
+      if (!first || fromDate <= first.arrival || fromDate >= first.departure) return list
+      const id = nextId(list)
+      const allNights = Math.max(1, Math.round((Date.parse(`${first.departure}T00:00:00`) - Date.parse(`${first.arrival}T00:00:00`)) / 86400000))
+      const firstNights = Math.max(1, Math.round((Date.parse(`${fromDate}T00:00:00`) - Date.parse(`${first.arrival}T00:00:00`)) / 86400000))
+      const perNight = first.total / allNights
+      const second: Reservation = {
+        id,
+        guest: first.guest,
+        guestId: first.guestId,
+        roomType: toRoomType,
+        room: toRoom,
+        arrival: fromDate,
+        departure: first.departure,
+        status: 'booked',
+        total: Math.round(perNight * (allNights - firstNights)),
+        paid: 0,
+        plan: first.plan,
+        guarantee: first.guarantee,
+        legs: { previousId: first.id, index: 2, of: 2 },
+      }
+      return list
+        .map((r) =>
+          r.id === first.id
+            ? { ...r, departure: fromDate, total: Math.round(perNight * firstNights), legs: { nextId: id, index: 1, of: 2 } }
+            : r,
+        )
+        .concat(second)
+    })
+  }
+
   /** A standing instruction that some of this guest's charges belong on another bill. */
   function setRouting(reservationId: string, rules: RoutingRule[]) {
     setReservations((list) => list.map((r) => (r.id === reservationId ? { ...r, routing: rules } : r)))
@@ -494,6 +566,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         acceptPreReg,
         nameGroupRoom,
         setRouting,
+        addShare,
+        splitStay,
         releaseRoom,
         auditRuns,
         closeDay,

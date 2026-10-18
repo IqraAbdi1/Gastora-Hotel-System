@@ -18,6 +18,9 @@ import { useMessages } from '../messages/messagesContext'
 import { useHotel } from '../../lib/hotelContext'
 import { useFeatures } from '../platform/featuresContext'
 import { PRE_REG_LABEL, PRE_REG_TONE, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
+import { SHARE_NOTE, legsOf } from '../../lib/sharing'
+import ShareDialog from './ShareDialog'
+import SplitStayDialog from './SplitStayDialog'
 import { Badge } from '../../components/ui'
 import { CHANNEL_LABEL, KIND_LABEL } from '../../lib/messages'
 
@@ -39,13 +42,16 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [moving, setMoving] = useState(false)
   const [cancelMode, setCancelMode] = useState<CancelMode | null>(null)
   const [showPhoto, setShowPhoto] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [splitting, setSplitting] = useState(false)
   const balance = r.total - r.paid
   const { byId } = useCorporate()
   const { forStay, queue } = useMessages()
   const stayMessages = forStay(r.id)
-  const { sendPreReg } = useHotel()
+  const { sendPreReg, reservations, addShare, splitStay } = useHotel()
   const { features } = useFeatures()
   const preState = preRegState(r.preReg)
+  const canArrange = r.status === 'booked' || r.status === 'in-house'
   const preProgress = preRegProgress(r.preReg?.details)
   const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
 
@@ -233,6 +239,48 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
           </div>
         )}
 
+        {(r.share || r.legs) && (
+          <div>
+            <p className={heading}>{r.share ? 'Sharing this room' : 'This stay is in more than one room'}</p>
+            {r.share && (
+              <p className="mt-1 text-sm text-ink/75">
+                With <strong>{r.share.withGuest}</strong>.{' '}
+                {r.share.splitRoom ? SHARE_NOTE.split : SHARE_NOTE.primary}{' '}
+                {r.share.primary ? 'This booking holds the room.' : 'The room is held by the other booking, so it is only counted once.'}
+              </p>
+            )}
+            {r.legs && (
+              <ul className="mt-1 space-y-1 text-sm text-ink/75">
+                {legsOf(reservations, r.id).map((leg) => (
+                  <li key={leg.id} className={leg.id === r.id ? 'font-medium text-ink' : ''}>
+                    {dayMonth(leg.arrival)} to {dayMonth(leg.departure)} · {leg.roomType}
+                    {leg.room ? ` · Room ${leg.room}` : ' · room not assigned'}
+                    {leg.id === r.id ? ' · this part' : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {canArrange && (
+          <div>
+            <p className={heading}>Arrangements</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {!r.share && r.room && r.status === 'in-house' && (
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => setSharing(true)}>
+                  Add somebody sharing this room
+                </button>
+              )}
+              {!r.legs && nightsBetween(r.arrival, r.departure) > 1 && (
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => setSplitting(true)}>
+                  Move rooms part-way through
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {stayMessages.length > 0 && (
           <div>
             <p className={heading}>Messages to the guest</p>
@@ -352,6 +400,26 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
 
     </div>
 
+      {sharing && (
+        <ShareDialog
+          reservation={r}
+          onClose={() => setSharing(false)}
+          onAdd={(g, p, split) => {
+            addShare(r.id, g, p, split)
+            setSharing(false)
+          }}
+        />
+      )}
+      {splitting && (
+        <SplitStayDialog
+          reservation={r}
+          onClose={() => setSplitting(false)}
+          onSplit={(date, type, room) => {
+            splitStay(r.id, date, type, room)
+            setSplitting(false)
+          }}
+        />
+      )}
       {amending && <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />}
       {moving && <MoveRoomPanel reservation={r} onClose={() => setMoving(false)} onDone={() => setMoving(false)} />}
       {cancelMode && (

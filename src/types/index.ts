@@ -3,8 +3,9 @@ import type { Express } from '../lib/expressCheckout'
 import type { Release } from '../lib/dayRun'
 import type { GroupLink } from '../lib/groups'
 import type { RoutingRule } from '../lib/routing'
+import type { LegLink, ShareLink } from '../lib/sharing'
 import type { PreReg } from '../lib/preRegistration'
-export type { PreReg, Express, Release, GroupLink, RoutingRule }
+export type { PreReg, Express, Release, GroupLink, RoutingRule, ShareLink, LegLink }
 
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
@@ -158,6 +159,10 @@ export type Reservation = {
   group?: GroupLink
   /** Standing instructions sending some of this guest's charges to another bill. */
   routing?: RoutingRule[]
+  /** Two guests in one room, each with their own bill. */
+  share?: ShareLink
+  /** One stay across more than one room, a night or more in each. */
+  legs?: LegLink
 }
 export type RoomMove = {
   at: string

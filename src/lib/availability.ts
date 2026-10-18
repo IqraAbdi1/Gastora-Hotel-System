@@ -1,7 +1,10 @@
 import type { Reservation, Room } from '../types'
 
 // Only booked and in-house stays hold a room. Cancelled, no-show and checked-out stays do not.
+// Nor does the second guest in a shared room: the room is already held by the person they share with,
+// and counting it twice would have the hotel believe it had sold a room it still has.
 export function holdsRoom(r: Reservation) {
+  if (r.share && !r.share.primary) return false
   return r.status === 'booked' || r.status === 'in-house'
 }
 
