@@ -209,11 +209,11 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
           button reading "Copy the link": the same words inches apart for two different pages, and no
           way to tell which was which.
         */}
-        {((features.guestPortal && r.status !== 'cancelled') || (features.preRegistration && r.status === 'booked')) && (
+        {(features.guestPortal || (features.preRegistration && r.status === 'booked')) && (
           <div>
             <p className={heading}>Links for the guest</p>
             <div className="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/10">
-              {features.guestPortal && r.status !== 'cancelled' && (
+              {features.guestPortal && (
                 <div className="p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm font-medium text-ink">Guest page</span>

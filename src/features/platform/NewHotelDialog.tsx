@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Badge, Button, Field, Input, Select, Textarea } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { PLANS } from '../../lib/features'
-import type { CompanySize, PlanId, TenantRegistry } from '../../lib/features'
+import type { CompanySize, PlanId, Tenant, TenantRegistry } from '../../lib/features'
 import { SIZE_LABEL } from '../../lib/corporate'
 import { useFeatures } from './featuresContext'
 
@@ -15,16 +15,49 @@ function sizeForRooms(rooms: number): CompanySize {
   return 'small'
 }
 
-// Signing up a hotel. Gastora keeps what it needs to invoice them and to reach a real person,
-// plus the licence and TIN the hotel's own invoices depend on.
-export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
-  const { addTenant } = useFeatures()
+/**
+ * Signing up a property. Gastora keeps what it needs to invoice them and to reach a real person, plus
+ * the licence and TIN the hotel's own invoices depend on.
+ *
+ * Two different sales use this one form. A new hotel is a customer Gastora does not have. A branch is
+ * a second property for a customer it already has: the two are joined into the owner's group from the
+ * moment it exists, so each can see the other's free rooms, and the new one starts from the first
+ * one's set-up instead of from nothing.
+ */
+export default function NewHotelDialog({
+  onClose,
+  onCreated,
+  branchOf,
+}: {
+  onClose: () => void
+  onCreated: (id: string) => void
+  /** Set when this is a second property for an owner Gastora already bills. */
+  branchOf?: Tenant
+}) {
+  const { addTenant, setGroup, copySettingsFrom } = useFeatures()
+  // A branch joins its parent's group. If the parent has no group yet, the owner's group is named
+  // after it and the parent joins too: one property is not a group until there are two.
+  const groupName = branchOf ? (branchOf.group ?? branchOf.name) : ''
 
   const [name, setName] = useState('')
   const [rooms, setRooms] = useState('')
-  const [plan, setPlan] = useState<PlanId>('starter')
+  const [plan, setPlan] = useState<PlanId>(branchOf ? branchOf.plan : 'starter')
   const [size, setSize] = useState<CompanySize | ''>('')
-  const [reg, setReg] = useState<TenantRegistry>({ joinedOn: TODAY, billingStartsOn: TODAY })
+  // A branch is the same company: the contact, the legal name and the TIN are already known.
+  const [reg, setReg] = useState<TenantRegistry>(
+    branchOf
+      ? {
+          ...branchOf.registry,
+          joinedOn: TODAY,
+          billingStartsOn: TODAY,
+          town: undefined,
+          address: undefined,
+          phone: undefined,
+          email: undefined,
+          notes: undefined,
+        }
+      : { joinedOn: TODAY, billingStartsOn: TODAY },
+  )
 
   const roomCount = num(rooms)
   const suggested = sizeForRooms(roomCount)
@@ -45,23 +78,33 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
       rooms: roomCount,
       plan,
       companySize: chosenSize,
+      group: branchOf ? groupName : undefined,
       registry: {
         ...reg,
         legalName: reg.legalName?.trim() || undefined,
         tin: reg.tin?.trim() || undefined,
       },
     })
+    if (branchOf) {
+      // The parent joins the group as well, or the two would not be sisters.
+      if (!branchOf.group) setGroup(branchOf.id, groupName)
+      copySettingsFrom(branchOf.id, created.id)
+    }
     onCreated(created.id)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true" aria-label="Add a hotel">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true" aria-label={branchOf ? 'Add a branch' : 'Add a hotel'}>
       <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
         <div className="flex items-start justify-between gap-4 bg-linear-to-r from-brand-deep to-brand p-4 text-white">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Gastora · Platform admin</p>
-            <h2 className="text-lg font-semibold">Add a hotel</h2>
-            <p className="text-sm text-white/80">It starts active, on the plan you choose. You can change everything afterwards.</p>
+            <h2 className="text-lg font-semibold">{branchOf ? `Add a branch for ${branchOf.name}` : 'Add a hotel'}</h2>
+            <p className="text-sm text-white/80">
+              {branchOf
+                ? `It joins ${groupName}, starts from ${branchOf.name}'s set-up, and takes the plan you choose here.`
+                : 'It starts active, on the plan you choose. You can change everything afterwards.'}
+            </p>
           </div>
           <button type="button" onClick={onClose} className="text-sm font-semibold text-white/90 hover:text-white">
             Close
@@ -70,10 +113,10 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
 
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
           <section className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">The hotel</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">{branchOf ? 'The branch' : 'The hotel'}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Hotel name" required>
-                {(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder="Lakeview Grand Hotel" />}
+                {(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder={branchOf ? 'Savannah Lodge' : 'Lakeview Grand Hotel'} />}
               </Field>
               <Field label="Name on the certificate" hint="Only if it differs from the trading name.">
                 {(id) => <Input id={id} value={reg.legalName ?? ''} onChange={(e) => set({ legalName: e.target.value })} />}
@@ -181,6 +224,14 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
             </ul>
           )}
 
+          {branchOf && (
+            <p className="rounded-xl bg-good/10 p-3 text-xs text-ink/70">
+              Joined to <strong>{groupName}</strong>. The two see each other&apos;s free rooms, so a full night at one
+              can be sent to the other. Room policies, house rules, cleaning areas, message wording, tax rules and
+              stay times are copied from {branchOf.name} and can be changed afterwards.
+            </p>
+          )}
+
           <p className="rounded-xl bg-brand/6 p-3 text-xs text-ink/65">
             Prototype: this keeps the hotel in this browser only. In the real system it creates the hotel's own space, its
             first admin account and its subscription. <Badge tone="neutral">Nothing is billed here</Badge>
@@ -189,7 +240,7 @@ export default function NewHotelDialog({ onClose, onCreated }: { onClose: () => 
 
         <div className="flex flex-wrap items-center gap-3 border-t border-ink/10 p-4">
           <Button className="flex-1" onClick={save} disabled={problems.length > 0}>
-            Add {name.trim() || 'the hotel'}
+            Add {name.trim() || (branchOf ? 'the branch' : 'the hotel')}
           </Button>
           <Button variant="ghost" onClick={onClose}>
             Cancel

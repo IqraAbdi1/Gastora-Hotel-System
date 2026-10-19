@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { FEATURES, PLANS, featuresOf, planHas } from '../../lib/features'
-import type { FeatureKey, TenantStatus } from '../../lib/features'
+import type { FeatureKey, Tenant, TenantStatus } from '../../lib/features'
 import Switch from '../../components/Switch'
+import { Button } from '../../components/ui'
+import NewHotelDialog from './NewHotelDialog'
 import { useFeatures } from './featuresContext'
 
 const STATUSES: { id: TenantStatus; label: string }[] = [
@@ -10,8 +13,13 @@ const STATUSES: { id: TenantStatus; label: string }[] = [
 ]
 
 export default function PlatformPage() {
-  const { tenants, tenant: current, selectTenant, setPlan, setStatus, setOverride, clearOverrides } =
-    useFeatures()
+  const { tenants, tenant: current, selectTenant, setPlan, setStatus, setOverride, clearOverrides } = useFeatures()
+
+  // Two different sales, one form. `adding` with no parent is a customer Gastora does not have;
+  // with a parent it is a second property for one it already bills.
+  const [adding, setAdding] = useState<{ branchOf?: Tenant } | null>(null)
+
+  const sistersOf = (t: Tenant) => (t.group ? tenants.filter((x) => x.group === t.group && x.id !== t.id) : [])
 
   /** Why a switch cannot be turned on yet, from the same rules the app uses. */
   function blockedBy(on: Record<FeatureKey, boolean>, key: FeatureKey): string | null {
@@ -36,6 +44,9 @@ export default function PlatformPage() {
         <p className="mt-1 text-sm text-ink/60">
           You decide which features each hotel has paid for. Hotels cannot switch these themselves.
         </p>
+        <div className="mt-3">
+          <Button onClick={() => setAdding({})}>Add a hotel</Button>
+        </div>
         <p className="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs text-ink/70">
           Prototype: this only hides screens. In the real system the backend stores each hotel&apos;s
           features and rejects calls for anything that is off.
@@ -49,9 +60,24 @@ export default function PlatformPage() {
         return (
           <section key={t.id} className="rounded-xl border border-ink/10 bg-surface p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <h2 className="font-semibold text-ink">{t.name}</h2>
-                <p className="text-xs text-ink/60">{t.rooms} rooms</p>
+                <p className="text-xs text-ink/60">
+                  {t.rooms} rooms
+                  {t.group ? ` · ${t.group}` : ' · stands on its own'}
+                </p>
+                {sistersOf(t).length > 0 && (
+                  <p className="text-xs text-ink/55">
+                    Sees the free rooms of {sistersOf(t).map((x) => x.name).join(', ')}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAdding({ branchOf: t })}
+                  className="mt-1 text-xs font-semibold text-brand"
+                >
+                  Add a branch for this owner
+                </button>
               </div>
               <button
                 type="button"
@@ -169,6 +195,17 @@ export default function PlatformPage() {
           </section>
         )
       })}
+
+      {adding && (
+        <NewHotelDialog
+          branchOf={adding.branchOf}
+          onClose={() => setAdding(null)}
+          onCreated={(id) => {
+            setAdding(null)
+            selectTenant(id)
+          }}
+        />
+      )}
     </div>
   )
 }

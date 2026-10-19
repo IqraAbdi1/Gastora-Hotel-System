@@ -81,10 +81,35 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       companySize: input.companySize,
       overrides: {},
       registry: input.registry,
+      group: input.group,
     }
     setTenants((list) => [...list, created])
     return created
   }, [setTenants])
+
+  /**
+   * Join a hotel to an owner's group, or take it out of one. Two hotels in the same group see each
+   * other's free rooms, so only Gastora may set it: a hotel admin who could type another owner's
+   * group name would be reading that owner's availability.
+   */
+  const setGroup = useCallback(
+    (id: string, group: string) => patchTenant(id, (t) => ({ ...t, group: group.trim() || undefined })),
+    [patchTenant],
+  )
+
+  /**
+   * A second property starts from the first one's set-up rather than from nothing: the same room
+   * policies, house rules, cleaning areas, message wording, tax rules and stay times. The owner then
+   * changes what is different about the new place, which is far less than what is the same.
+   */
+  const copySettingsFrom = useCallback(
+    (fromId: string, toId: string) => {
+      setOptionsById((m) => (m[fromId] ? { ...m, [toId]: m[fromId] } : m))
+      setTaxById((m) => (m[fromId] ? { ...m, [toId]: m[fromId] } : m))
+      setStayTimesById((m) => (m[fromId] ? { ...m, [toId]: m[fromId] } : m))
+    },
+    [setOptionsById, setTaxById, setStayTimesById],
+  )
 
   const setRegistry = useCallback(
     (id: string, patch: Partial<TenantRegistry>) => patchTenant(id, (t) => ({ ...t, registry: { ...t.registry, ...patch } })),
@@ -170,9 +195,11 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
       setTax,
       setStayTimes,
       addTenant,
+      setGroup,
+      copySettingsFrom,
       setRegistry,
     }
-  }, [tenants, currentId, optionsById, taxById, stayTimesById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize, setTax, setStayTimes, addTenant, setRegistry])
+  }, [tenants, currentId, optionsById, taxById, stayTimesById, setPlan, setStatus, setOverride, clearOverrides, setOptions, setCompanySize, setTax, setStayTimes, addTenant, setGroup, copySettingsFrom, setRegistry])
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>
 }

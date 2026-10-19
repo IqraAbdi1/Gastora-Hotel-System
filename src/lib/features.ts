@@ -49,7 +49,7 @@ export type FeatureKey =
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
 export type FeatureMap = Record<FeatureKey, boolean>
-export type NewTenant = Pick<Tenant, 'name' | 'rooms' | 'plan' | 'companySize'> & { registry: TenantRegistry }
+export type NewTenant = Pick<Tenant, 'name' | 'rooms' | 'plan' | 'companySize'> & { registry: TenantRegistry; group?: string }
 export type InspectionMode = 'off' | 'spot' | 'every'
 
 export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [

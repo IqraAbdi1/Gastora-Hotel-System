@@ -38,6 +38,10 @@ export interface FeaturesValue {
   /** Gastora signs up a new hotel. */
   addTenant: (input: NewTenant) => Tenant
   setRegistry: (id: string, patch: Partial<TenantRegistry>) => void
+  /** Join a hotel to an owner's group, or clear it with an empty name. Gastora only. */
+  setGroup: (id: string, group: string) => void
+  /** Give a new property the set-up of one that already exists. */
+  copySettingsFrom: (fromId: string, toId: string) => void
 }
 
 export const FeaturesContext = createContext<FeaturesValue | null>(null)
