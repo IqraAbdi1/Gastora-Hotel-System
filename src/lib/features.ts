@@ -42,6 +42,7 @@ export type FeatureKey =
   | 'maintenanceParts'
   | 'slaEscalation'
   | 'roomDowntime'
+  | 'engineeringDashboard'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -90,6 +91,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'roomDowntime',
     label: 'Room downtime',
     blurb: 'How long each room has been off sale, and what those nights were worth.',
+  },
+  {
+    key: 'engineeringDashboard',
+    label: 'Engineering dashboard',
+    blurb: 'What keeps breaking, what each machine costs to keep, and the whole maintenance history.',
   },
   {
     key: 'repairSignoff',
@@ -313,6 +319,7 @@ export const PLANS: {
       'maintenanceParts',
       'slaEscalation',
       'roomDowntime',
+      'engineeringDashboard',
       'crossProperty',
     ],
   },

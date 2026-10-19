@@ -56,6 +56,7 @@ export const modules: NavModule[] = [
     { to: '/maintenance/out-of-order', label: 'Rooms out of order', feature: 'maintenanceFull' },
     { to: '/maintenance/assets', label: 'Asset register', feature: 'assetRegister' },
     { to: '/maintenance/planned', label: 'Planned work', feature: 'preventiveMaintenance' },
+    { to: '/maintenance/engineering', label: 'Engineering', feature: 'engineeringDashboard' },
     { to: '/maintenance/supplies', label: 'Supplies', feature: 'requests' },
   ]),
   module('pos', 'POS', 'pos', [
