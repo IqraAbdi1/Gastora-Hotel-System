@@ -23,6 +23,7 @@ import { DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
 import { addOnsTotal, chargesFor, PER_LABEL, priceOf } from '../../lib/addOns'
 import { findPromo, promoProblem, promoSaving, tidyCode } from '../../lib/promos'
 import type { Promo } from '../../lib/promos'
+import { portalLink } from '../../lib/preRegistration'
 import { useFeatures } from '../platform/featuresContext'
 
 type Step = 'search' | 'rooms' | 'extras' | 'details' | 'pay' | 'done'
@@ -567,6 +568,32 @@ export default function BookPage() {
             </p>
           </div>
           <Summary offer={chosen} search={search} nights={nights} rates={rates} perNight={perNight} />
+
+          {/*
+            Asked here rather than only in a message the day before. The guest has just typed their
+            name and paid: they are at a desk, they have their documents to hand, and they are more
+            willing now than they will ever be again. Whoever does not fill it in still gets the
+            message tomorrow, so nothing is lost by asking twice.
+          */}
+          {features.guestPortal && (
+            <div className="rounded-xl border border-brand/30 bg-brand/[0.06] p-4">
+              <p className="font-semibold text-ink">Save time when you arrive</p>
+              <p className="mt-1 text-sm text-ink/75">
+                Fill in your details now and the desk only has to check your identification. It takes a minute, and
+                the same page holds your booking and your bill for the whole stay.
+              </p>
+              <a
+                href={portalLink(window.location.origin, bookingId, search.arrival)}
+                className="mt-3 inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
+              >
+                Fill in my details
+              </a>
+              <p className="mt-2 break-all text-xs text-ink/50">
+                Keep this link: {portalLink(window.location.origin, bookingId, search.arrival)}
+              </p>
+            </div>
+          )}
+
           <div className="rounded-xl border border-ink/10 bg-surface p-4 text-sm text-ink/75">
             <p className="font-semibold text-ink">What happens next</p>
             <ul className="mt-1.5 list-disc space-y-1 pl-5">
@@ -575,7 +602,11 @@ export default function BookPage() {
                 travel with.
               </li>
               <li>{ugx(Math.max(0, payable - chosen.deposit))} is paid at the hotel.</li>
-              <li>The hotel may send you a form to fill in before you arrive, so the desk is quicker.</li>
+              <li>
+                {features.guestPortal
+                  ? 'If you do not fill it in now, the hotel sends you the same link the day before you arrive.'
+                  : 'The hotel may send you a form to fill in before you arrive, so the desk is quicker.'}
+              </li>
             </ul>
           </div>
         </section>
