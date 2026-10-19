@@ -62,6 +62,89 @@ export default function HotelSettingsPage() {
         </ul>
       </section>
 
+      {features.slaEscalation && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-ink">Repair targets</h2>
+              <p className="mt-1 text-xs text-ink/60">
+                How long a repair may take before it goes up. The answer target is how long before anybody picks it
+                up; the fix target is how long before it is closed. A repair waiting for a part from the store does
+                not go up: its clock is stopped.
+              </p>
+            </div>
+            <Switch
+              on={options.sla.on}
+              label="Repair targets"
+              onChange={(v) => setOptions({ sla: { ...options.sla, on: v } })}
+            />
+          </div>
+
+          {options.sla.on && (
+            <>
+              <div className="mt-3 space-y-3 border-t border-ink/10 pt-3">
+                {(['Urgent', 'High', 'Normal'] as const).map((level) => (
+                  <div key={level} className="grid gap-3 sm:grid-cols-[120px_1fr_1fr] sm:items-center">
+                    <p className="text-sm font-medium text-ink">{level}</p>
+                    <label className="text-xs text-ink/60">
+                      Hours to pick it up
+                      <input
+                        type="number"
+                        min={1}
+                        value={options.sla.targets[level].answerHours}
+                        onChange={(e) =>
+                          setOptions({
+                            sla: {
+                              ...options.sla,
+                              targets: {
+                                ...options.sla.targets,
+                                [level]: { ...options.sla.targets[level], answerHours: Math.max(1, Number(e.target.value)) },
+                              },
+                            },
+                          })
+                        }
+                        className={box}
+                      />
+                    </label>
+                    <label className="text-xs text-ink/60">
+                      Hours to close it
+                      <input
+                        type="number"
+                        min={1}
+                        value={options.sla.targets[level].fixHours}
+                        onChange={(e) =>
+                          setOptions({
+                            sla: {
+                              ...options.sla,
+                              targets: {
+                                ...options.sla.targets,
+                                [level]: { ...options.sla.targets[level], fixHours: Math.max(1, Number(e.target.value)) },
+                              },
+                            },
+                          })
+                        }
+                        className={box}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <label className="mt-4 block text-xs text-ink/60 sm:max-w-xs">
+                Goes up to the manager once it is this many times past the fix target
+                <input
+                  type="number"
+                  min={1}
+                  step={0.5}
+                  value={options.sla.secondStepAt}
+                  onChange={(e) => setOptions({ sla: { ...options.sla, secondStepAt: Math.max(1, Number(e.target.value)) } })}
+                  className={box}
+                />
+              </label>
+            </>
+          )}
+        </section>
+      )}
+
       <section className="rounded-xl border border-ink/10 bg-surface p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

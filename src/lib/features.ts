@@ -4,6 +4,8 @@ import { DEFAULT_MESSAGING } from './messages'
 import type { MessagingSettings } from './messages'
 import { DEFAULT_EFRIS, DEFAULT_TAX } from './tax'
 import { DEFAULT_ADD_ONS } from './addOns'
+import { DEFAULT_SLA } from './sla'
+import type { SlaSettings } from './sla'
 import type { AddOn } from './addOns'
 import type { TaxSettings } from './tax'
 
@@ -38,6 +40,7 @@ export type FeatureKey =
   | 'assetCosts'
   | 'preventiveMaintenance'
   | 'maintenanceParts'
+  | 'slaEscalation'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -76,6 +79,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'maintenanceParts',
     label: 'Parts on a repair',
     blurb: 'A repair draws its parts from the store, so what a machine costs to keep is real rather than guessed.',
+  },
+  {
+    key: 'slaEscalation',
+    label: 'Repair targets',
+    blurb: 'How long a repair may take before the supervisor, and then the manager, is told it has not been done.',
   },
   {
     key: 'repairSignoff',
@@ -296,6 +304,7 @@ export const PLANS: {
       'assetCosts',
       'preventiveMaintenance',
       'maintenanceParts',
+      'slaEscalation',
       'crossProperty',
     ],
   },
@@ -425,6 +434,8 @@ export interface HotelOptions {
   nightAuditAt: string
   /** Extras the hotel sells beside the room, offered on its own booking page. */
   addOns: AddOn[]
+  /** How long a repair may take before it goes up to somebody more senior. */
+  sla: SlaSettings
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -447,6 +458,7 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   messaging: DEFAULT_MESSAGING,
   expressMax: DEFAULT_EXPRESS_MAX,
   nightAuditAt: DEFAULT_AUDIT_AT,
+  sla: DEFAULT_SLA,
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [

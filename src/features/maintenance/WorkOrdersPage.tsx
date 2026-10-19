@@ -16,6 +16,9 @@ import type { RoomDefect } from '../housekeeping/hkModel'
 import { partWords, partsTotal } from '../../lib/parts'
 import { ugx } from '../../lib/format'
 import PartsDialog from './PartsDialog'
+import { CLOCK_TONE, STEP_TO, clockWords, slaOf } from '../../lib/sla'
+import { waitingParts } from '../../lib/parts'
+import { useNow } from '../../lib/useNow'
 import { useRoomOverlays } from '../housekeeping/useRoomOverlays'
 
 const ACTIVE = 'Active'
@@ -25,7 +28,9 @@ type Row = { room: string; defect: RoomDefect }
 
 export default function WorkOrdersPage() {
   const hk = useHousekeeping()
-  const { features } = useFeatures()
+  const { features, options } = useFeatures()
+  // A target is only true if it moves. Checked every half minute, like the rest of the clock work.
+  const now = useNow(30000)
   const { overlays, openRoom, reportIssue } = useRoomOverlays()
   const [status, setStatus] = useState(ACTIVE)
   const [search, setSearch] = useState('')
@@ -56,6 +61,29 @@ export default function WorkOrdersPage() {
   const shown = orders.slice(page * PAGE, page * PAGE + PAGE)
 
   const waiting = hk.allDefects.filter((d) => d.defect.status === 'Open').length
+
+  // Where each open repair stands against its targets, worked out live and never stored: a target that
+  // was true an hour ago is not a fact about now.
+  const slaOn = features.slaEscalation && options.sla.on
+  const slaFor = (row: Row) =>
+    slaOf(
+      {
+        priority: defectPriority(row.defect),
+        reportedIso: row.defect.reportedIso,
+        startedIso: row.defect.startedIso,
+        closedIso: row.defect.closedIso,
+        waitingOnPart: waitingParts(row.defect.parts).length > 0,
+      },
+      options.sla,
+      now,
+    )
+  const late = slaOn
+    ? hk.allDefects
+        .filter(({ defect }) => defect.status !== 'Open' && defect.status !== 'Resolved')
+        .map((row) => ({ row, sla: slaFor(row) }))
+        .filter((x) => x.sla.step > 0)
+        .sort((a, b) => b.sla.step - a.sla.step)
+    : []
   const live = hk.allDefects.filter((d) => d.defect.status !== 'Open' && d.defect.status !== 'Resolved')
   const urgent = live.filter((d) => defectPriority(d.defect) === 'Urgent').length
   const offSale = live.filter((d) => d.defect.blocksRoom).length
@@ -133,6 +161,25 @@ export default function WorkOrdersPage() {
                   ))}
                 </Select>
               ),
+          },
+        ] as Column<Row>[])
+      : []),
+    ...(slaOn
+      ? ([
+          {
+            key: 'target',
+            header: 'Target',
+            hideBelow: 'lg',
+            cell: (row: Row) => {
+              const sla = slaFor(row)
+              const clock = row.defect.startedIso || row.defect.closedIso ? sla.fix : sla.answer
+              return (
+                <>
+                  <Badge tone={CLOCK_TONE[clock.state]}>{clockWords(clock)}</Badge>
+                  {sla.step > 0 && <p className="mt-1 text-xs font-medium text-bad">With {STEP_TO[sla.step]}</p>}
+                </>
+              )
+            },
           },
         ] as Column<Row>[])
       : []),
@@ -216,7 +263,7 @@ export default function WorkOrdersPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-3 ${slaOn ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
         <StatCard label="Open repairs" icon="alert" value={String(live.length)} hint="Not yet closed" />
         <StatCard
           label="Urgent"
@@ -232,6 +279,15 @@ export default function WorkOrdersPage() {
           hint="Held by a repair"
           tone={offSale > 0 ? 'warn' : 'default'}
         />
+        {slaOn && (
+          <StatCard
+            label="Past target"
+            icon="alert"
+            value={String(late.length)}
+            hint="Gone up to somebody"
+            tone={late.length > 0 ? 'bad' : 'default'}
+          />
+        )}
         <StatCard
           label="With the supervisor"
           icon="list"
@@ -240,6 +296,37 @@ export default function WorkOrdersPage() {
           tone={full && waiting > 0 ? 'warn' : 'default'}
         />
       </div>
+
+      {late.length > 0 && (
+        <Card
+          title="Past target"
+          icon="alert"
+          count={late.length}
+          description="Repairs that have gone over the time the hotel allows. A repair waiting for a part is not here: its clock is stopped."
+          padded={false}
+        >
+          <ul className="divide-y divide-ink/10">
+            {late.map(({ row, sla }) => (
+              <li key={`${row.room}-${row.defect.id}`} className="flex flex-wrap items-start justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => openRoom(row.room, 'defects')}
+                    className="font-semibold text-ink hover:text-brand"
+                  >
+                    Room {row.room}
+                  </button>
+                  <p className="text-sm text-ink/70">
+                    {row.defect.category}: {row.defect.description}
+                  </p>
+                  <p className="text-xs text-ink/55">{sla.why}</p>
+                </div>
+                <Badge tone={sla.step === 2 ? 'bad' : 'warn'}>{STEP_TO[sla.step]}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title="Report a problem" icon="alert" description="Raise a repair against a room number.">
         <div className="flex flex-wrap items-center gap-2">

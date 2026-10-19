@@ -82,6 +82,14 @@ export type RoomDefect = {
   reportedOn?: string
   /** What the repair consumed. Issued parts carry their cost; the rest are still with the store. */
   parts?: UsedPart[]
+  /**
+   * Real timestamps, for the targets. `reportedAt` is a clock face and `reportedOn` a day; neither can
+   * answer "was this picked up within the hour". A defect raised before these existed has none, and the
+   * targets say so rather than guessing a time.
+   */
+  reportedIso?: string
+  startedIso?: string
+  closedIso?: string
   note?: string
 }
 

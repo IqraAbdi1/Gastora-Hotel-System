@@ -148,6 +148,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
           upsell: { ...DEFAULT_OPTIONS.upsell, ...(saved.upsell ?? {}) },
           limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },
           service: { ...DEFAULT_OPTIONS.service, ...(saved.service ?? {}) },
+          sla: { ...DEFAULT_OPTIONS.sla, ...(saved.sla ?? {}), targets: { ...DEFAULT_OPTIONS.sla.targets, ...(saved.sla?.targets ?? {}) } },
         }
       : DEFAULT_OPTIONS
     const inspectionMode: InspectionMode = features.inspections ? options.inspectionMode : 'off'

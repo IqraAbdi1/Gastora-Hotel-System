@@ -716,6 +716,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
           status,
           reportedAt: clock(),
           reportedOn: TODAY,
+          reportedIso: new Date().toISOString(),
           blocksRoom: input.blocksRoom,
           assetId: input.assetId,
         },
@@ -742,7 +743,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   }
 
   function startDefect(room: string, defectId: number) {
-    patchDefect(room, defectId, { status: 'In Progress' })
+    patchDefect(room, defectId, { status: 'In Progress', startedIso: new Date().toISOString() })
     log(room, 'Repair started', `Work started on defect #${defectId}.`, 'Maintenance')
   }
 
@@ -752,7 +753,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     const all = details[room]?.defects ?? []
     const defect = all.find((x) => x.id === defectId)
     if (!defect) return
-    patchDefect(room, defectId, { status: 'Resolved', note: note || defect.note })
+    patchDefect(room, defectId, { status: 'Resolved', note: note || defect.note, closedIso: new Date().toISOString() })
     log(room, 'Defect resolved', note ? `Defect #${defectId} closed. ${note}` : `Defect #${defectId} closed.`, 'Maintenance')
     if (!defect.blocksRoom) return
     const stillBlocked = all.some((x) => x.id !== defectId && x.blocksRoom && x.status !== 'Resolved')
