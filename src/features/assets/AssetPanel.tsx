@@ -16,12 +16,15 @@ import {
   warrantyOf,
 } from '../../lib/assets'
 import type { Asset, MeterReading } from '../../lib/assets'
+import { DUE_TONE, dueOf, dueWords, everyWords } from '../../lib/preventive'
 import { useAuth } from '../auth/authContext'
+import { useFeatures } from '../platform/featuresContext'
+import { usePreventive } from './usePreventive'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import { defectStatusTone } from '../housekeeping/hkModel'
 import type { RoomDefect } from '../housekeeping/hkModel'
 
-type Tab = 'about' | 'meter' | 'repairs'
+type Tab = 'about' | 'meter' | 'repairs' | 'servicing'
 
 const warrantyTone = { none: 'neutral', 'in warranty': 'good', 'ending soon': 'warn', expired: 'neutral' } as const
 
@@ -50,6 +53,8 @@ export default function AssetPanel({
 }) {
   const hk = useHousekeeping()
   const { user } = useAuth()
+  const { features } = useFeatures()
+  const { plans, jobs } = usePreventive()
   const [tab, setTab] = useState<Tab>('about')
   const [reading, setReading] = useState('')
   const [takenOn, setTakenOn] = useState(TODAY)
@@ -76,8 +81,15 @@ export default function AssetPanel({
     setTouched(false)
   }
 
+  // This machine's servicing: the plans that cover it and anything they have raised.
+  const myPlans = plans.filter((p) => p.assetId === asset.id)
+  const myJobs = jobs.filter((j) => j.assetId === asset.id && j.status !== 'Done')
+
   const tabs: TabItem<Tab>[] = [
     { key: 'about', label: 'About' },
+    ...(features.preventiveMaintenance
+      ? ([{ key: 'servicing', label: 'Servicing', count: myPlans.length, alert: myJobs.length > 0 }] as TabItem<Tab>[])
+      : []),
     ...(asset.meterUnit ? ([{ key: 'meter', label: 'Readings', count: asset.readings?.length ?? 0 }] as TabItem<Tab>[]) : []),
     { key: 'repairs', label: 'Repairs', count: repairs.length, alert: open > 0 },
   ]
@@ -214,6 +226,61 @@ export default function AssetPanel({
               rowKey={(r) => `${r.takenOn}-${r.reading}`}
               empty={{ title: 'No readings yet', hint: 'Record what the dial says and the hotel can see how hard it works.' }}
             />
+          </Card>
+        </div>
+      )}
+
+      {tab === 'servicing' && (
+        <div className="space-y-4">
+          {myJobs.length > 0 && (
+            <Card title="Waiting to be done" icon="tasks" count={myJobs.length}>
+              <ul className="space-y-2">
+                {myJobs.map((j) => (
+                  <li key={j.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 p-3 text-sm">
+                    <span className="font-medium text-ink">{j.name}</span>
+                    <span className="text-xs text-ink/60">Due {dayMonthYear(j.dueOn)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <Card
+            title="Service plans"
+            icon="calendar"
+            count={myPlans.length}
+            description="Plans are kept on the planned work page. This is what covers this machine."
+          >
+            {myPlans.length === 0 ? (
+              <EmptyState title="Nothing is scheduled for it" hint="Add a plan on the planned work page." />
+            ) : (
+              <ul className="space-y-3">
+                {myPlans.map((p) => {
+                  const due = dueOf(p, asset, TODAY)
+                  return (
+                    <li key={p.id} className="rounded-xl border border-ink/10 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-ink">{p.name}</p>
+                          <p className="text-xs text-ink/60">{everyWords(p.every, asset.meterUnit)}</p>
+                          <p className="text-xs text-ink/55">
+                            Last done {p.lastDoneOn ? dayMonthYear(p.lastDoneOn) : 'not recorded'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge tone={DUE_TONE[due.state]}>{due.state[0].toUpperCase() + due.state.slice(1)}</Badge>
+                          <p className="mt-1 text-xs text-ink/60">
+                            {due.on ? `${dayMonthYear(due.on)}${due.estimated ? ' (estimate)' : ''}` : dueWords(due, asset.meterUnit)}
+                          </p>
+                        </div>
+                      </div>
+                      {p.note && <p className="mt-2 text-xs text-ink/60">{p.note}</p>}
+                      {!p.active && <p className="mt-2 text-xs font-medium text-warn">Switched off.</p>}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </Card>
         </div>
       )}

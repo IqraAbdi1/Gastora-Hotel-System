@@ -41,6 +41,7 @@ import InspectionsPage from './features/housekeeping/InspectionsPage'
 import IssuesPage from './features/housekeeping/IssuesPage'
 import RoomsOutOfOrderPage from './features/maintenance/RoomsOutOfOrderPage'
 import AssetsPage from './features/assets/AssetsPage'
+import PlannedWorkPage from './features/assets/PlannedWorkPage'
 import WorkOrdersPage from './features/maintenance/WorkOrdersPage'
 import PlatformPage from './features/platform/PlatformPage'
 import RequestsPage from './features/procurement/RequestsPage'
@@ -138,6 +139,14 @@ export const router = createBrowserRouter([
             element: (
               <FeatureGate feature="assetRegister">
                 <AssetsPage />
+              </FeatureGate>
+            ),
+          },
+          {
+            path: 'maintenance/planned',
+            element: (
+              <FeatureGate feature="preventiveMaintenance">
+                <PlannedWorkPage />
               </FeatureGate>
             ),
           },

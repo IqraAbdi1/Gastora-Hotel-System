@@ -7,6 +7,7 @@ import HousekeepingProvider from '../features/housekeeping/HousekeepingProvider'
 import MessagesProvider from '../features/messages/MessagesProvider'
 import WaitlistProvider from '../features/waitlist/WaitlistProvider'
 import DayRunner from '../features/frontdesk/DayRunner'
+import ServiceRunner from '../features/assets/ServiceRunner'
 import GroupsProvider from '../features/groups/GroupsProvider'
 import ApprovalsProvider from '../features/approvals/ApprovalsProvider'
 import LostFoundProvider from '../features/lostfound/LostFoundProvider'
@@ -30,6 +31,7 @@ export default function Root() {
                         <WaitlistProvider>
                           <GroupsProvider>
                             <DayRunner />
+                            <ServiceRunner />
                             <Outlet />
                           </GroupsProvider>
                         </WaitlistProvider>

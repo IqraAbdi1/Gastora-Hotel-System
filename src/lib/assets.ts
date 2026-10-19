@@ -147,10 +147,14 @@ export function lifeUsed(asset: Asset, today: string): number | undefined {
   return daysBetween(asset.boughtOn, today) / 365.25 / life
 }
 
-/** The latest number off the dial. */
+/**
+ * The latest number off the dial. Two readings taken on the same day are settled by the number itself:
+ * a meter only goes up, so the larger one was taken later. Without that the answer depends on the order
+ * they happen to sit in, and a service due at a reading could be judged from the earlier of the two.
+ */
 export function latestReading(asset: Asset): MeterReading | undefined {
   if (!asset.readings?.length) return undefined
-  return [...asset.readings].sort((a, b) => b.takenOn.localeCompare(a.takenOn))[0]
+  return [...asset.readings].sort((a, b) => b.takenOn.localeCompare(a.takenOn) || b.reading - a.reading)[0]
 }
 
 /**
@@ -171,7 +175,7 @@ export function readingProblem(asset: Asset, reading: number, takenOn: string): 
 
 /** Use since the reading before last, which is what a service interval is counted in. */
 export function usePerDay(asset: Asset): number | undefined {
-  const sorted = [...(asset.readings ?? [])].sort((a, b) => a.takenOn.localeCompare(b.takenOn))
+  const sorted = [...(asset.readings ?? [])].sort((a, b) => a.takenOn.localeCompare(b.takenOn) || a.reading - b.reading)
   if (sorted.length < 2) return undefined
   const first = sorted[0]
   const last = sorted[sorted.length - 1]
