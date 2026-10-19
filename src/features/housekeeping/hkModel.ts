@@ -1,5 +1,6 @@
 import type { Room, Reservation } from '../../types'
 import type { Tone } from '../../components/ui'
+import type { UsedPart } from '../../lib/parts'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import type {
   HousekeepingPriority,
@@ -79,6 +80,8 @@ export type RoomDefect = {
   assetId?: string
   /** The day it was reported. `reportedAt` is only a clock time, which cannot answer a question next month. */
   reportedOn?: string
+  /** What the repair consumed. Issued parts carry their cost; the rest are still with the store. */
+  parts?: UsedPart[]
   note?: string
 }
 

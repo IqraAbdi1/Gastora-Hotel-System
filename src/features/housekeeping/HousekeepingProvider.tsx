@@ -5,6 +5,7 @@ import { PAST, TODAY, YESTERDAY } from '../../data/sample'
 import { useHotel } from '../../lib/hotelContext'
 import { floorOf } from '../../lib/rooms'
 import { useFeatures } from '../platform/featuresContext'
+import type { UsedPart } from '../../lib/parts'
 import { HK_KEYS } from './hkStorage'
 import { HkContext } from './hkContext'
 import type { BlockKind, ExceptionKind, HkValue, NewTask } from './hkContext'
@@ -725,6 +726,11 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     if (input.blocksRoom) setException(room, input.blocksRoom, text)
   }
 
+  /** The parts a repair used. The stock itself moves in the store, not here. */
+  function setDefectParts(room: string, defectId: number, parts: UsedPart[]) {
+    patchDefect(room, defectId, { parts })
+  }
+
   function requestMaintenance(room: string, defectId: number) {
     patchDefect(room, defectId, { status: 'Maintenance Requested' })
     log(room, 'Maintenance request created', `Maintenance requested for defect #${defectId}.`)
@@ -822,6 +828,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     setLinenFound,
     addPhoto,
     reportDefect,
+    setDefectParts,
     requestMaintenance,
     assignDefect,
     startDefect,

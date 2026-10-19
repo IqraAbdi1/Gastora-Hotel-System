@@ -9,6 +9,10 @@ import type { Asset } from '../../lib/assets'
 import { DUE_TONE, dueOf, dueWords, everyWords, newPlanId } from '../../lib/preventive'
 import type { PlannedJob, ServicePlan } from '../../lib/preventive'
 import { technicians } from '../housekeeping/hkModel'
+import { partWords, partsTotal } from '../../lib/parts'
+import { ugx } from '../../lib/format'
+import PartsDialog from '../maintenance/PartsDialog'
+import { useFeatures } from '../platform/featuresContext'
 import PlanForm from './PlanForm'
 import { useAssets } from './useAssets'
 import { usePreventive } from './usePreventive'
@@ -29,6 +33,8 @@ export default function PlannedWorkPage() {
   const [page, setPage] = useState(0)
   const [editing, setEditing] = useState<{ plan: ServicePlan; isNew: boolean } | null>(null)
   const [signing, setSigning] = useState<PlannedJob | null>(null)
+  const [parting, setParting] = useState<PlannedJob | null>(null)
+  const { features } = useFeatures()
 
   const assetById = useMemo(() => new Map(assets.map((a) => [a.id, a])), [assets])
   const planById = useMemo(() => new Map(plans.map((p) => [p.id, p])), [plans])
@@ -126,6 +132,21 @@ export default function PlannedWorkPage() {
         <Badge tone={j.status === 'Done' ? 'good' : j.status === 'In progress' ? 'warn' : 'info'}>{j.status}</Badge>
       ),
     },
+    ...(features.maintenanceParts
+      ? ([
+          {
+            key: 'parts',
+            header: 'Parts',
+            hideBelow: 'xl',
+            cell: (j: PlannedJob) => (
+              <>
+                <p className="text-ink/70">{partWords(j.parts)}</p>
+                {partsTotal(j.parts) > 0 && <p className="text-xs tabular-nums text-ink/55">{ugx(partsTotal(j.parts))}</p>}
+              </>
+            ),
+          },
+        ] as Column<PlannedJob>[])
+      : []),
     {
       key: 'actions',
       header: '',
@@ -135,6 +156,11 @@ export default function PlannedWorkPage() {
           <span className="text-xs text-ink/55">{j.doneOn ? dayMonthYear(j.doneOn) : ''}</span>
         ) : (
           <div className="flex justify-end gap-2">
+            {features.maintenanceParts && (
+              <Button size="sm" variant="ghost" onClick={() => setParting(j)}>
+                Parts
+              </Button>
+            )}
             {j.status === 'Open' && (
               <Button size="sm" variant="secondary" onClick={() => setJob({ ...j, status: 'In progress' })}>
                 Start
@@ -302,6 +328,19 @@ export default function PlannedWorkPage() {
           onSave={(plan) => {
             savePlan(plan)
             setEditing(null)
+          }}
+        />
+      )}
+
+      {parting && (
+        <PartsDialog
+          title={`${parting.name}${assetById.get(parting.assetId) ? ` · ${assetById.get(parting.assetId)!.tag}` : ''}`}
+          reference={`Service: ${parting.name}`}
+          parts={parting.parts ?? []}
+          onClose={() => setParting(null)}
+          onSave={(parts) => {
+            setJob({ ...parting, parts })
+            setParting(null)
           }}
         />
       )}

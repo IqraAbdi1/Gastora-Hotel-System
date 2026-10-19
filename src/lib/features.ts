@@ -37,6 +37,7 @@ export type FeatureKey =
   | 'assetRegister'
   | 'assetCosts'
   | 'preventiveMaintenance'
+  | 'maintenanceParts'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -70,6 +71,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'preventiveMaintenance',
     label: 'Planned servicing',
     blurb: 'Service plans per machine, by the calendar or by running hours, raising their own jobs when they come round.',
+  },
+  {
+    key: 'maintenanceParts',
+    label: 'Parts on a repair',
+    blurb: 'A repair draws its parts from the store, so what a machine costs to keep is real rather than guessed.',
   },
   {
     key: 'repairSignoff',
@@ -289,6 +295,7 @@ export const PLANS: {
       'assetRegister',
       'assetCosts',
       'preventiveMaintenance',
+      'maintenanceParts',
       'crossProperty',
     ],
   },

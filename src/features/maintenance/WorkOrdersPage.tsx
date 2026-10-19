@@ -13,6 +13,9 @@ import {
   technicians,
 } from '../housekeeping/hkModel'
 import type { RoomDefect } from '../housekeeping/hkModel'
+import { partWords, partsTotal } from '../../lib/parts'
+import { ugx } from '../../lib/format'
+import PartsDialog from './PartsDialog'
 import { useRoomOverlays } from '../housekeeping/useRoomOverlays'
 
 const ACTIVE = 'Active'
@@ -29,6 +32,7 @@ export default function WorkOrdersPage() {
   const [page, setPage] = useState(0)
   const [roomNo, setRoomNo] = useState('')
   const [rejecting, setRejecting] = useState<Row | null>(null)
+  const [parting, setParting] = useState<Row | null>(null)
   const [note, setNote] = useState('')
 
   const full = features.maintenanceFull
@@ -132,6 +136,23 @@ export default function WorkOrdersPage() {
           },
         ] as Column<Row>[])
       : []),
+    ...(features.maintenanceParts
+      ? ([
+          {
+            key: 'parts',
+            header: 'Parts',
+            hideBelow: 'xl',
+            cell: ({ defect }) => (
+              <>
+                <p className="text-ink/70">{partWords(defect.parts)}</p>
+                {partsTotal(defect.parts) > 0 && (
+                  <p className="text-xs tabular-nums text-ink/55">{ugx(partsTotal(defect.parts))}</p>
+                )}
+              </>
+            ),
+          },
+        ] as Column<Row>[])
+      : []),
     {
       key: 'actions',
       header: '',
@@ -140,6 +161,11 @@ export default function WorkOrdersPage() {
         const { room, defect } = row
         return (
           <div className="flex justify-end gap-2">
+            {features.maintenanceParts && defect.status !== 'Resolved' && (
+              <Button size="sm" variant="ghost" onClick={() => setParting(row)}>
+                Parts
+              </Button>
+            )}
             {defect.status === 'Maintenance Requested' &&
               (full ? (
                 <Button size="sm" onClick={() => hk.startDefect(room, defect.id)}>
@@ -272,6 +298,19 @@ export default function WorkOrdersPage() {
         />
         <Pager page={page} total={orders.length} perPage={PAGE} onPage={setPage} noun="repairs" />
       </Card>
+
+      {parting && (
+        <PartsDialog
+          title={`Room ${parting.room} · ${parting.defect.category}: ${parting.defect.description}`}
+          reference={`Repair in room ${parting.room}: ${parting.defect.description}`}
+          parts={parting.defect.parts ?? []}
+          onClose={() => setParting(null)}
+          onSave={(parts) => {
+            hk.setDefectParts(parting.room, parting.defect.id, parts)
+            setParting(null)
+          }}
+        />
+      )}
 
       {rejecting && (
         <Modal

@@ -7,6 +7,7 @@
 
 import { daysBetween, latestReading, usePerDay } from './assets'
 import type { Asset } from './assets'
+import type { UsedPart } from './parts'
 
 /** How often the work comes round: by the calendar, or by how hard the machine has worked. */
 export type Every =
@@ -44,6 +45,8 @@ export type PlannedJob = {
   doneOn?: string
   doneAtReading?: number
   note?: string
+  /** What the service consumed: oil, filters, belts. */
+  parts?: UsedPart[]
 }
 
 export const EVERY_KIND_LABEL = { days: 'days', months: 'months', meter: 'running' } as const

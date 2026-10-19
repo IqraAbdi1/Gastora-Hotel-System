@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { HkRequest, Reservation } from '../../types'
 import type { CleaningArea } from '../../lib/cleaning'
+import type { UsedPart } from '../../lib/parts'
 import type {
   HkRoom,
   HkTask,
@@ -74,6 +75,8 @@ export type HkValue = {
   startDefect: (room: string, defectId: number) => void
   finishDefect: (room: string, defectId: number) => void
   verifyDefect: (room: string, defectId: number, pass: boolean, note: string) => void
+  /** The parts a repair used, or has asked the store for. */
+  setDefectParts: (room: string, defectId: number, parts: UsedPart[]) => void
   resolveDefect: (room: string, defectId: number) => void
   /** True while an open repair is what keeps this room out of sale. */
   blockedByRepair: (room: string) => boolean
