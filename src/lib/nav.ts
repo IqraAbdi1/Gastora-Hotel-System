@@ -48,6 +48,7 @@ export const modules: NavModule[] = [
     { to: '/housekeeping/roster', label: 'Attendant roster' },
     { to: '/housekeeping/inspections', label: 'Inspections', badge: 'toInspect', feature: 'inspections' },
     { to: '/housekeeping/issues', label: 'Issues', badge: 'issues' },
+    { to: '/housekeeping/room-check', label: 'Room check', feature: 'roomCheck' },
     { to: '/housekeeping/lost-found', label: 'Lost and found' },
     { to: '/housekeeping/supplies', label: 'Supplies', feature: 'requests' },
   ]),

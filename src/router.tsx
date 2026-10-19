@@ -43,6 +43,7 @@ import RoomsOutOfOrderPage from './features/maintenance/RoomsOutOfOrderPage'
 import AssetsPage from './features/assets/AssetsPage'
 import PlannedWorkPage from './features/assets/PlannedWorkPage'
 import EngineeringPage from './features/maintenance/EngineeringPage'
+import RoomCheckPage from './features/housekeeping/RoomCheckPage'
 import WorkOrdersPage from './features/maintenance/WorkOrdersPage'
 import PlatformPage from './features/platform/PlatformPage'
 import RequestsPage from './features/procurement/RequestsPage'
@@ -116,6 +117,14 @@ export const router = createBrowserRouter([
             ),
           },
           { path: 'housekeeping/issues', element: <IssuesPage /> },
+          {
+            path: 'housekeeping/room-check',
+            element: (
+              <FeatureGate feature="roomCheck">
+                <RoomCheckPage />
+              </FeatureGate>
+            ),
+          },
           {
             path: 'housekeeping/supplies',
             element: (

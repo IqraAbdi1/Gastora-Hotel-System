@@ -43,6 +43,7 @@ export type FeatureKey =
   | 'slaEscalation'
   | 'roomDowntime'
   | 'engineeringDashboard'
+  | 'roomCheck'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -96,6 +97,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'engineeringDashboard',
     label: 'Engineering dashboard',
     blurb: 'What keeps breaking, what each machine costs to keep, and the whole maintenance history.',
+  },
+  {
+    key: 'roomCheck',
+    label: 'Room check',
+    blurb: 'Walk the floor and compare what is really in each room with what the system believes: sleepers, skips and wrong statuses.',
   },
   {
     key: 'repairSignoff',
@@ -280,6 +286,7 @@ export const PLANS: {
       'guestPortal',
       'assetRegister',
       'roomDowntime',
+      'roomCheck',
     ],
   },
   {
@@ -320,6 +327,7 @@ export const PLANS: {
       'slaEscalation',
       'roomDowntime',
       'engineeringDashboard',
+      'roomCheck',
       'crossProperty',
     ],
   },
