@@ -46,6 +46,8 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [showPhoto, setShowPhoto] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [splitting, setSplitting] = useState(false)
+  // Which message is open. The panel answers "did it go?" at a glance; the wording is there on a click.
+  const [openMessage, setOpenMessage] = useState<string | null>(null)
   const balance = r.total - r.paid
   const { byId } = useCorporate()
   const { forStay, queue } = useMessages()
@@ -202,74 +204,91 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
           </div>
         )}
 
-        {features.guestPortal && r.status !== 'cancelled' && (
+        {/*
+          One section, two named rows. Before this the two links sat in separate blocks, each with a
+          button reading "Copy the link": the same words inches apart for two different pages, and no
+          way to tell which was which.
+        */}
+        {((features.guestPortal && r.status !== 'cancelled') || (features.preRegistration && r.status === 'booked')) && (
           <div>
-            <p className={heading}>Their own page</p>
-            <p className="mt-1 text-sm text-ink/70">
-              One link holding their stay, their bill, the form before arrival and anything they want to ask for.
-              Send it with any message, or read it out over the telephone.
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="text-sm font-semibold text-brand"
-                onClick={() => void navigator.clipboard?.writeText(portalLink(window.location.origin, r.id, r.arrival))}
-              >
-                Copy the link
-              </button>
-              <a
-                href={portalLink(window.location.origin, r.id, r.arrival)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-semibold text-ink/60"
-              >
-                Open it
-              </a>
-            </div>
-            <p className="mt-1 break-all text-xs text-ink/45">
-              {portalLink(window.location.origin, r.id, r.arrival)}
-            </p>
-          </div>
-        )}
-
-        {features.preRegistration && r.status === 'booked' && (
-          <div>
-            <p className={heading}>Before they arrive</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge tone={PRE_REG_TONE[preState]} dot>
-                {PRE_REG_LABEL[preState]}
-              </Badge>
-              {preState === 'filled in' && (
-                <span className="text-xs text-ink/60">
-                  {preProgress.answered} of {preProgress.total} answered · sent {r.preReg?.submittedAt}
-                </span>
+            <p className={heading}>Links for the guest</p>
+            <div className="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/10">
+              {features.guestPortal && r.status !== 'cancelled' && (
+                <div className="p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">Guest page</span>
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-brand"
+                        onClick={() => void navigator.clipboard?.writeText(portalLink(window.location.origin, r.id, r.arrival))}
+                      >
+                        Copy
+                      </button>
+                      <a
+                        href={portalLink(window.location.origin, r.id, r.arrival)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-semibold text-ink/60"
+                      >
+                        Open
+                      </a>
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-ink/55">
+                    Their stay, their bill, the form before arrival and anything they want to ask for. Send it with
+                    any message, or read it out over the telephone.
+                  </p>
+                  <p className="mt-1 truncate text-xs text-ink/40">{portalLink(window.location.origin, r.id, r.arrival)}</p>
+                </div>
               )}
-              {preState === 'opened' && <span className="text-xs text-ink/60">Opened {r.preReg?.openedAt}, not finished yet.</span>}
-              {preState === 'sent' && <span className="text-xs text-ink/60">Sent {r.preReg?.sentAt}, not opened yet.</span>}
-            </div>
-            {preState === 'filled in' && (
-              <p className="mt-2 text-sm text-ink/70">
-                Their answers are waiting in the check-in form. Check them against the ID when they arrive.
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="text-sm font-semibold text-brand"
-                onClick={() => {
-                  sendPreReg(r.id)
-                  queue({ kind: 'before arrival', reservationId: r.id })
-                }}
-              >
-                {preState === 'not sent' ? 'Send the link' : 'Send the link again'}
-              </button>
-              <button
-                type="button"
-                className="text-sm font-semibold text-ink/60"
-                onClick={() => void navigator.clipboard?.writeText(preRegLink(window.location.origin, r.id, r.arrival))}
-              >
-                Copy the link
-              </button>
+
+              {features.preRegistration && r.status === 'booked' && (
+                <div className="p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">Registration form</span>
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-brand"
+                        onClick={() => {
+                          sendPreReg(r.id)
+                          queue({ kind: 'before arrival', reservationId: r.id })
+                        }}
+                      >
+                        {preState === 'not sent' ? 'Send' : 'Send again'}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-ink/60"
+                        onClick={() => void navigator.clipboard?.writeText(preRegLink(window.location.origin, r.id, r.arrival))}
+                      >
+                        Copy
+                      </button>
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge tone={PRE_REG_TONE[preState]} dot>
+                      {PRE_REG_LABEL[preState]}
+                    </Badge>
+                    {preState === 'filled in' && (
+                      <span className="text-xs text-ink/60">
+                        {preProgress.answered} of {preProgress.total} answered · sent {r.preReg?.submittedAt}
+                      </span>
+                    )}
+                    {preState === 'opened' && (
+                      <span className="text-xs text-ink/60">Opened {r.preReg?.openedAt}, not finished yet.</span>
+                    )}
+                    {preState === 'sent' && <span className="text-xs text-ink/60">Sent {r.preReg?.sentAt}, not opened yet.</span>}
+                  </div>
+                  {preState === 'filled in' && (
+                    <p className="mt-1 text-xs text-ink/60">
+                      Their answers are waiting in the check-in form. Check them against the ID when they arrive.
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-ink/55">Sent by itself the day before arrival.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -373,25 +392,34 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         {stayMessages.length > 0 && (
           <div>
             <p className={heading}>Messages to the guest</p>
-            <ul className="mt-2 space-y-2 text-sm">
-              {stayMessages.map((m) => (
-                <li key={m.id} className="border-b border-ink/5 pb-2 last:border-0">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium text-ink">{KIND_LABEL[m.kind]}</span>
-                    <span className="text-xs text-ink/55">
-                      {m.status === 'sent'
-                        ? `Sent ${m.sentAt} by ${CHANNEL_LABEL[m.channel]}${m.by ? ` (${m.by})` : ''}`
-                        : m.status === 'queued'
-                          ? 'Written, waiting to be sent'
-                          : m.status === 'failed'
-                            ? `Could not go: ${m.problem}`
-                            : 'Not sent'}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-ink/70">{m.body}</p>
-                </li>
-              ))}
+            <ul className="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/10 text-sm">
+              {stayMessages.map((m) => {
+                const open = openMessage === m.id
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenMessage(open ? null : m.id)}
+                      aria-expanded={open}
+                      className="flex w-full flex-wrap items-baseline justify-between gap-2 px-3 py-2 text-left hover:bg-canvas"
+                    >
+                      <span className="font-medium text-ink">{KIND_LABEL[m.kind]}</span>
+                      <span className="text-xs text-ink/55">
+                        {m.status === 'sent'
+                          ? `Sent ${m.sentAt} by ${CHANNEL_LABEL[m.channel]}${m.by ? ` (${m.by})` : ''}`
+                          : m.status === 'queued'
+                            ? 'Written, waiting to be sent'
+                            : m.status === 'failed'
+                              ? `Could not go: ${m.problem}`
+                              : 'Not sent'}
+                      </span>
+                    </button>
+                    {open && <p className="px-3 pb-3 text-ink/70">{m.body}</p>}
+                  </li>
+                )
+              })}
             </ul>
+            <p className="mt-1 text-xs text-ink/50">Open one to read the wording that went.</p>
           </div>
         )}
 
