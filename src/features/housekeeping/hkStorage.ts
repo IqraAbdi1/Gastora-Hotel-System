@@ -9,4 +9,5 @@ export const HK_KEYS = {
   threads: 'gastora:hotel:hkThreads',
   readyAlerts: 'gastora:hotel:hkReadyAlerts',
   declined: 'gastora:hotel:hkDeclined',
+  downtime: 'gastora:hotel:hkDowntime',
 } as const

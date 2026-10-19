@@ -41,6 +41,7 @@ export type FeatureKey =
   | 'preventiveMaintenance'
   | 'maintenanceParts'
   | 'slaEscalation'
+  | 'roomDowntime'
   | 'crossProperty'
 
 export type PlanId = 'starter' | 'standard' | 'large'
@@ -84,6 +85,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     key: 'slaEscalation',
     label: 'Repair targets',
     blurb: 'How long a repair may take before the supervisor, and then the manager, is told it has not been done.',
+  },
+  {
+    key: 'roomDowntime',
+    label: 'Room downtime',
+    blurb: 'How long each room has been off sale, and what those nights were worth.',
   },
   {
     key: 'repairSignoff',
@@ -267,6 +273,7 @@ export const PLANS: {
       'loyaltyPoints',
       'guestPortal',
       'assetRegister',
+      'roomDowntime',
     ],
   },
   {
@@ -305,6 +312,7 @@ export const PLANS: {
       'preventiveMaintenance',
       'maintenanceParts',
       'slaEscalation',
+      'roomDowntime',
       'crossProperty',
     ],
   },

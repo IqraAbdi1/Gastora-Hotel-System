@@ -6,6 +6,8 @@ import { useHotel } from '../../lib/hotelContext'
 import { floorOf } from '../../lib/rooms'
 import { useFeatures } from '../platform/featuresContext'
 import type { UsedPart } from '../../lib/parts'
+import { newSpellId } from '../../lib/downtime'
+import type { Spell } from '../../lib/downtime'
 import { HK_KEYS } from './hkStorage'
 import { HkContext } from './hkContext'
 import type { BlockKind, ExceptionKind, HkValue, NewTask } from './hkContext'
@@ -93,6 +95,9 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   const [daySync, setDaySync] = useState<string | null>(null)
   // Days a guest refused the service, by room. Room 102 refused yesterday, so one more refusal escalates.
   const [declinedDays, setDeclinedDays] = useBrowserSyncedState<Record<string, string[]>>(HK_KEYS.declined, { '102': [YESTERDAY] })
+  // Every stretch of a room being off sale, open and closed. Kept rather than worked out afterwards:
+  // the room's status only says where it is now, and "for how long" cannot be recovered from that.
+  const [spells, setSpells] = useBrowserSyncedState<Spell[]>(HK_KEYS.downtime, [])
   // Counts rooms considered for a spot-check, so "1 in N" is steady and easy to demonstrate.
   const spotCounter = useRef(0)
 
@@ -471,6 +476,8 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
 
   function setException(room: string, kind: ExceptionKind, reason: string) {
     setHousekeeping(room, kind, reason.trim())
+    // A discrepancy is a disagreement about the room, not a room taken off sale, so it costs no nights.
+    if (kind !== 'discrepancy') openSpell(room, kind, reason.trim())
     if (kind !== 'discrepancy') {
       setTasks((current) =>
         current.map((t) => (t.room === room && isActive(t) ? { ...t, status: 'Cancelled' as const } : t)),
@@ -482,7 +489,22 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   // Back into the normal flow. A vacant room goes to Dirty so it is cleaned before it is sold again.
   function resetRoom(room: string) {
     setHousekeeping(room, 'dirty')
+    closeSpell(room)
     log(room, 'Issue cleared', 'Room returned to the normal flow.')
+  }
+
+  /** A room leaves sale. An already open stretch is left alone, so one fault is not counted twice. */
+  function openSpell(room: string, kind: 'out-of-order' | 'out-of-service', reason?: string, defectId?: number) {
+    setSpells((current) => {
+      if (current.some((s) => s.room === room && !s.toIso)) return current
+      return [{ id: newSpellId(), room, kind, reason, defectId, fromIso: new Date().toISOString() }, ...current]
+    })
+  }
+
+  /** The room is sellable again. Closing a stretch that is already closed changes nothing. */
+  function closeSpell(room: string) {
+    const at = new Date().toISOString()
+    setSpells((current) => current.map((s) => (s.room === room && !s.toIso ? { ...s, toIso: at } : s)))
   }
 
   // ---- front desk and housekeeping talking ----
@@ -760,6 +782,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     const blockedAs = roomByNumber.get(room)?.hk
     if (!stillBlocked && (blockedAs === 'out-of-service' || blockedAs === 'out-of-order')) {
       setHousekeeping(room, 'dirty')
+      closeSpell(room)
       log(room, 'Room released', 'Repair finished. Room sent for cleaning.', 'Maintenance')
     }
   }
@@ -829,6 +852,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     setLinenFound,
     addPhoto,
     reportDefect,
+    spells,
     setDefectParts,
     requestMaintenance,
     assignDefect,

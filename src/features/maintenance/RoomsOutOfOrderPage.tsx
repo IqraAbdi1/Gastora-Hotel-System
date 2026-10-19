@@ -4,11 +4,16 @@ import { useFeatures } from '../platform/featuresContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import { defectStatusTone, statusTone } from '../housekeeping/hkModel'
 import { useRoomOverlays } from '../housekeeping/useRoomOverlays'
+import { downWords, hoursOf } from '../../lib/downtime'
+import { useNow } from '../../lib/useNow'
+import DowntimeCard from './DowntimeCard'
 
 export default function RoomsOutOfOrderPage() {
   const hk = useHousekeeping()
   const { features } = useFeatures()
   const { overlays, openRoom } = useRoomOverlays()
+  const now = useNow(60000)
+  const openSpell = (room: string) => hk.spells.find((s) => s.room === room && !s.toIso)
 
   const blocked = useMemo(
     () => hk.rooms.filter((r) => r.status === 'Out of Order' || r.status === 'Out of Service'),
@@ -70,6 +75,13 @@ export default function RoomsOutOfOrderPage() {
                       {room.type} · {room.zone}
                     </p>
                     {room.reason && <p className="text-sm text-ink/70">Reason: {room.reason}</p>}
+                    {features.roomDowntime &&
+                      (() => {
+                        const spell = openSpell(room.room)
+                        return spell ? (
+                          <p className="text-xs font-medium text-warn">Off sale {downWords(hoursOf(spell, now))}</p>
+                        ) : null
+                      })()}
                     {repairs.map(({ defect }) => (
                       <p key={defect.id} className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-ink/70">
@@ -99,6 +111,8 @@ export default function RoomsOutOfOrderPage() {
           </ul>
         )}
       </Card>
+
+      {features.roomDowntime && <DowntimeCard />}
 
       {overlays}
     </div>

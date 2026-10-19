@@ -16,6 +16,7 @@ import type { RoomDefect } from '../housekeeping/hkModel'
 import { partWords, partsTotal } from '../../lib/parts'
 import { ugx } from '../../lib/format'
 import PartsDialog from './PartsDialog'
+import DowntimeCard from './DowntimeCard'
 import { CLOCK_TONE, STEP_TO, clockWords, slaOf } from '../../lib/sla'
 import { waitingParts } from '../../lib/parts'
 import { useNow } from '../../lib/useNow'
@@ -385,6 +386,12 @@ export default function WorkOrdersPage() {
         />
         <Pager page={page} total={orders.length} perPage={PAGE} onPage={setPage} noun="repairs" />
       </Card>
+
+      {/*
+        Downtime lives on the rooms-out-of-order page for a hotel that has it. A Standard hotel has no
+        such page, so the card comes here instead rather than being a feature it pays for and cannot see.
+      */}
+      {features.roomDowntime && !features.maintenanceFull && <DowntimeCard />}
 
       {parting && (
         <PartsDialog
