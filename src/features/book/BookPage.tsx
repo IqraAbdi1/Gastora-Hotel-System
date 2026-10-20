@@ -579,8 +579,7 @@ export default function BookPage() {
             <div className="rounded-xl border border-brand/30 bg-brand/[0.06] p-4">
               <p className="font-semibold text-ink">Save time when you arrive</p>
               <p className="mt-1 text-sm text-ink/75">
-                Fill in your details now and the desk only has to check your identification. It takes a minute, and
-                the same page holds your booking and your bill for the whole stay.
+                Fill in your details now and the desk only has to check your identification when you arrive.
               </p>
               <a
                 href={portalLink(window.location.origin, bookingId, search.arrival)}
@@ -588,8 +587,8 @@ export default function BookPage() {
               >
                 Fill in my details
               </a>
-              <p className="mt-2 break-all text-xs text-ink/50">
-                Keep this link: {portalLink(window.location.origin, bookingId, search.arrival)}
+              <p className="mt-2 text-xs text-ink/55">
+                This page holds your booking and your bill for the whole stay. The hotel sends you the link as well.
               </p>
             </div>
           )}

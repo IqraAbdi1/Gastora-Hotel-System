@@ -235,11 +235,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                       </a>
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-ink/55">
-                    Their stay, their bill, the form before arrival and anything they want to ask for. Send it with
-                    any message, or read it out over the telephone.
-                  </p>
-                  <p className="mt-1 truncate text-xs text-ink/40">{portalLink(window.location.origin, r.id, r.arrival)}</p>
+                  <p className="mt-0.5 text-xs text-ink/55">Their stay, their bill and the form before arrival.</p>
                 </div>
               )}
 
@@ -286,7 +282,9 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                       Their answers are waiting in the check-in form. Check them against the ID when they arrive.
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-ink/55">Sent by itself the day before arrival.</p>
+                  {preState !== 'filled in' && (
+                    <p className="mt-1 text-xs text-ink/55">Sent by itself the day before arrival.</p>
+                  )}
                 </div>
               )}
             </div>
