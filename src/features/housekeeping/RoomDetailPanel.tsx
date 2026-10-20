@@ -3,6 +3,9 @@ import { Badge, Button, Card, DataTable, EmptyState, Modal, Tabs } from '../../c
 import type { Column, TabItem } from '../../components/ui'
 import { dayMonth } from '../../lib/format'
 import { useHousekeeping } from './hkContext'
+import { useAuth } from '../auth/authContext'
+import { MAX_ROOM_PHOTOS, roomHasSpace } from '../../lib/roomPhotos'
+import { PhotoThumbs, TakePhotoButton } from './RoomPhotos'
 import { defectStatusTone, isActive, priorityTone, statusTone, taskStatusTone } from './hkModel'
 import type { LinenItem, MinibarItem, TabKey } from './hkModel'
 
@@ -18,13 +21,17 @@ export default function RoomDetailPanel({
   startTab?: TabKey
 }) {
   const hk = useHousekeeping()
+  const { user } = useAuth()
+  const me = user?.staffName ?? user?.name ?? 'Housekeeping'
   const [tab, setTab] = useState<TabKey>(startTab)
+  const [photoNote, setPhotoNote] = useState('')
 
   const room = hk.rooms.find((r) => r.room === roomNumber)
   if (!room) return null
   const details = hk.detailsOf(roomNumber)
   const stay = hk.stayOf(roomNumber)
   const task = hk.tasks.find((t) => t.room === roomNumber && isActive(t))
+  const photoCount = details.photos.length
   const openDefects = details.defects.filter((d) => d.status !== 'Resolved').length
 
   const tabs: TabItem<TabKey>[] = [
@@ -171,26 +178,31 @@ export default function RoomDetailPanel({
             <Card
               title="Room photos"
               icon="sparkles"
-              description="Placeholders until photo upload is connected."
+              count={photoCount}
+              description={`What the room looked like, with who took each photo and when. Up to ${MAX_ROOM_PHOTOS} are kept per room.`}
               actions={
-                <Button variant="secondary" size="sm" onClick={() => hk.addPhoto(roomNumber)}>
-                  Add photo
-                </Button>
+                <TakePhotoButton
+                  disabled={!roomHasSpace(details.photos)}
+                  label={roomHasSpace(details.photos) ? 'Add photo' : 'Room full'}
+                  onPhoto={(src) => setPhotoNote(hk.addPhoto(roomNumber, { src, by: me }) ?? '')}
+                />
               }
             >
+              {photoNote && (
+                <p role="alert" className="mb-3 rounded-lg bg-warn/10 px-3 py-2 text-sm text-ink">
+                  {photoNote}
+                </p>
+              )}
               {details.photos.length === 0 ? (
-                <p className="text-sm text-ink/60">No photos captured.</p>
+                <p className="text-sm text-ink/60">No photos yet. On a phone, Add photo opens the camera.</p>
               ) : (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {details.photos.map((photo, i) => (
-                    <div
-                      key={`${photo}-${i}`}
-                      className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-ink/20 bg-canvas text-sm text-ink/60"
-                    >
-                      {photo}
-                    </div>
-                  ))}
-                </div>
+                <PhotoThumbs
+                  photos={details.photos}
+                  onRemove={(i) => {
+                    hk.removePhoto(roomNumber, i, me)
+                    setPhotoNote('')
+                  }}
+                />
               )}
             </Card>
           </>
@@ -260,6 +272,11 @@ export default function RoomDetailPanel({
                             {defect.technician && ` · With ${defect.technician}`}
                           </p>
                           {defect.note && <p className="mt-1 text-xs text-ink/60">{defect.note}</p>}
+                          {defect.photos && defect.photos.length > 0 && (
+                            <div className="mt-2">
+                              <PhotoThumbs compact photos={defect.photos} alt={`Photo of the problem: ${defect.category}`} />
+                            </div>
+                          )}
                         </div>
                         {defect.status === 'Open' && (
                           <Button

@@ -42,12 +42,12 @@ export default function DataTable<T>({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-ink/10 bg-canvas/60">
+          <tr className="border-b border-ink/10 bg-canvas/50">
             {columns.map((c) => (
               <th
                 key={c.key}
                 scope="col"
-                className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink/55 ${align(c)} ${hide(c)}`}
+                className={`px-4 py-2.5 text-xs font-semibold text-ink/55 ${align(c)} ${hide(c)}`}
               >
                 {c.header}
               </th>

@@ -7,6 +7,7 @@ import { useRoomOverlays } from './useRoomOverlays'
 import { checklistChoices, matchChoices } from '../../lib/cleaning'
 import { useFeatures } from '../platform/featuresContext'
 import { useAuth } from '../auth/authContext'
+import { byWorkOrder } from '../../lib/hkAllocation'
 import LogItemDialog from '../lostfound/LogItemDialog'
 
 /**
@@ -215,17 +216,21 @@ export default function MyTasksPage() {
   // Who is signed in is who this page is for. The work comes from the supervisor, not from a list
   // the attendant picks off, so there is one person responsible for who is where.
   const me = user?.staffName ?? ''
+  const zoned = useFeatures().features.hkZones
 
   const { mine, now, done } = useMemo(() => {
+    // With a plan by zone applied, her list follows the plan's order (urgent work still rises to the top).
     const sort = (a: HkTask, b: HkTask) =>
-      priorityRank[a.priority] - priorityRank[b.priority] || a.dueTime.localeCompare(b.dueTime)
+      zoned
+        ? byWorkOrder(a, b)
+        : priorityRank[a.priority] - priorityRank[b.priority] || a.dueTime.localeCompare(b.dueTime)
     const mineAll = hk.tasks.filter((t) => isActive(t) && t.attendant === me).sort(sort)
     return {
       mine: mineAll.filter((t) => t.status !== 'In Progress'),
       now: mineAll.find((t) => t.status === 'In Progress') ?? null,
       done: hk.tasks.filter((t) => t.attendant === me && t.status === 'Completed').length,
     }
-  }, [hk.tasks, me])
+  }, [hk.tasks, me, zoned])
 
   if (!me) {
     return (

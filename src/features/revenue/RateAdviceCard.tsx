@@ -35,7 +35,7 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
     const last = nights[nights.length - 1].date
     const sold = soldByNight(rooms, reservations, nights[0].date, last)
     return worthSaying(
-      nights.map((n) => adviseNight(n, priceNight(type, n.date, rates, (d) => sold[d]), type)),
+      nights.map((n) => adviseNight(n, priceNight(type, n.date, rates, (d) => sold[d]), type, undefined, rates.events ?? [])),
     )
   }, [nights, rooms, reservations, rates, type])
 
@@ -61,13 +61,13 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
       icon="money"
       count={advice.length}
       padded
-      description="Rules reading pace and occupancy. Nothing changes until somebody approves it."
+      description="Rules reading pace, occupancy and the events the hotel entered. Nothing changes until somebody approves it."
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className="text-xs text-ink/60">
           Each suggestion says what it rests on: a <strong className="text-ink/80">Rule</strong> is something counted,
           an <strong className="text-ink/80">Estimate</strong> is the forecast, which any conference nobody told us
-          about will beat.
+          about will beat, and <strong className="text-ink/80">Your input</strong> is an event the hotel entered below.
         </p>
         <Select
           value={type}
@@ -98,6 +98,15 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
                       {a.daysOut === 0 ? 'tonight' : `${a.daysOut} days out`}
                     </span>
                   </p>
+                  {a.events && a.events.length > 0 && (
+                    <p className="mt-0.5 flex flex-wrap gap-1">
+                      {a.events.map((e) => (
+                        <Badge key={e.id} tone="info">
+                          Event: {e.name}
+                        </Badge>
+                      ))}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-sm text-ink/75">
                     <span className="tabular-nums">{ugx(a.current)}</span>
                     <span className="mx-1.5 text-ink/40">→</span>
@@ -168,7 +177,9 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
           <ul className="space-y-2">
             {open.drivers.map((d) => (
               <li key={d.text} className="flex gap-2 text-sm">
-                <Badge tone={d.basis === 'Rule' ? 'neutral' : 'warn'}>{d.basis}</Badge>
+                <span className="shrink-0">
+                  <Badge tone={d.basis === 'Rule' ? 'neutral' : d.basis === 'Your input' ? 'info' : 'warn'}>{d.basis}</Badge>
+                </span>
                 <span className="text-ink/75">{d.text}</span>
               </li>
             ))}

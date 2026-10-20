@@ -6,6 +6,9 @@ import { useAuth } from '../auth/authContext'
 import { useHousekeeping } from './hkContext'
 import { attendants, isActive, placeLabel } from './hkModel'
 import type { HkTask } from './hkModel'
+import { useFeatures } from '../platform/featuresContext'
+import { SHIFT_LABEL, byWorkOrder } from '../../lib/hkAllocation'
+import type { Shift } from '../../lib/hkAllocation'
 
 type View = 'roster' | 'record'
 
@@ -24,7 +27,8 @@ const WORK_WORDS = [
 ]
 
 export default function RosterPage() {
-  const { tasks, rooms, allHistory, assignTask } = useHousekeeping()
+  const { tasks, rooms, allHistory, assignTask, roster: shifts, setRosterEntry, zones } = useHousekeeping()
+  const { features } = useFeatures()
   const { can } = useAuth()
   const [view, setView] = useState<View>('roster')
   const [q, setQ] = useState('')
@@ -170,6 +174,55 @@ export default function RosterPage() {
             )}
           </Card>
 
+          {features.hkZones && (
+            <Card
+              title="Zones and shifts today"
+              icon="calendar"
+              padded
+              description="Where each person works and when. Sharing out by zone keeps each one on her own floor or area. It carries over to tomorrow until it is changed."
+            >
+              <ul className="space-y-2">
+                {shifts.map((r) => (
+                  <li
+                    key={r.name}
+                    className="grid items-center gap-2 rounded-lg border border-ink/10 bg-surface p-2.5 sm:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)]"
+                  >
+                    <span className={`font-semibold ${r.shift === 'off' ? 'text-ink/50' : 'text-ink'}`}>{r.name}</span>
+                    {canAssign ? (
+                      <>
+                        <Select
+                          aria-label={`${r.name}'s zone`}
+                          value={r.zone}
+                          onChange={(e) => setRosterEntry(r.name, { zone: e.target.value })}
+                        >
+                          <option value="">No zone</option>
+                          {[...new Set([...zones, ...(r.zone ? [r.zone] : [])])].map((z) => (
+                            <option key={z}>{z}</option>
+                          ))}
+                        </Select>
+                        <Select
+                          aria-label={`${r.name}'s shift`}
+                          value={r.shift}
+                          onChange={(e) => setRosterEntry(r.name, { shift: e.target.value as Shift })}
+                        >
+                          {(Object.keys(SHIFT_LABEL) as Shift[]).map((s) => (
+                            <option key={s} value={s}>
+                              {SHIFT_LABEL[s]}
+                            </option>
+                          ))}
+                        </Select>
+                      </>
+                    ) : (
+                      <span className="text-sm text-ink/70 sm:col-span-2">
+                        {r.zone || 'No zone'} &middot; {SHIFT_LABEL[r.shift]}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           {shown.map(([name, list]) => (
             <Card
               key={name}
@@ -183,7 +236,7 @@ export default function RosterPage() {
                 <ul className="space-y-2">
                   {list
                     .slice()
-                    .sort((a, b) => a.dueTime.localeCompare(b.dueTime))
+                    .sort(features.hkZones ? byWorkOrder : (a, b) => a.dueTime.localeCompare(b.dueTime))
                     .map((t) => (
                       <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/10 bg-surface p-2.5">
                         <div className="min-w-0">

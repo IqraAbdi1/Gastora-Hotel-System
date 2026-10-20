@@ -21,6 +21,7 @@ import { CLOCK_TONE, STEP_TO, clockWords, slaOf } from '../../lib/sla'
 import { waitingParts } from '../../lib/parts'
 import { useNow } from '../../lib/useNow'
 import { useRoomOverlays } from '../housekeeping/useRoomOverlays'
+import { PhotoThumbs } from '../housekeeping/RoomPhotos'
 
 const ACTIVE = 'Active'
 const PAGE = 25
@@ -116,6 +117,11 @@ export default function WorkOrdersPage() {
         <>
           <p className="font-medium text-ink">{defect.category}</p>
           <p className="max-w-xs text-xs text-ink/60">{defect.description}</p>
+          {defect.photos && defect.photos.length > 0 && (
+            <div className="mt-1">
+              <PhotoThumbs compact photos={defect.photos} alt={`Photo of the problem: ${defect.category}`} />
+            </div>
+          )}
           {defect.note && <p className="max-w-xs text-xs text-ink/50">{defect.note}</p>}
         </>
       ),

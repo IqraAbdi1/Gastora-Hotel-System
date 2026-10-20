@@ -42,7 +42,8 @@ export default function BookPage() {
   const { tenant, options, features, stayTimes, setOptions } = useFeatures()
 
   const [step, setStep] = useState<Step>('search')
-  const [search, setSearch] = useState<Search>({ arrival: TODAY, departure: '', adults: 2, children: 0 })
+  // Tonight, one night, two adults: the most common stay, so the first thing a guest sees is rooms they could book.
+  const [search, setSearch] = useState<Search>({ arrival: TODAY, departure: nextDay(TODAY), adults: 2, children: 0 })
   const [chosen, setChosen] = useState<Offer | null>(null)
   // One package chosen per room type, so each room reads as one thing to decide rather than nine.
   const [plans, setPlans] = useState<Record<string, string>>({})
@@ -71,7 +72,7 @@ export default function BookPage() {
     [problem, search, rooms, reservations, rates, sold],
   )
   const perNight = useMemo(
-    () => (chosen && !problem ? priceNights(chosen.type, search.arrival, search.departure, rates, (d) => sold[d]) : []),
+    () => (chosen && !problem ? priceNights(chosen.type, search.arrival, search.departure, rates, (d) => sold[d], { planId: chosen.planId }) : []),
     [chosen, problem, search.arrival, search.departure, rates, sold],
   )
 
@@ -167,9 +168,9 @@ export default function BookPage() {
   }
 
   return (
-    <Shell hotel={tenant.name}>
-      {step !== 'done' && (
-        <ol className="mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold">
+    <Shell hotel={tenant.name} hero={step === 'search'} wide={step === 'search' || step === 'rooms'}>
+      {step !== 'done' && step !== 'search' && (
+        <ol className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold">
           {(offered.length > 0
             ? (['search', 'rooms', 'extras', 'details', 'pay'] as Step[])
             : (['search', 'rooms', 'details', 'pay'] as Step[])
@@ -195,9 +196,9 @@ export default function BookPage() {
       )}
 
       {step === 'search' && (
-        <section className="space-y-4">
+        <section className="space-y-4 rounded-2xl border border-ink/10 bg-surface p-5 shadow-[0_12px_30px_rgba(17,48,44,0.10)] sm:p-6">
           <h2 className="text-lg font-semibold text-ink">When are you coming?</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Arrival">
               {(id) => (
                 <Input
@@ -247,7 +248,10 @@ export default function BookPage() {
             <p className="text-sm text-bad">{problem}</p>
           ) : (
             <p className="text-sm text-ink/60">
-              {nights} night{nights === 1 ? '' : 's'} · check-in from {stayTimes.checkInTime}, check-out by{' '}
+              <span className="font-semibold text-ink">
+                {longDate(search.arrival)} to {longDate(search.departure)}
+              </span>{' '}
+              · {nights} night{nights === 1 ? '' : 's'} · check-in from {stayTimes.checkInTime}, check-out by{' '}
               {stayTimes.checkOutTime}
             </p>
           )}
@@ -274,7 +278,7 @@ export default function BookPage() {
             </button>
           </div>
 
-          <ul className="space-y-3">
+          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {(['Standard', 'Deluxe', 'Suite'] as const).map((type) => {
               const forType = offers.filter((o) => o.type === type)
               if (forType.length === 0) return null
@@ -285,9 +289,14 @@ export default function BookPage() {
               return (
                 <li
                   key={type}
-                  className={`rounded-xl border p-4 ${open ? 'border-ink/10 bg-surface shadow-sm' : 'border-ink/10 bg-ink/[0.03]'}`}
+                  className={`flex flex-col overflow-hidden rounded-2xl border ${open ? 'border-ink/10 bg-surface shadow-sm' : 'border-ink/10 bg-ink/[0.03]'}`}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  {/* Where the hotel's own photograph of the room goes. */}
+                  <div className={`flex h-36 items-end bg-linear-to-br p-3 ${ROOM_TONE[type]} ${open ? '' : 'opacity-50 grayscale'}`}>
+                    <span className="rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink">{type} room</span>
+                  </div>
+                  <div className="flex flex-1 flex-col p-4">
+                  <div className="flex flex-col gap-3">
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-ink">{type}</p>
                       {o.refusal ? (
@@ -302,11 +311,16 @@ export default function BookPage() {
                         </div>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p className="text-lg font-bold tabular-nums text-ink">{ugx(o.total)}</p>
                       <p className="text-xs text-ink/55">
                         {ugx(o.nightly)} a night · {nights} night{nights === 1 ? '' : 's'}
                       </p>
+                      {o.stayDeal && (
+                        <p className="mt-1">
+                          <Badge tone="good">{o.stayDeal.label}</Badge>
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -335,9 +349,9 @@ export default function BookPage() {
                   <p className="mt-1.5 text-xs text-ink/60">{plan.inclusions}</p>
 
                   {open && (
-                    <div className="mt-3">
+                    <div className="mt-auto pt-4">
                       <Button
-                        size="sm"
+                        className="w-full"
                         onClick={() => {
                           setChosen(o)
                           setStep(offered.length > 0 ? 'extras' : 'details')
@@ -347,6 +361,7 @@ export default function BookPage() {
                       </Button>
                     </div>
                   )}
+                  </div>
                 </li>
               )
             })}
@@ -640,6 +655,12 @@ function Summary({
         {search.children > 0 && `, ${search.children} child${search.children === 1 ? '' : 'ren'}`}
       </p>
       <p className="mt-2 text-lg font-bold tabular-nums text-ink">{ugx(offer.total)}</p>
+      {offer.stayDeal && (
+        <p className="mt-0.5 flex justify-between gap-3 text-sm text-good">
+          <span>{offer.stayDeal.label}</span>
+          <span className="tabular-nums">− {ugx(offer.stayDeal.saving)}, already taken off</span>
+        </p>
+      )}
       {varies(perNight) && (
         <>
           <button type="button" onClick={() => setOpen(!open)} className="mt-1 text-xs font-semibold text-brand">
@@ -668,14 +689,58 @@ const Note = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-xl bg-warn/[0.1] p-3 text-sm text-ink/80">{children}</p>
 )
 
-function Shell({ hotel, children }: { hotel: string; children: React.ReactNode }) {
+// Where each room type's photograph will go, until the hotel uploads its own.
+const ROOM_TONE: Record<string, string> = {
+  Standard: 'from-[#c8d8cf] to-[#7da08f]',
+  Deluxe: 'from-[#d9cfb8] to-[#9a8460]',
+  Suite: 'from-[#bcc8d6] to-[#5f7891]',
+}
+
+const nextDay = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
+/** "Tue 20 Oct 2026": a date nobody can read the wrong way round. */
+const longDate = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+function Shell({
+  hotel,
+  hero = false,
+  wide = false,
+  children,
+}: {
+  hotel: string
+  /** The large welcome at the top, for the first step only. */
+  hero?: boolean
+  /** Room choices need the width; forms read better narrow. */
+  wide?: boolean
+  children: React.ReactNode
+}) {
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="bg-linear-to-br from-brand to-brand-deep px-5 py-6 text-white">
-        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Book a room</p>
-        <h1 className="text-xl font-bold">{hotel}</h1>
+      <header
+        className={`relative overflow-hidden bg-linear-to-br from-[#2f5f4b] via-brand-deep to-[#6b5a2e] px-5 text-white ${
+          hero ? 'pb-24 pt-6 sm:pb-28' : 'py-5'
+        }`}
+      >
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent/25 blur-3xl" aria-hidden="true" />
+        <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <p className="text-lg font-bold">{hotel}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Book direct</p>
+        </div>
+        {hero && (
+          <div className="relative mx-auto mt-14 max-w-5xl">
+            <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">Your stay at {hotel}</h1>
+            <p className="mt-3 max-w-xl text-white/85">Book directly with the hotel for its own best price. Pay the deposit by mobile money or card.</p>
+          </div>
+        )}
       </header>
-      <main className="mx-auto max-w-2xl px-5 py-6">{children}</main>
+      <main className={`relative mx-auto px-5 pb-10 ${wide ? 'max-w-5xl' : 'max-w-2xl'} ${hero ? '-mt-16 sm:-mt-20' : 'pt-6'}`}>
+        {children}
+      </main>
     </div>
   )
 }

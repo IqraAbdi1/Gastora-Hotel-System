@@ -40,7 +40,7 @@ export function stayTotalBetween(
   const nights = nightsOf(arrival, departure)
   if (nights < 1) return 0
   if (!rates) return stayTotal(type, planId, nights)
-  return roomTotalFor(type, arrival, departure, rates, soldOn) + planFor(planId, rates).extraPerNight * nights
+  return roomTotalFor(type, arrival, departure, rates, soldOn, { planId }) + planFor(planId, rates).extraPerNight * nights
 }
 
 /** The average night of a stay, room plus meal plan. One number standing for nights that may differ. */
@@ -53,7 +53,7 @@ export function nightlyForStay(
   soldOn?: SoldOn,
 ) {
   if (!rates) return (roomRate[type] ?? 0) + planFor(planId).extraPerNight
-  return averageNightly(type, arrival, departure, rates, soldOn) + planFor(planId, rates).extraPerNight
+  return averageNightly(type, arrival, departure, rates, soldOn, { planId }) + planFor(planId, rates).extraPerNight
 }
 
 export function suggestedDeposit(total: number, percent?: number) {

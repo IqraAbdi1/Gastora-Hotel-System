@@ -5,6 +5,7 @@ import { useHousekeeping } from './hkContext'
 import { defectStatusTone, exceptionStatuses, statusTone } from './hkModel'
 import type { RoomDefect } from './hkModel'
 import { useRoomOverlays } from './useRoomOverlays'
+import { PhotoThumbs } from './RoomPhotos'
 
 const OPEN = 'Not resolved'
 const PAGE = 25
@@ -45,6 +46,11 @@ export default function IssuesPage() {
         <>
           <p className="font-medium text-ink">{defect.category}</p>
           <p className="max-w-xs truncate text-xs text-ink/60">{defect.description}</p>
+          {defect.photos && defect.photos.length > 0 && (
+            <div className="mt-1">
+              <PhotoThumbs compact photos={defect.photos} alt={`Photo of the problem: ${defect.category}`} />
+            </div>
+          )}
         </>
       ),
     },

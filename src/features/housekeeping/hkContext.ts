@@ -3,6 +3,8 @@ import type { HkRequest, Reservation } from '../../types'
 import type { CleaningArea } from '../../lib/cleaning'
 import type { UsedPart } from '../../lib/parts'
 import type { Spell } from '../../lib/downtime'
+import type { AllocationPlan, RosterEntry } from '../../lib/hkAllocation'
+import type { RoomPhoto } from '../../lib/roomPhotos'
 import type {
   HkRoom,
   HkTask,
@@ -66,11 +68,21 @@ export type HkValue = {
   dismissReady: (room: string) => void
   setMinibarUsed: (room: string, index: number, value: number) => void
   setLinenFound: (room: string, index: number, value: number) => void
-  addPhoto: (room: string) => void
-   reportDefect: (
+  /**
+   * With a photo, keeps it on the room with who took it. Without one, adds a text placeholder as before.
+   * Returns a message for the person when the photo could not be kept (room full, device storage full).
+   */
+  addPhoto: (room: string, photo?: { src: string; by: string }) => string | undefined
+  removePhoto: (room: string, index: number, by?: string) => void
+  /** Returns a message when the problem was saved but its photos could not be. */
+  reportDefect: (
     room: string,
-    input: Pick<RoomDefect, 'category' | 'severity' | 'description'> & { blocksRoom?: BlockKind; assetId?: string },
-  ) => void
+    input: Pick<RoomDefect, 'category' | 'severity' | 'description'> & {
+      blocksRoom?: BlockKind
+      assetId?: string
+      photos?: RoomPhoto[]
+    },
+  ) => string | undefined
   requestMaintenance: (room: string, defectId: number) => void
   assignDefect: (room: string, defectId: number, technician: string) => void
   startDefect: (room: string, defectId: number) => void
@@ -83,6 +95,17 @@ export type HkValue = {
   resolveDefect: (room: string, defectId: number) => void
   /** True while an open repair is what keeps this room out of sale. */
   blockedByRepair: (room: string) => boolean
+
+  // Cleaning by zone (Standard and Large plans).
+  /** Every attendant, with today's zone and shift. */
+  roster: RosterEntry[]
+  setRosterEntry: (name: string, patch: Partial<Omit<RosterEntry, 'name'>>) => void
+  /** The zones a person can be put on: the floors, and wherever the public areas are. */
+  zones: string[]
+  /** A proposal only. Nothing changes until applyPlan. */
+  planByZone: (reshare: boolean) => AllocationPlan
+  /** Gives out the work as planned and sets each list's order. Started work is never moved. */
+  applyPlan: (plan: AllocationPlan) => void
 }
 
 export const HkContext = createContext<HkValue | null>(null)

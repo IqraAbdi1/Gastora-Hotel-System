@@ -112,7 +112,7 @@ export default function ItemDialog({ item, onClose }: { item?: StockItem; onClos
             </label>
           )}
           {showExpiry && (
-            <label className="col-span-2 flex items-start gap-3 rounded-lg bg-linear-to-r from-good/10 to-transparent p-3 text-sm">
+            <label className="col-span-2 flex items-start gap-3 rounded-lg bg-surface p-3 text-sm">
               <input
                 type="checkbox"
                 checked={tracksExpiry}

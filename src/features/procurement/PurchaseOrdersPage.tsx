@@ -41,9 +41,9 @@ export default function PurchaseOrdersPage() {
   const link = 'rounded-lg border border-brand/40 px-3 py-1 text-xs font-semibold text-brand hover:bg-brand/5'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Purchase orders</h1>
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Purchase orders</h1>
         <p className="text-sm text-ink/60">
           Raised by procurement from approved requisitions. Each one shows its request ID. A short delivery keeps the
           balance open on the same order. Tap View to open or print.

@@ -60,7 +60,7 @@ export default function ItemPanel({
     <div className="fixed inset-0 z-40 flex justify-end bg-ink/40">
       <button type="button" aria-label="Close panel" onClick={onClose} className="flex-1 cursor-default" />
       <aside className="flex h-full w-full max-w-md flex-col overflow-y-auto bg-surface shadow-xl">
-        <div className="flex items-start justify-between gap-3 bg-linear-to-br from-good/15 to-brand/10 px-5 py-4">
+        <div className="flex items-start justify-between gap-3 bg-surface px-5 py-4">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">{item.name}</h2>
             <p className="text-sm text-ink/60">

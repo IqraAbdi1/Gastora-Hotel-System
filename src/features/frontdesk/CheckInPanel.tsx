@@ -25,6 +25,8 @@ import { isSensitiveTag } from '../../lib/loyalty'
 import { stamp } from '../../lib/folio'
 import GuestRecognition from '../guests/GuestRecognition'
 import PreferenceChips from '../guests/PreferenceChips'
+import { proposeRoom } from '../../lib/roomAssign'
+import { TODAY } from '../../data/sample'
 import CheckInRoomStep from './CheckInRoomStep'
 import CompanyCheckIn from './CompanyCheckIn'
 
@@ -111,9 +113,14 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
   const index = Math.max(0, steps.findIndex((s) => s.key === stepKey))
   const current = steps[index].key
 
+  // The assignment rules' proposal, for a stay nobody has given a room yet. A room the desk chose stays chosen.
+  const [suggestion] = useState(() =>
+    features.roomAutoAssign && !r.room ? proposeRoom(r, { reservations, rooms, guests, today: TODAY }) : undefined,
+  )
   const [room, setRoom] = useState(() => {
     const assigned = readyRooms.find((x) => x.number === (preferred ?? r.room))
     if (assigned) return assigned.number
+    if (suggestion?.room && readyRooms.some((x) => x.number === suggestion.room)) return suggestion.room
     const sorted = [...readyRooms].sort((a, b) => Number(a.number) - Number(b.number))
     return sorted[0]?.number ?? ''
   })
@@ -536,7 +543,16 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
 
                 {current === 'room' && (
                   <Card title="Assign a room" description={`${r.roomType} · ${dayMonth(r.arrival)} to ${dayMonth(r.departure)}`} padded>
-                    <CheckInRoomStep type={r.roomType} ready={readyRooms} dirty={dirtyRooms} booked={r.room} reservation={r} value={room} onChange={setRoom} />
+                    <CheckInRoomStep
+                      type={r.roomType}
+                      ready={readyRooms}
+                      dirty={dirtyRooms}
+                      booked={r.room}
+                      reservation={r}
+                      value={room}
+                      onChange={setRoom}
+                      suggestion={suggestion}
+                    />
                   </Card>
                 )}
 

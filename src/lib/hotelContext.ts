@@ -28,6 +28,14 @@ export type HotelValue = {
   guests: Guest[]
   checkIn: (reservationId: string, roomNumber: string, details: GuestDetails) => void
   addReservation: (input: NewReservation) => Reservation
+  /**
+   * Several rooms booked in one go by one booker. The first input is the booker's own room. Each room is
+   * an ordinary booking carrying the same party reference; with `oneBill` every other room's charges go
+   * to the first room's bill. Returns the bookings made, the booker's first.
+   */
+  addParty: (inputs: NewReservation[], booker: string, oneBill: boolean, by: string) => Reservation[]
+  /** Start or stop one room of a party paying for all the others. */
+  setPartyPayer: (partyId: string, payerId: string | null, by: string) => void
   /** Several at once, for a block of rooms held under one name. */
   addReservations: (inputs: NewReservation[]) => void
   addGuest: (input: Omit<Guest, 'id'>) => Guest
@@ -40,6 +48,8 @@ export type HotelValue = {
   /** Cancels a wrong charge with a reversing line. Both lines stay on the folio. */
   reverseCharge: (reservationId: string, chargeId: string, reason: string, approvedBy: string) => void
   addPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
+  /** A payment the guest made from their own page: on the folio if in-house, on the booking if not yet arrived. */
+  addGuestPayment: (reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) => void
   /** Record the arrival-day call to a guest whose booking nothing is securing. */
   recordConfirmCall: (reservationId: string, outcome: CallOutcome, by: string) => void
   /** Give this stay a pre-arrival link, so the guest can fill in their own details. */
@@ -84,6 +94,11 @@ export type HotelValue = {
   /** Free upgrade: moves a booked stay to a higher room type and assigns the room. The total stays the same. */
   upgradeStay: (reservationId: string, toType: Room['type'], roomNumber: string, reason: string) => void
   setHousekeeping: (roomNumber: string, request: HkRequest, reason?: string) => void
+  /**
+   * Put proposed rooms on booked stays. A stay that already has a room is never touched, and a room
+   * that has been taken since the plan was made is skipped rather than double-booked.
+   */
+  assignRooms: (items: { reservationId: string; room: string; reason: string }[], by: string, auto: boolean) => number
   setCorporate: (
     reservationId: string,
     corporate: CorporateBooking,

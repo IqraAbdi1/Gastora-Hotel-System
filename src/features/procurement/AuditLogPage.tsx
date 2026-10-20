@@ -89,9 +89,9 @@ export default function AuditLogPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Audit log</h1>
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Audit log</h1>
         <p className="text-sm text-ink/60">
           Every request from ask to issue, with who did what and when. Search a request ID, such as SR-1006.
         </p>

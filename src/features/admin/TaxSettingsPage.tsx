@@ -32,7 +32,7 @@ export default function TaxSettingsPage() {
 
   if (!tax) {
     return (
-      <div className="mx-auto max-w-3xl p-4 md:p-6">
+      <div className="max-w-3xl">
         <PageHeader eyebrow="Admin" title="Taxes and EFRIS" description={tenant.name} />
         <p className="mt-4 rounded-lg bg-ink/5 px-4 py-3 text-sm text-ink/70">
           Tax lines are not on your plan. Contact Gastora to switch them on.
@@ -60,7 +60,7 @@ export default function TaxSettingsPage() {
   const efrisMissing = efris.status === 'registered' && (efris.tin.trim() === '' || efris.deviceNo.trim() === '')
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+    <div className="max-w-5xl space-y-5">
       <PageHeader
         eyebrow="Admin"
         title="Taxes and EFRIS"

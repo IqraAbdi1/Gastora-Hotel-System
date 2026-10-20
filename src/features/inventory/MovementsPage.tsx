@@ -74,25 +74,25 @@ export default function MovementsPage() {
     else days.push({ label, rows: [m] })
   }
 
-  const tile = 'rounded-xl border p-3'
+  const tile = 'rounded-xl border border-ink/10 bg-surface px-4 py-3'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Stock movements</h1>
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Stock movements</h1>
         <p className="text-sm text-ink/60">Everything that entered, left or was corrected in the store. Tap a line with a receipt to open it.</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className={`${tile} border-good/25 bg-linear-to-br from-good/15 to-brand/10`}>
+        <div className={`${tile} border-good/25 bg-surface`}>
           <p className="text-xl font-bold text-good">{formatUGX(worth('Received'))}</p>
           <p className="text-xs text-ink/60">Came in</p>
         </div>
-        <div className={`${tile} border-warn/30 bg-linear-to-br from-warn/20 to-warn/5`}>
+        <div className={`${tile} border-warn/30 bg-surface`}>
           <p className="text-xl font-bold text-warn">{formatUGX(worth('Issued'))}</p>
           <p className="text-xs text-ink/60">Went out</p>
         </div>
-        <div className={`${tile} border-brand/20 bg-linear-to-br from-brand/10 to-good/10`}>
+        <div className={`${tile} border-brand/20 bg-surface`}>
           <p className="text-xl font-bold text-brand">{adjustments}</p>
           <p className="text-xs text-ink/60">Corrections</p>
         </div>
@@ -163,7 +163,7 @@ export default function MovementsPage() {
             {days.map((d) => (
               <tbody key={d.label} className="divide-y divide-ink/10">
                 <tr>
-                  <td colSpan={7} className="bg-linear-to-r from-good/10 to-transparent px-4 py-1.5 text-xs font-semibold text-ink/60">
+                  <td colSpan={7} className="bg-surface px-4 py-1.5 text-xs font-semibold text-ink/60">
                     {d.label}
                   </td>
                 </tr>

@@ -228,7 +228,7 @@ export default function StockEntryDialog({
                   )}
                 </div>
                 {purchase && r.name.trim() && q.tracksExpiry(r.name) && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-linear-to-r from-good/10 to-transparent p-2 text-xs text-ink/60">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-surface p-2 text-xs text-ink/60">
                     <label className="flex items-center gap-1">
                       Expires
                       <input

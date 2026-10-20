@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react'
 import { readBrowserValue, useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
+import { ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import { useRequests } from '../procurement/requestsContext'
 import { claimLineDeduction, finishLineDeduction, isLineDeducted, migratePosStorage } from './posStore'
@@ -35,12 +37,8 @@ function selectedGuestAlert(guestId: string, guests: ReturnType<typeof useHotel>
   return [guest.preferences?.diet, ...(guest.notes ?? []).map(note => note.text)].filter(Boolean).join(' · ')
 }
 
-const cash = (n: number) =>
-  new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency: 'UGX',
-    maximumFractionDigits: 0,
-  }).format(n)
+// The same "UGX 22,000" the rest of the app prints, rather than the browser's own "USh".
+const cash = (n: number) => ugx(Math.round(n))
 
 export default function PosPage() {
   const location = useLocation()
@@ -457,13 +455,13 @@ export default function PosPage() {
         eyebrow="Restaurant & bar POS"
         title={
           isOrders
-            ? 'Order Management'
+            ? 'Orders'
             : isTables
-              ? 'Table Management'
+              ? 'Tables'
               : isMenu
-                ? 'Menu Management'
+                ? 'Menu management'
                 : isPayments
-                  ? 'Payment Processing'
+                  ? 'Payments'
                   : isRecipes
                     ? 'Recipes and stock'
                     : 'Menus & new order'
@@ -513,18 +511,9 @@ export default function PosPage() {
 
       {!isTables && !isMenu && !isRecipes && !isPayments && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-black/5 bg-white p-4">
-            <p className="text-sm text-ink/60">Today's sales</p>
-            <p className="mt-1 text-2xl font-bold">{cash(todayTotal)}</p>
-          </div>
-          <div className="rounded-xl border border-black/5 bg-white p-4">
-            <p className="text-sm text-ink/60">Completed orders today</p>
-            <p className="mt-1 text-2xl font-bold">{todaySales.length}</p>
-          </div>
-          <div className="rounded-xl border border-black/5 bg-white p-4">
-            <p className="text-sm text-ink/60">Items in current order</p>
-            <p className="mt-1 text-2xl font-bold">{count}</p>
-          </div>
+          <StatCard label="Today's sales" value={cash(todayTotal)} icon="money" />
+          <StatCard label="Completed orders today" value={todaySales.length} icon="check" />
+          <StatCard label="Items in current order" value={count} icon="list" />
         </div>
       )}
 

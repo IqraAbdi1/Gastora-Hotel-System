@@ -8,7 +8,7 @@ import { dayMonth, ugx } from '../../lib/format'
 import { floorLabel, floorOf } from '../../lib/rooms'
 import { findMatches } from '../../lib/guests'
 import { depositForStay, freeByType, freeRooms, nightlyForStay, nightsOf, planFor, roomTypes, stayTotalBetween } from '../../lib/booking'
-import { calendarInUse, DAY_SHORT, dayOf, priceNights, varies } from '../../lib/rateCalendar'
+import { calendarInUse, DAY_SHORT, dayOf, priceNights, stayDiscountOf, varies } from '../../lib/rateCalendar'
 import { soldByNight } from '../../lib/availability'
 import { RULE_LABEL, refusedBy } from '../../lib/rateRules'
 import { depositExplained, guaranteeRules, nightlyRate } from '../../lib/rates'
@@ -27,6 +27,9 @@ import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
 import CheckInPanel from './CheckInPanel'
 import CompanyBookingSection from './CompanyBookingSection'
+import { partyLabel, shareDeposit, standings } from '../../lib/party'
+import { BILLING_LABEL as AGENT_BILLING, linkFor } from '../../lib/agents'
+import type { PartyRoomLine } from '../../lib/party'
 
 const field = inputClass
 const methods = ['MTN MoMo', 'Airtel Money', 'Card', 'Cash']
@@ -40,7 +43,7 @@ export function NewReservationForm({
   onClose?: () => void
   preset?: BookingPreset
 }) {
-  const { rooms, reservations, guests, addReservation, addGuest } = useHotel()
+  const { rooms, reservations, guests, addReservation, addParty, addGuest } = useHotel()
   const { byId, policy } = useCorporate()
   const { user } = useAuth()
 
@@ -65,11 +68,16 @@ export function NewReservationForm({
   const [depositText, setDepositText] = useState('')
   const [override, setOverride] = useState(false)
   const [reason, setReason] = useState('')
-  const [via, setVia] = useState<'front desk' | 'phone' | 'email'>('front desk')
+  const [via, setVia] = useState<'front desk' | 'phone' | 'email' | 'agent'>('front desk')
+  const [agentId, setAgentId] = useState('')
   const [created, setCreated] = useState<Reservation | null>(null)
+  // Rooms beyond the first, booked in the same go for the same booker. Empty is the ordinary booking.
+  const [extra, setExtra] = useState<PartyRoomLine[]>([])
+  const [oneBill, setOneBill] = useState(false)
+  const [createdParty, setCreatedParty] = useState<Reservation[]>([])
   const [checkInFor, setCheckInFor] = useState<Reservation | null>(null)
   const [company, setCompany] = useState<CompanyInput | null>(null)
-  const { options, tenant } = useFeatures()
+  const { options, tenant, features } = useFeatures()
   const loyalty = options.loyalty
   const rates = options.rates
   const { record } = useApprovals()
@@ -136,8 +144,10 @@ export function NewReservationForm({
   const tier = history && loyaltyKnown(selectedGuest) ? tierFor(history, loyalty) : null
   const roomOnly = datesOk ? stayTotalBetween(type, 'room-only', from, departure, rates, soldOn) : 0
   // Night by night, so a price the guest will query can be answered without opening the settings.
-  const perNight = datesOk ? priceNights(type, from, departure, rates, soldOn) : []
+  const perNight = datesOk ? priceNights(type, from, departure, rates, soldOn, { planId }) : []
   const nightsDiffer = varies(perNight)
+  // The length-of-stay discount is already inside the nights above; this is the line that says so.
+  const stayDeal = stayDiscountOf(perNight)
   const earned = loyaltyDiscount(tier, roomOnly, !!companyPlan?.selected.length)
   const [useLoyalty, setUseLoyalty] = useState(true)
   const [loyaltyApproved, setLoyaltyApproved] = useState('')
@@ -145,7 +155,29 @@ export function NewReservationForm({
   const total = Math.max(0, beforeLoyalty - (discountOn ? earned : 0))
   // A company account and its LPO are themselves the guarantee, so the guest is not asked for a deposit too.
   const onCompany = !!company
-  const suggested = onCompany ? 0 : depositForStay(type, planId, nights, rates, { arrival: from, departure }, soldOn)
+  const suggestedOne = onCompany ? 0 : depositForStay(type, planId, nights, rates, { arrival: from, departure }, soldOn)
+
+  // Several rooms: each one checked on its own against what the rooms before it left, each priced at
+  // the hotel's own rate for its type, each refused by the same rate rules a single booking would be.
+  const multi = !walkin && features.multiRoom && extra.length > 0
+  // A travel agent booking records the agent, and the commission agreed today, on every room.
+  const agentList = options.agents.filter((a) => a.active)
+  const viaAgent = !walkin && features.travelAgents && via === 'agent'
+  const agent = viaAgent ? agentList.find((a) => a.id === agentId) : undefined
+  const agentFields = agent ? { agent: linkFor(agent) } : {}
+  const extras = multi ? extra : []
+  const standing = datesOk ? standings([type, ...extras.map((e) => e.type)], free, rates.overbook) : []
+  const extraStanding = standing.slice(1)
+  const extraRefusal = extras.map((e) =>
+    datesOk ? refusedBy(rates.rules, e.type, from, departure, planId, planFor(planId, rates).name) : undefined,
+  )
+  const extraTotals = extras.map((e) => (datesOk ? stayTotalBetween(e.type, planId, from, departure, rates, soldOn) : 0))
+  const extrasOver = extraStanding.some((x) => x === 'over')
+  const extrasFull = extraStanding.some((x) => x === 'full')
+  const grand = total + extraTotals.reduce((n, t) => n + t, 0)
+  const suggested =
+    suggestedOne +
+    (onCompany ? 0 : extras.reduce((n, e) => n + depositForStay(e.type, planId, nights, rates, { arrival: from, departure }, soldOn), 0))
   const deposit = depositText === '' ? (guarantee === 'deposit' ? suggested : 0) : Math.max(0, Number(depositText) || 0)
 
   const matches = useMemo(
@@ -156,10 +188,14 @@ export function NewReservationForm({
   const others = matches.filter((m) => !m.likely)
 
   const nameOk = name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 9
-  const depositOk = deposit <= total && (guarantee !== 'deposit' || deposit > 0)
+  const depositOk = deposit <= grand && (guarantee !== 'deposit' || deposit > 0)
   const overrideOk = !refusal && (!soldOut || (roomLeft && override && reason.trim().length >= 5))
   const companyOk = !company || (!!companyPlan && companyPlan.errors.length === 0)
-  const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1 && companyOk
+  const partyOk =
+    !multi ||
+    (extraRefusal.every((x) => !x) && !extrasFull && (!extrasOver || (override && reason.trim().length >= 5)) && !company && extras.every((e) => e.adults >= 1))
+  const agentOk = !viaAgent || !!agent
+  const valid = datesOk && nameOk && depositOk && overrideOk && adults >= 1 && companyOk && partyOk && agentOk
 
   const problems: string[] = []
   if (!datesOk) problems.push('Pick valid dates (today or later, at least one night).')
@@ -168,7 +204,11 @@ export function NewReservationForm({
   if (!overrideOk) problems.push('This room type is sold out. A manager override and a reason are needed.')
   if (company && !companyAccount) problems.push('Choose the company, or untick "Book for a company".')
   if (companyPlan) problems.push(...companyPlan.errors)
-
+  if (!agentOk) problems.push('Choose the travel agent who made the booking.')
+  if (multi && company) problems.push('A company booking takes one room at a time here. For several company rooms, use Groups.')
+  if (multi && extraRefusal.some(Boolean)) problems.push('One of the extra rooms is on dates the hotel has closed for that room type.')
+  if (multi && extrasFull) problems.push('One of the extra rooms is past what the hotel allows to be oversold.')
+  if (multi && extrasOver && !(override && reason.trim().length >= 5)) problems.push('An extra room oversells its type. A manager override and a reason are needed.')
   function toggleWalkin(on: boolean) {
     setWalkin(on)
     if (on && departure <= TODAY) setDeparture(addDays(TODAY, 1))
@@ -190,9 +230,55 @@ export function NewReservationForm({
     setSelectedGuest(g)
   }
 
+  function addRoom() {
+    setExtra((list) => [...list, { type, adults: 1, children: 0, guest: '' }])
+  }
+
+  function changeRoom(i: number, patch: Partial<PartyRoomLine>) {
+    setExtra((list) => list.map((x, k) => (k === i ? { ...x, ...patch } : x)))
+  }
+
   function submit() {
     const profile = selectedGuest ?? addGuest({ name: name.trim(), phone: phone.trim() })
     const record = company && companyPlan ? companyBookingRecord(companyPlan, company, user?.name ?? 'Front desk') : null
+    if (multi) {
+      // The deposit is shared across the rooms by price, so no room shows as paid beyond its own total.
+      const shares = shareDeposit(deposit, [total, ...extraTotals])
+      const common = { arrival: from, departure, plan: planId, guarantee, source: via, ...agentFields }
+      const made = addParty(
+        [
+          {
+            ...common,
+            guest: profile.name,
+            guestId: profile.id,
+            roomType: type,
+            room: roomValue || null,
+            total,
+            paid: shares[0],
+            adults,
+            children,
+            ...(soldOut ? { overrideReason: reason.trim() } : {}),
+          },
+          ...extras.map((e, i) => ({
+            ...common,
+            guest: e.guest.trim() || `${profile.name} (room ${i + 2})`,
+            roomType: e.type,
+            room: null,
+            total: extraTotals[i],
+            paid: shares[i + 1],
+            adults: e.adults,
+            children: e.children,
+            ...(extraStanding[i] === 'over' ? { overrideReason: reason.trim() } : {}),
+          })),
+        ],
+        profile.name,
+        oneBill,
+        user?.name ?? 'Front desk',
+      )
+      setCreated(made[0])
+      setCreatedParty(made)
+      return
+    }
     const made = addReservation({
       guest: profile.name,
       guestId: profile.id,
@@ -206,6 +292,7 @@ export function NewReservationForm({
       guarantee: record?.guarantee ?? guarantee,
       ...(record ? { corporate: record.corporate } : {}),
       source: walkin ? 'walk-in' : via,
+      ...(walkin ? {} : agentFields),
       adults,
       children,
       ...(soldOut ? { overrideReason: reason.trim() } : {}),
@@ -246,6 +333,27 @@ export function NewReservationForm({
           )}
           {created.overrideReason && (
             <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">Overbooking override logged: {created.overrideReason}</p>
+          )}
+          {createdParty.length > 1 && (
+            <div className="space-y-1 rounded-lg bg-canvas p-3 text-sm">
+              <p className="font-semibold">
+                {partyLabel(createdParty.length)} · {created.party?.id}
+              </p>
+              {createdParty.map((x) => (
+                <p key={x.id} className="flex justify-between gap-3 text-ink/75">
+                  <span>
+                    {x.id} · {x.guest} · {x.roomType}
+                  </span>
+                  <span className="tabular-nums">{ugx(x.total)}</span>
+                </p>
+              ))}
+              <p className="text-xs text-ink/60">
+                {created.party?.payerId
+                  ? `${created.guest} pays for every room on one bill: charges on the other rooms go to ${created.id}.`
+                  : 'Each room has its own bill.'}{' '}
+                Party total {ugx(createdParty.reduce((n, x) => n + x.total, 0))}.
+              </p>
+            </div>
           )}
         </div>
         <div className="flex flex-wrap gap-3">
@@ -469,6 +577,138 @@ export function NewReservationForm({
           </div>
           </Card>
 
+          {!walkin && features.multiRoom && (
+            <Card
+              title="Rooms in this booking"
+              description="One room unless you add more. Every extra room is its own booking for the same dates and rate plan, linked to this one."
+              padded
+            >
+              <div className="space-y-3">
+                <p className="text-sm text-ink/70">
+                  <b>Room 1</b> · {type} · {adults} adult{adults === 1 ? '' : 's'}
+                  {children > 0 && `, ${children} child${children === 1 ? '' : 'ren'}`} · the booker's own room, chosen above
+                </p>
+                {extra.map((e, i) => {
+                  const st = extraStanding[i]
+                  const refusedHere = extraRefusal[i]
+                  return (
+                    <div key={i} className="space-y-2 rounded-lg border border-ink/10 bg-canvas/50 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">Room {i + 2}</p>
+                        <div className="flex items-center gap-2">
+                          {datesOk && (
+                            <Badge tone={refusedHere || st === 'full' ? 'bad' : st === 'over' ? 'warn' : 'good'} dot>
+                              {refusedHere ? 'Closed on these dates' : st === 'full' ? 'Sold out' : st === 'over' ? 'Oversells' : 'Free'}
+                            </Badge>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setExtra((list) => list.filter((_, k) => k !== i))}
+                            className="text-xs font-semibold text-bad"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                        <label className="block text-xs font-medium">
+                          Room type
+                          <select value={e.type} onChange={(ev) => changeRoom(i, { type: ev.target.value as Room['type'] })} className={`${field} mt-1`}>
+                            {roomTypes.map((t) => (
+                              <option key={t} value={t}>
+                                {t}
+                                {datesOk ? ` (${Math.max(0, free[t])} free)` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-xs font-medium">
+                          Adults
+                          <input
+                            type="number"
+                            min={1}
+                            value={e.adults}
+                            onChange={(ev) => changeRoom(i, { adults: Math.max(1, Number(ev.target.value) || 1) })}
+                            className={`${field} mt-1`}
+                          />
+                        </label>
+                        <label className="block text-xs font-medium">
+                          Children
+                          <input
+                            type="number"
+                            min={0}
+                            value={e.children}
+                            onChange={(ev) => changeRoom(i, { children: Math.max(0, Number(ev.target.value) || 0) })}
+                            className={`${field} mt-1`}
+                          />
+                        </label>
+                        <label className="block text-xs font-medium">
+                          Guest name (optional)
+                          <input
+                            value={e.guest}
+                            onChange={(ev) => changeRoom(i, { guest: ev.target.value })}
+                            placeholder="Named at check-in"
+                            className={`${field} mt-1`}
+                          />
+                        </label>
+                      </div>
+                      {datesOk && <p className="text-xs text-ink/60">{ugx(extraTotals[i] ?? 0)} for the stay, at the hotel's own rate.</p>}
+                      {refusedHere && <p className="text-xs text-bad">{refusedHere.why}</p>}
+                    </div>
+                  )
+                })}
+                <button type="button" onClick={addRoom} className="text-sm font-semibold text-brand">
+                  + Add another room
+                </button>
+                {multi && (
+                  <>
+                    <label className="flex items-start gap-2 text-sm">
+                      <input type="checkbox" checked={oneBill} onChange={(e) => setOneBill(e.target.checked)} className="mt-1" />
+                      <span>
+                        <b>The booker pays for every room on one bill</b>
+                        <span className="block text-xs text-ink/60">
+                          Charges on the other rooms go to the booker's bill, and the desk can settle every room in one go. The room money
+                          stays on each room.
+                        </span>
+                      </span>
+                    </label>
+                    {(extrasOver || extrasFull) && !soldOut && (
+                      <div className="space-y-2 rounded-lg bg-bad/10 p-3 text-sm">
+                        <p className="font-semibold text-bad">
+                          {extrasFull
+                            ? "An extra room is past this hotel's overbooking limit, so it cannot be booked. Remove it or choose another type."
+                            : 'An extra room oversells its type. Only a manager can book it, and the reason is saved on that room.'}
+                        </p>
+                        {extrasOver && !extrasFull && (
+                          <>
+                            <label className="flex items-center gap-2 font-medium">
+                              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
+                              Manager override (simulated)
+                            </label>
+                            {override && (
+                              <textarea
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                rows={2}
+                                placeholder="Reason, for example: expecting a cancellation"
+                                className={field}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {company && (
+                      <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">
+                        A company booking takes one room at a time here. For several company rooms, use Groups.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </Card>
+          )}
+
           <CompanyBookingSection value={company} onChange={changeCompany} plan={companyPlan} />
 
           <Card title="Guest" padded>
@@ -478,13 +718,34 @@ export function NewReservationForm({
                 Booked via
                 <select
                   value={via}
-                  onChange={(e) => setVia(e.target.value as 'front desk' | 'phone' | 'email')}
+                  onChange={(e) => setVia(e.target.value as 'front desk' | 'phone' | 'email' | 'agent')}
                   className={`${field} mt-1`}
                 >
                   <option value="front desk">Front desk (guest came in)</option>
                   <option value="phone">Phone call</option>
                   <option value="email">Email</option>
+                  {features.travelAgents && <option value="agent">Travel agent</option>}
                 </select>
+              </label>
+            )}
+            {viaAgent && (
+              <label className="block text-sm font-medium">
+                Travel agent
+                <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className={`${field} mt-1`}>
+                  <option value="">Choose the agent</option>
+                  {agentList.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} · {a.commissionPercent}%
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal text-ink/60">
+                  {agent
+                    ? `${agent.commissionPercent}% of the room money, earned once the stay is completed. ${
+                        agent.collectsPayment ? AGENT_BILLING.net : AGENT_BILLING.commission
+                      }.`
+                    : 'The guest below is the person staying. Agents are kept on the Travel agents page.'}
+                </span>
               </label>
             )}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -594,7 +855,9 @@ export function NewReservationForm({
                 <span className="mt-1 block text-xs font-normal text-ink/60">
                   {onCompany
                     ? 'No deposit: the company account and its LPO are the guarantee.'
-                    : `Suggested ${depositExplained(nightlyRate(type, planFor(planId, rates).extraPerNight, rates), nights, rates)}: ${ugx(suggested)}`}
+                    : multi
+                      ? `Suggested for the ${extras.length + 1} rooms, by the same rule for each: ${ugx(suggested)}. Shared across the rooms by price.`
+                      : `Suggested ${depositExplained(nightlyRate(type, planFor(planId, rates).extraPerNight, rates), nights, rates)}: ${ugx(suggested)}`}
                 </span>
               </label>
               <label className="block text-sm font-medium">
@@ -705,12 +968,29 @@ export function NewReservationForm({
                 )}
               </>
             )}
+            {stayDeal && !companyPlan?.selected.length && (
+              <>
+                <p className="flex justify-between gap-2 text-ink/60"><span>Before the long-stay price</span><span className="shrink-0 whitespace-nowrap">{ugx(beforeLoyalty + stayDeal.saving)}</span></p>
+                <p className="flex justify-between gap-2 text-good"><span>{stayDeal.label}</span><span className="shrink-0 whitespace-nowrap">− {ugx(stayDeal.saving)}</span></p>
+              </>
+            )}
             {discountOn && (
               <p className="flex justify-between text-good"><span>{tier?.name} discount</span><span>− {ugx(earned)}</span></p>
             )}
-            <p className="flex justify-between"><span>Total</span><span className="font-semibold">{ugx(total)}</span></p>
+            {multi && (
+              <>
+                <p className="flex justify-between text-ink/60"><span>Room 1 · {type}</span><span>{ugx(total)}</span></p>
+                {extras.map((e, i) => (
+                  <p key={i} className="flex justify-between text-ink/60">
+                    <span>Room {i + 2} · {e.type}</span>
+                    <span>{ugx(extraTotals[i] ?? 0)}</span>
+                  </p>
+                ))}
+              </>
+            )}
+            <p className="flex justify-between"><span>{multi ? `Total, ${extras.length + 1} rooms` : 'Total'}</span><span className="font-semibold">{ugx(grand)}</span></p>
             <p className="flex justify-between"><span>Deposit</span><span>{ugx(deposit)}</span></p>
-            <p className="flex justify-between"><span>Balance</span><span className="font-semibold">{ugx(Math.max(0, total - deposit))}</span></p>
+            <p className="flex justify-between"><span>Balance</span><span className="font-semibold">{ugx(Math.max(0, grand - deposit))}</span></p>
           </div>
           <button
             type="button"
@@ -718,7 +998,7 @@ export function NewReservationForm({
             disabled={!valid}
             className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {walkin ? 'Create and check in' : 'Create reservation'}
+            {walkin ? 'Create and check in' : multi ? `Create ${extras.length + 1} reservations` : 'Create reservation'}
           </button>
           {!valid && (
             <ul className="space-y-1 text-xs text-ink/60">

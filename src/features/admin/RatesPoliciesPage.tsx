@@ -16,8 +16,10 @@ import {
 } from '../../lib/rates'
 import type { DepositMode, MealPlanSetting, RatesPolicy } from '../../lib/rates'
 import AddOnsCard from './AddOnsCard'
+import ServicesCard from './ServicesCard'
 import PromoCard from './PromoCard'
 import RateCalendarCard from './RateCalendarCard'
+import StayRatesCard from './StayRatesCard'
 import { useAuth } from '../auth/authContext'
 import { useCorporate } from '../corporate/corporateContext'
 import { useHotel } from '../../lib/hotelContext'
@@ -70,7 +72,7 @@ export default function RatesPoliciesPage() {
   const guarantees = guaranteeRules(rates)
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
+    <div className="max-w-5xl space-y-5">
       <PageHeader
         eyebrow="Admin"
         title="Rates and policies"
@@ -111,12 +113,19 @@ export default function RatesPoliciesPage() {
 
         <RateCalendarCard rates={rates} set={set} />
 
+        {/* The last layer of the rate calendar, so it goes wherever the calendar goes: every plan. */}
+        <StayRatesCard rates={rates} set={set} />
+
         {/* Codes and extras are sold on the hotel's own booking page, so a hotel without one would be
             setting up something it cannot offer. */}
         {features.bookingEngine && <PromoCard rates={rates} set={set} />}
 
         {features.bookingEngine && (
           <AddOnsCard addOns={options.addOns ?? []} set={(next) => setOptions({ addOns: next })} />
+        )}
+
+        {features.serviceBookings && (
+          <ServicesCard services={options.services ?? []} set={(next) => setOptions({ services: next })} />
         )}
 
         <Card title="Meal plans" icon="money" count={rates.plans.length} padded description="Added to the room rate, per night.">

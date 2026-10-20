@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { TODAY } from '../../data/sample'
 import { useNow } from '../../lib/useNow'
 import { auditReport } from '../../lib/nightAudit'
-import { auditDue, noShowsAtClose, ran, timeNow, toRelease } from '../../lib/dayRun'
+import { auditDue, noShowsAtClose, ran, reached, timeNow, toRelease } from '../../lib/dayRun'
+import { proposeRooms, unassignedArrivals } from '../../lib/roomAssign'
 import { useHotel } from '../../lib/hotelContext'
 import { useFeatures } from '../platform/featuresContext'
 import { useMessages } from '../messages/messagesContext'
@@ -14,8 +15,8 @@ import { useMessages } from '../messages/messagesContext'
 // is open: close every browser at five and nothing is released at six. A real build runs it on the
 // server, which is the same rules in a place that never sleeps.
 export default function DayRunner() {
-  const { reservations, rooms, releaseRoom, auditRuns, closeDay } = useHotel()
-  const { options } = useFeatures()
+  const { reservations, rooms, guests, releaseRoom, auditRuns, closeDay, assignRooms } = useHotel()
+  const { options, features, setOptions } = useFeatures()
   const { queue } = useMessages()
   const now = useNow(30000)
   const clock = useMemo(() => timeNow(new Date(now)), [now])
@@ -36,6 +37,22 @@ export default function DayRunner() {
       })
     }
   }
+
+  // The morning room assignment, once a day at the hotel's hour, when the hotel has switched it on.
+  // It fills empty room slots only; anything the desk chose by hand is left alone. Run from an effect
+  // rather than while drawing, because it changes the settings as well as the bookings.
+  const auto = options.autoAssign
+  const assignDue = features.roomAutoAssign && auto.on && auto.lastRun !== TODAY && reached(clock, auto.at)
+  useEffect(() => {
+    if (!assignDue) return
+    setOptions({ autoAssign: { ...auto, lastRun: TODAY } })
+    const plan = proposeRooms({ reservations, rooms, guests, today: TODAY, targets: unassignedArrivals(reservations, TODAY) })
+    assignRooms(
+      plan.filter((p) => p.room).map((p) => ({ reservationId: p.reservationId, room: p.room as string, reason: p.reason })),
+      'The system',
+      true,
+    )
+  }, [assignDue, auto, reservations, rooms, guests, setOptions, assignRooms])
 
   const auditOn = options.nightAudit
   if (auditDue(auditRuns, TODAY, clock, options.nightAuditAt, auditOn)) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Badge, Button, Field, Textarea } from '../../components/ui'
+import { Badge, Button, Field, Modal, Textarea } from '../../components/ui'
 import { TODAY } from '../../data/sample'
 import { soldByNight } from '../../lib/availability'
 import { folioOf, stamp } from '../../lib/folio'
@@ -11,6 +11,13 @@ import { OFFER_LABEL, offersFor } from '../../lib/upsell'
 import type { Offer } from '../../lib/upsell'
 import GuestFeedbackForm from '../feedback/GuestFeedbackForm'
 import { useFeatures } from '../platform/featuresContext'
+import { slugOf } from '../../lib/bookingEngine'
+import { canPayFor } from '../../lib/portalPay'
+import type { GuestPayment } from '../../lib/portalPay'
+import BookServices from './BookServices'
+import CheckoutOnline from './CheckoutOnline'
+import PayNow, { Receipt } from './PayNow'
+import { usePortalPayments } from './usePortalPayments'
 import { newRequestId, useGuestRequests } from './useGuestRequests'
 
 /**
@@ -31,6 +38,9 @@ export default function StayPage() {
   const { requests, add } = useGuestRequests()
   const [asking, setAsking] = useState('')
   const [said, setSaid] = useState('')
+  const [paying, setPaying] = useState(false)
+  const [showing, setShowing] = useState<GuestPayment | null>(null)
+  const { payments } = usePortalPayments()
 
   const stay = useMemo(() => reservations.find((r) => tokenFor(r.id, r.arrival) === token), [reservations, token])
 
@@ -63,6 +73,8 @@ export default function StayPage() {
   const mine = requests.filter((r) => r.reservationId === stay.id)
   const already = (offerId: string) => mine.some((r) => r.offerId === offerId && r.state !== 'declined')
   const left = stay.status === 'checked-out'
+  const paidHere = payments.filter((p) => p.reservationId === stay.id)
+  const canPay = features.guestPortal && canPayFor(stay) && f.balance > 0
 
   function ask(offer: Offer) {
     add({
@@ -127,6 +139,13 @@ export default function StayPage() {
           hint={f.balance > 0 ? `${ugx(f.paid)} paid so far` : 'Settled in full'}
           to={`/bill/${token}`}
           action="See the bill"
+          extra={
+            canPay ? (
+              <Button size="sm" onClick={() => setPaying(true)}>
+                Pay now
+              </Button>
+            ) : undefined
+          }
         />
         {stay.status === 'booked' && (
           <Box
@@ -138,6 +157,8 @@ export default function StayPage() {
           />
         )}
       </div>
+
+      <CheckoutOnline stay={stay} token={token} onPay={() => setPaying(true)} />
 
       {!left && offers.length > 0 && (
         <section className="mt-5">
@@ -185,6 +206,8 @@ export default function StayPage() {
           </ul>
         </section>
       )}
+
+      {!left && features.serviceBookings && <BookServices stay={stay} />}
 
       {!left && (
         <section className="mt-5 rounded-xl border border-ink/10 bg-surface p-4">
@@ -240,7 +263,47 @@ export default function StayPage() {
         </section>
       )}
 
+      {paidHere.length > 0 && (
+        <section className="mt-5">
+          <h2 className="text-base font-semibold text-ink">Your payments</h2>
+          <ul className="mt-2 space-y-1.5">
+            {paidHere.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 px-3 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="font-medium tabular-nums text-ink">{ugx(p.amount)}</span>
+                  <span className="ml-2 text-xs text-ink/55">
+                    {p.method} · {p.at}
+                  </span>
+                </span>
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => setShowing(p)}>
+                  View receipt
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {left && <GuestFeedbackForm stay={stay} />}
+
+      {features.bookingEngine && (
+        <section className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 bg-surface p-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">Coming back?</p>
+            <p className="text-xs text-ink/60">Book your next stay with us directly.</p>
+          </div>
+          <Link to={`/book/${slugOf(tenant.name)}`} className="text-sm font-semibold text-brand">
+            Book another stay
+          </Link>
+        </section>
+      )}
+
+      {paying && <PayNow stay={stay} balance={f.balance} onClose={() => setPaying(false)} />}
+      {showing && (
+        <Modal title="Receipt" onClose={() => setShowing(null)} footer={<Button onClick={() => setShowing(null)}>Close</Button>}>
+          <Receipt p={showing} />
+        </Modal>
+      )}
 
       <p className="mt-5 text-xs text-ink/50">
         This page is yours alone and shows nothing about any other guest. Shown as at {TODAY}.
@@ -249,15 +312,32 @@ export default function StayPage() {
   )
 }
 
-function Box({ title, value, hint, to, action }: { title: string; value: string; hint: string; to: string; action: string }) {
+function Box({
+  title,
+  value,
+  hint,
+  to,
+  action,
+  extra,
+}: {
+  title: string
+  value: string
+  hint: string
+  to: string
+  action: string
+  extra?: React.ReactNode
+}) {
   return (
     <div className="rounded-xl border border-ink/10 bg-surface p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">{title}</p>
       <p className="mt-1 text-lg font-bold text-ink">{value}</p>
       <p className="text-xs text-ink/55">{hint}</p>
-      <Link to={to} className="mt-2 inline-block text-sm font-semibold text-brand">
-        {action}
-      </Link>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        {extra}
+        <Link to={to} className="inline-block text-sm font-semibold text-brand">
+          {action}
+        </Link>
+      </div>
     </div>
   )
 }

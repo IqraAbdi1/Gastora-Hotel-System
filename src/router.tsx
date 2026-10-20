@@ -27,6 +27,7 @@ import ReservationsPage from './features/frontdesk/ReservationsPage'
 import RoomsPage from './features/frontdesk/RoomsPage'
 import NewReservationPage from './features/frontdesk/NewReservationPage'
 import FoliosPage from './features/frontdesk/FoliosPage'
+import TravelAgentsPage from './features/frontdesk/TravelAgentsPage'
 import MessagesPage from './features/messages/MessagesPage'
 import ArrivePage from './features/prearrival/ArrivePage'
 import BillPage from './features/prearrival/BillPage'
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
           { path: 'desk/groups', element: <GroupsPage /> },
           { path: 'desk/sister-properties', element: <CrsPage /> },
           { path: 'desk/companies', element: <CompaniesPage /> },
+          { path: 'desk/agents', element: <TravelAgentsPage /> },
           { path: 'desk/documents', element: <GuestDocumentsPage /> },
           { path: 'desk/guests', element: <GuestsPage /> },
           { path: 'desk/feedback', element: <FeedbackPage /> },

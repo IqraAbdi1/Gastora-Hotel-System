@@ -92,7 +92,7 @@ export default function PendingReturnsDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
       <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-canvas">
-        <div className="flex items-center justify-between bg-linear-to-r from-brand to-good px-5 py-4 text-white">
+        <div className="flex items-center justify-between bg-brand px-5 py-4 text-white">
           <div>
             <h2 className="text-lg font-semibold">Returns waiting for you</h2>
             <p className="mt-0.5 text-xs text-white/85">Count what arrived. Stock goes up only when you confirm.</p>

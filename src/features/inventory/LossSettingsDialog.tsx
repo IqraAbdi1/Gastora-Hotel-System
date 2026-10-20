@@ -79,7 +79,7 @@ export default function LossSettingsDialog({ onClose }: { onClose: () => void })
           <button
             type="button"
             onClick={save}
-            className="rounded-lg bg-linear-to-r from-brand to-ink/90 px-5 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white"
           >
             Save rules
           </button>

@@ -93,7 +93,7 @@ export default function StoresDialog({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={add}
-            className="rounded-lg bg-linear-to-r from-brand to-ink/90 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
           >
             Add
           </button>

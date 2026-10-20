@@ -12,7 +12,9 @@ import { dayMonth, ugx } from '../../lib/format'
 import { summarizeDay } from '../../lib/frontdesk'
 import { useHotel } from '../../lib/hotelContext'
 import { BIG_HOTEL } from '../../lib/rooms'
+import { partyLabel, partyOf, stillIn } from '../../lib/party'
 import type { Reservation } from '../../types'
+import AssignRoomsButton from './AssignRoomsDialog'
 import CheckInPanel from './CheckInPanel'
 import ReservationPanel from './ReservationPanel'
 
@@ -27,6 +29,7 @@ const sourceLabel: Record<Source | 'none', string> = {
   email: 'Email',
   online: 'Online',
   ota: 'OTA',
+  agent: 'Travel agent',
   none: 'Not recorded',
 }
 
@@ -190,7 +193,10 @@ export default function ReservationsPage() {
       cell: (r) => (
         <div className="min-w-0">
           <p className="truncate font-semibold text-ink">{r.guest}</p>
-          <p className="text-xs text-ink/55">{r.id}</p>
+          <p className="text-xs text-ink/55">
+            {r.id}
+            {r.party ? ` · ${partyLabel(partyOf(reservations, r).filter(stillIn).length)}` : ''}
+          </p>
         </div>
       ),
     },
@@ -206,7 +212,10 @@ export default function ReservationsPage() {
       cell: (r) => (
         <div>
           <p>{r.room ? `Room ${r.room}` : 'Not assigned'}</p>
-          <p className="text-xs text-ink/55">{r.roomType}</p>
+          <p className="text-xs text-ink/55">
+            {r.roomType}
+            {r.roomBy && r.status === 'booked' ? ' · by the rules' : ''}
+          </p>
         </div>
       ),
     },
@@ -255,6 +264,7 @@ export default function ReservationsPage() {
       <PageHeader
         title="Reservations"
         description="Click a booking to see it without leaving this page. Guests due today have a Check in button."
+        actions={<AssignRoomsButton size="md" />}
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

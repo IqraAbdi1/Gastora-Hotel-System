@@ -95,13 +95,13 @@ export default function StockPage() {
   }
   if (showStores && admin) more.push({ label: 'Manage stores', onClick: () => setManaging(true) })
 
-  const tile = 'rounded-xl border p-3 text-left'
+  const tile = 'rounded-xl border border-ink/10 bg-surface px-4 py-3 text-left'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Stock</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Stock</h1>
           <p className="text-sm text-ink/60">What is in the store. Tap an item for its details.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export default function StockPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className={`${tile} border-brand/20 bg-linear-to-br from-brand/10 to-good/10`}>
+        <div className={`${tile} border-brand/20 bg-surface`}>
           <p className="text-xl font-bold text-brand">{scoped.length}</p>
           <p className="text-xs text-ink/60">Items</p>
         </div>
@@ -127,14 +127,14 @@ export default function StockPage() {
           }}
           className={`${tile} ${
             low > 0
-              ? 'border-warn/30 bg-linear-to-br from-warn/20 to-bad/10'
-              : 'border-good/25 bg-linear-to-br from-good/15 to-good/5'
+              ? 'border-warn/30 bg-surface'
+              : 'border-good/25 bg-surface'
           }`}
         >
           <p className={`text-xl font-bold ${low > 0 ? 'text-warn' : 'text-good'}`}>{low}</p>
           <p className="text-xs text-ink/60">Low or out · tap to {lowOnly ? 'show all' : 'filter'}</p>
         </button>
-        <div className={`${tile} border-good/25 bg-linear-to-br from-good/15 to-brand/10`}>
+        <div className={`${tile} border-good/25 bg-surface`}>
           <p className="text-xl font-bold text-good">{formatUGX(value)}</p>
           <p className="text-xs text-ink/60">Stock value (usual cost)</p>
         </div>
@@ -150,7 +150,7 @@ export default function StockPage() {
       )}
 
       {attention && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-linear-to-r from-brand to-good px-4 py-3 text-white shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-brand px-4 py-3 text-white shadow-sm">
           <p className="mr-1 text-sm font-semibold">Needs attention</p>
           {reorder.length > 0 && (
             <button

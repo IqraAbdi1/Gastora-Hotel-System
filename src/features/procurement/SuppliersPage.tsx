@@ -32,10 +32,10 @@ export default function SuppliersPage() {
   const field = 'w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Suppliers</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Suppliers</h1>
           <p className="text-sm text-ink/60">Who the hotel buys from. Procurement picks one when raising a purchase order.</p>
         </div>
         {edit && (

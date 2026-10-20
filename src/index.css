@@ -6,18 +6,23 @@
 }
 
 @theme inline {
-  --color-sidebar: #1F5C45;
+  --color-sidebar: #133D2E;
 
   --color-brand: var(--brand);
   --color-brand-deep: #123B2C;
   --color-accent: var(--accent);
   --color-surface: #FFFFFF;
-  --color-canvas: #EEF3F2;
+  --color-canvas: #F2F5F4;
   --color-ink: #11302C;
   --color-good: #1B7F4B;
   --color-warn: #A35F00;
   --color-bad: #B3382C;
   --color-info: #2563A8;
+}
+
+body {
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
 }
 
 /* When printing from POS, print only the selected receipt. */

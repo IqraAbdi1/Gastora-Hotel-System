@@ -169,3 +169,30 @@ export function areaDueOn(area: CleaningArea, day: string): boolean {
   if (Number.isNaN(date.getTime())) return false
   return date.getDay() === (area.weekday ?? 1)
 }
+
+/**
+ * How long each kind of work usually takes, in minutes, for a standard room. Used to share the day's work
+ * out evenly, so a departure clean counts for two stayovers rather than one. Sample figures, set once for
+ * every hotel; a hotel's own timings from its cleaning record would be better and can replace them later.
+ */
+export const TASK_MINUTES: Record<string, number> = {
+  'Departure Clean': 30,
+  'Stay Over': 15,
+  'Deep Clean': 90,
+  'Arrival Preparation': 10,
+  Turndown: 8,
+  'Public Area': 25,
+  Inspection: 10,
+}
+
+/** A bigger room takes longer. Matches the average clean times the front desk estimate uses (30, 40, 60). */
+export const ROOM_SIZE_FACTOR: Record<string, number> = { Standard: 1, Deluxe: 4 / 3, Suite: 2 }
+
+/** Minutes this piece of work should take. Sheets on a stayover add a few minutes. Never less than the honest minimum. */
+export function taskMinutes(type: string, roomType?: string, linen = false): number {
+  const base = TASK_MINUTES[type] ?? 20
+  // Size only matters for work inside the room. A corridor has no room type, and an inspection is a look.
+  const sized = type === 'Public Area' || type === 'Inspection' ? base : base * (ROOM_SIZE_FACTOR[roomType ?? ''] ?? 1)
+  const minutes = Math.round(sized + (linen ? 5 : 0))
+  return Math.max(minutes, MIN_MINUTES[type] ?? 1)
+}

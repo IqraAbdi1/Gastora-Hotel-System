@@ -22,6 +22,9 @@ import { SHARE_NOTE, legsOf } from '../../lib/sharing'
 import { KEY_STATE_LABEL, KEY_STATE_TONE } from '../../lib/keys'
 import { useAuth } from '../auth/authContext'
 import ShareDialog from './ShareDialog'
+import PartySection from './PartySection'
+import { commissionOf } from '../../lib/agents'
+import CheckInPanel from './CheckInPanel'
 import SplitStayDialog from './SplitStayDialog'
 import { Badge } from '../../components/ui'
 import { CHANNEL_LABEL, KIND_LABEL } from '../../lib/messages'
@@ -35,6 +38,7 @@ const sourceLabel = {
   email: 'Email',
   online: 'Online',
   ota: 'OTA',
+  agent: 'Travel agent',
 }
 
 const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
@@ -46,6 +50,9 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
   const [showPhoto, setShowPhoto] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [splitting, setSplitting] = useState(false)
+  // Another room of the same party, opened on top of this one, and rooms being checked in one after another.
+  const [siblingId, setSiblingId] = useState<string | null>(null)
+  const [checkQueue, setCheckQueue] = useState<string[]>([])
   // Which message is open. The panel answers "did it go?" at a glance; the wording is there on a click.
   const [openMessage, setOpenMessage] = useState<string | null>(null)
   const balance = r.total - r.paid
@@ -64,8 +71,12 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
 
   const rows: string[][] = [
     ['Booked via', r.source ? sourceLabel[r.source] : 'Not recorded'],
+    ...(r.agent ? [['Travel agent', `${r.agent.name}, ${r.agent.commissionPercent}%`]] : []),
     ...(r.upgrade ? [['Upgrade', `Free, from ${r.upgrade.from}`]] : []),
     ['Room', r.room ? `${r.room} (${r.roomType})` : `${r.roomType}, not assigned yet`],
+    ...(r.roomBy && r.room && r.status === 'booked'
+      ? [['Room chosen by', r.roomBy.auto ? `The morning run, ${r.roomBy.at.slice(11)}` : `The rules, for ${r.roomBy.by}`]]
+      : []),
     ['Arrival', dayMonth(r.arrival)],
     ['Departure', dayMonth(r.departure)],
     ['Nights', String(nightsBetween(r.arrival, r.departure))],
@@ -142,6 +153,24 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
             </div>
           ))}
         </dl>
+
+        {r.agent && (
+          <p className="rounded-lg bg-canvas px-3 py-2 text-xs text-ink/70">
+            {(() => {
+              const c = commissionOf(r)
+              const how = r.agent.collectsPayment ? 'The agent collected from the guest and pays the hotel the net.' : 'The hotel pays the agent.'
+              if (c.state === 'earned') return `Commission earned: ${ugx(c.amount)} on the room money. ${how}`
+              if (c.state === 'expected') return `Commission ${ugx(c.amount)} on the room money, earned once the stay is completed. ${how}`
+              return 'No commission: the booking was cancelled or the guest never arrived.'
+            })()}
+          </p>
+        )}
+
+        {r.roomBy && r.room && r.status === 'booked' && (
+          <p className="rounded-lg bg-canvas px-3 py-2 text-xs text-ink/70">
+            Room {r.roomBy.reason}. Proposed by the assignment rules; the desk can still pick another room at check-in.
+          </p>
+        )}
 
         {r.corporate && (
           <div>
@@ -289,6 +318,10 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
               )}
             </div>
           </div>
+        )}
+
+        {r.party && (
+          <PartySection r={r} onOpen={setSiblingId} onCheckIn={setCheckQueue} />
         )}
 
         {(r.share || r.legs) && (
@@ -533,6 +566,19 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
             splitStay(r.id, date, type, room)
             setSplitting(false)
           }}
+        />
+      )}
+      {siblingId && reservations.find((x) => x.id === siblingId) && (
+        <ReservationPanel reservation={reservations.find((x) => x.id === siblingId) as Reservation} onClose={() => setSiblingId(null)} />
+      )}
+      {checkQueue.length > 0 && reservations.find((x) => x.id === checkQueue[0]) && (
+        <CheckInPanel
+          key={checkQueue[0]}
+          reservation={reservations.find((x) => x.id === checkQueue[0]) as Reservation}
+          onClose={() =>
+            // The next room only once this one is really in; closing without finishing stops the run.
+            setCheckQueue((q) => (reservations.find((x) => x.id === q[0])?.status === 'in-house' ? q.slice(1) : []))
+          }
         />
       )}
       {amending && <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />}

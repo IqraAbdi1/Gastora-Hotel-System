@@ -9,6 +9,8 @@ import type { NightPace } from '../../lib/pace'
 import { DAY_SHORT, dayOf } from '../../lib/rateCalendar'
 import { useFeatures } from '../platform/featuresContext'
 import RateAdviceCard from './RateAdviceCard'
+import DemandEventsCard from './DemandEventsCard'
+import { eventsOn } from '../../lib/demandEvents'
 
 const AHEAD = 30
 
@@ -21,7 +23,8 @@ const AHEAD = 30
  */
 export default function RevenuePage() {
   const { reservations, rooms } = useHotel()
-  const { tenant } = useFeatures()
+  const { tenant, options } = useFeatures()
+  const events = options.rates.events
 
   const nights = useMemo(() => paceAhead(reservations, rooms, TODAY, AHEAD), [reservations, rooms])
   const thin = useMemo(() => curveIsThin(reservations, TODAY), [reservations])
@@ -48,6 +51,11 @@ export default function RevenuePage() {
             {DAY_SHORT[dayOf(n.date)]} {dayMonth(n.date)}
           </p>
           <p className="text-xs text-ink/55">{n.daysOut === 0 ? 'Tonight' : `${n.daysOut} day${n.daysOut === 1 ? '' : 's'} out`}</p>
+          {eventsOn(events, n.date).map((e) => (
+            <p key={e.id} className="mt-0.5">
+              <Badge tone="info">Event: {e.name}</Badge>
+            </p>
+          ))}
         </div>
       ),
     },
@@ -166,6 +174,8 @@ export default function RevenuePage() {
 
       <RateAdviceCard nights={nights} />
 
+      <DemandEventsCard />
+
       <Card
         title="Where the next thirty nights stand"
         icon="money"
@@ -209,7 +219,8 @@ export default function RevenuePage() {
       <p className="text-xs text-ink/55">
         The likely finish is what is on the books divided by the share this hotel normally holds by now. It is a
         projection of this hotel's own habit, not a prediction of the world: a conference, a funeral or a closed road
-        will beat it, and nothing here knows about those.
+        will beat it, and nothing here knows about those unless the hotel enters them as events. Even then the likely
+        finish is left as pace says; only the suggestions move.
       </p>
     </div>
   )

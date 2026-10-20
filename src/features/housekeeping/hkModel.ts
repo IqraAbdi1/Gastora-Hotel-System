@@ -2,6 +2,8 @@ import type { Room, Reservation } from '../../types'
 import type { Tone } from '../../components/ui'
 import type { UsedPart } from '../../lib/parts'
 import { floorLabel, floorOf } from '../../lib/rooms'
+import type { RosterEntry } from '../../lib/hkAllocation'
+import type { RoomPhoto, StoredPhoto } from '../../lib/roomPhotos'
 import type {
   HousekeepingPriority,
   HousekeepingRoomStatus,
@@ -58,6 +60,8 @@ export type HkTask = {
   declined?: boolean
   /** Stayover only: the sheets are due today, not just the towels. */
   linen?: boolean
+  /** Place in the attendant's own list, set when the supervisor applies a plan by zone. Lower is sooner. */
+  order?: number
 }
 
 export type MinibarItem = { name: string; quantity: number; used: number }
@@ -91,6 +95,8 @@ export type RoomDefect = {
   startedIso?: string
   closedIso?: string
   note?: string
+  /** Photos taken when the problem was reported. */
+  photos?: RoomPhoto[]
 }
 
 /** `day` is what makes the record answer a question asked a week later. */
@@ -104,7 +110,8 @@ export type RoomDetails = {
   inspectionNote: string
   minibar: MinibarItem[]
   linen: LinenItem[]
-  photos: string[]
+  /** Real photos with who took them and when; older text placeholders ("Photo 1") are kept as they were. */
+  photos: StoredPhoto[]
   defects: RoomDefect[]
   history: RoomHistory[]
 }
@@ -113,6 +120,18 @@ export type TabKey = 'overview' | 'minibar' | 'linen' | 'defects' | 'history'
 
 // Sample staff and policy values. Real ones come from hotel settings later.
 export const attendants = ['Unassigned', 'Sarah', 'John', 'Mary', 'David', 'Grace', 'Peter']
+/**
+ * Sample roster for the demo: who is on today, where, and when. The head of housekeeping changes it on the
+ * roster page; it carries over to the next day until she does.
+ */
+export const SAMPLE_ROSTER: RosterEntry[] = [
+  { name: 'Sarah', zone: 'Floor 1', shift: 'morning' },
+  { name: 'John', zone: 'Floor 2', shift: 'morning' },
+  { name: 'Mary', zone: 'Floor 3', shift: 'off' },
+  { name: 'David', zone: 'Floor 3', shift: 'morning' },
+  { name: 'Grace', zone: 'Ground floor', shift: 'morning' },
+  { name: 'Peter', zone: 'Outside', shift: 'afternoon' },
+]
 export const technicians = ['Unassigned', 'Joseph', 'Ali', 'Ruth']
 export const defectCategories = ['General', 'Bathroom', 'Electrical', 'Furniture', 'HVAC', 'Plumbing']
 export const CHECKIN_TIME = '14:00'

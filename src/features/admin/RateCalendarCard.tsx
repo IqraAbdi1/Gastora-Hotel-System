@@ -19,6 +19,8 @@ import { useHotel } from '../../lib/hotelContext'
 import { roomTypeList } from '../../lib/rates'
 import type { RatesPolicy } from '../../lib/rates'
 import type { Room } from '../../types'
+import { eventsOn } from '../../lib/demandEvents'
+import { useFeatures } from '../platform/featuresContext'
 
 const box = 'w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink'
 const num = (s: string) => Number(s.replace(/[^\d-]/g, '')) || 0
@@ -45,6 +47,9 @@ export default function RateCalendarCard({
   set: (patch: Partial<RatesPolicy>) => void
 }) {
   const { rooms, reservations } = useHotel()
+  // Demand events belong to revenue management. They only mark the nights here; they never price one.
+  const { features } = useFeatures()
+  const events = features.revenue ? (rates.events ?? []) : []
   const [type, setType] = useState<Room['type']>('Standard')
   const seasons = rates.seasons ?? []
   const dayRates = rates.dayRates ?? []
@@ -62,7 +67,8 @@ export default function RateCalendarCard({
   for (let i = 0; i < 14; i++) end = nextDay(end)
   // The preview prices real nights against the bookings the hotel actually holds, not a guess.
   const sold = soldByNight(rooms, reservations, TODAY, end)
-  const preview = priceNights(type, TODAY, end, rates, (d) => sold[d])
+  // Night by night, with no stay rate: fourteen nights here are a list to read, not a stay.
+  const preview = priceNights(type, TODAY, end, rates, (d) => sold[d], { lengthOfStay: false })
   const flat = (rates.roomRates[type] ?? 0) * preview.length
   const withCalendar = preview.reduce((n, p) => n + p.rate, 0)
 
@@ -397,6 +403,11 @@ export default function RateCalendarCard({
                 <span className="text-ink/70">
                   {DAY_SHORT[dayOf(p.date)]} {dayMonth(p.date)}
                   {p.sold !== undefined && <span className="ml-2 text-xs text-ink/45">{p.sold}% sold</span>}
+                  {eventsOn(events, p.date, type).map((e) => (
+                    <span key={e.id} className="ml-2">
+                      <Badge tone="info">Event: {e.name}</Badge>
+                    </span>
+                  ))}
                   {p.steps.length > 1 && (
                     <span className="ml-2 text-xs text-ink/50">{p.steps.slice(1).map((x) => x.label).join(' → ')}</span>
                   )}
@@ -422,6 +433,12 @@ export default function RateCalendarCard({
             Room only, before any meal plan, company price or loyalty discount. A booking already taken keeps the price it
             was sold at.
           </p>
+          {events.length > 0 && (
+            <p className="mt-1 text-xs text-ink/55">
+              Events are the hotel's own input, marked here but never priced: they only move the suggestions on the revenue
+              page, which a person approves.
+            </p>
+          )}
         </section>
       </div>
     </Card>

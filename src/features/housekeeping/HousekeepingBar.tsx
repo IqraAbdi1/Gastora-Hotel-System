@@ -91,8 +91,9 @@ function RequestCard({ room }: { room: HkRoom }) {
   )
 }
 
-// Slim bar at the top of every housekeeping page. The button turns red when the front desk is waiting for an answer.
-export default function HousekeepingBar() {
+// The front desk requests button and the drawer it opens. It sits in the top bar of every
+// housekeeping page. The button turns red when the front desk is waiting for an answer.
+export function HousekeepingRequests() {
   const { rooms, counts } = useHousekeeping()
   const [open, setOpen] = useState(false)
 
@@ -103,25 +104,22 @@ export default function HousekeepingBar() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 border-b border-ink/10 bg-surface px-4 py-2 md:px-6">
-        <p className="text-sm font-semibold text-ink/60">Housekeeping</p>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={
-            waiting > 0
-              ? 'flex items-center gap-2 rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white'
-              : 'rounded-lg border border-ink/15 px-4 py-2 text-sm font-semibold text-ink/70 hover:border-brand'
-          }
-        >
-          {waiting > 0 && <span className="h-2 w-2 animate-pulse rounded-full bg-white" />}
-          {waiting > 0
-            ? `${waiting} front desk request${waiting === 1 ? '' : 's'}`
-            : requests.length > 0
-              ? `Front desk requests (${requests.length} answered)`
-              : 'Front desk requests'}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={
+          waiting > 0
+            ? 'flex items-center gap-2 rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white'
+            : 'rounded-lg border border-ink/15 bg-surface px-4 py-2 text-sm font-semibold text-ink/70 hover:border-brand'
+        }
+      >
+        {waiting > 0 && <span className="h-2 w-2 animate-pulse rounded-full bg-white" />}
+        {waiting > 0
+          ? `${waiting} front desk request${waiting === 1 ? '' : 's'}`
+          : requests.length > 0
+            ? `Front desk requests (${requests.length} answered)`
+            : 'Front desk requests'}
+      </button>
 
       {open && (
         <div className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
@@ -147,5 +145,15 @@ export default function HousekeepingBar() {
         </div>
       )}
     </>
+  )
+}
+
+// The older slim bar: a label and the requests button. The app shell now puts the button in its own top bar.
+export default function HousekeepingBar() {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-ink/10 bg-surface px-4 py-2 md:px-6">
+      <p className="text-sm font-semibold text-ink/60">Housekeeping</p>
+      <HousekeepingRequests />
+    </div>
   )
 }

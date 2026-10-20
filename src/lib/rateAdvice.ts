@@ -14,13 +14,20 @@
 // own habit projected forward, and can be beaten by any conference nobody told the system about - it
 // says Estimate. A hotelier is entitled to know which is which.
 //
+// There is a third kind, and it is labelled as its own thing: a demand event the hotel entered itself -
+// a conference, a holiday, a match (see demandEvents.ts). That is neither counted nor projected. It is
+// what somebody at the hotel said, so it says Your input, and the suggestion moves because of it only
+// as far as the same ceiling allows every other suggestion to move.
+//
 // Pure rules only: no React.
 
+import { effectPercent, eventsOn, nightsCovered } from './demandEvents'
+import type { DemandEvent } from './demandEvents'
 import type { NightPace } from './pace'
 import type { NightPrice } from './rateCalendar'
 import type { Room } from '../types'
 
-export type Basis = 'Rule' | 'Estimate'
+export type Basis = 'Rule' | 'Estimate' | 'Your input'
 
 export interface Driver {
   basis: Basis
@@ -42,6 +49,8 @@ export interface RateAdvice {
   daysOut: number
   /** Already decided by a person: no suggestion is made over the top of one. */
   settled: boolean
+  /** The hotel's own events on this night, which moved the suggestion. */
+  events?: DemandEvent[]
 }
 
 const tidy = (n: number) => Math.max(0, Math.round(n / 100) * 100)
@@ -64,12 +73,55 @@ export const DEFAULT_ADVICE: AdviceSettings = { mostPercent: 20, lastMinuteDays:
  *   - A night running behind but still far off is left alone: there is time, and cutting early teaches
  *     the market to wait.
  *   - A night nearly full is worth more whatever the pace said.
+ *   - Then, last, a night the hotel has marked with an event moves up or down by what the hotel said
+ *     to expect, within the same ceiling. Pace alone can only see a conference once guests have booked
+ *     for it; the hotel usually knows sooner.
  */
 export function adviseNight(
   pace: NightPace,
   price: NightPrice,
   type: Room['type'],
   settings: AdviceSettings = DEFAULT_ADVICE,
+  /** The hotel's demand events. Left out, the advice reads pace alone, as it always has. */
+  events: DemandEvent[] = [],
+): RateAdvice {
+  const fromPace = paceAdvice(pace, price, type, settings)
+  const on = eventsOn(events, pace.date, type)
+  if (on.length === 0) return fromPace
+
+  const drivers = [...fromPace.drivers]
+  for (const e of on) {
+    const p = effectPercent(e)
+    const n = nightsCovered(e)
+    drivers.push({
+      basis: 'Your input',
+      text: `Event: ${e.name}, ${n} night${n === 1 ? '' : 's'}. Entered by the hotel, not measured: ${
+        p > 0 ? `expect more demand, +${p}%` : p < 0 ? `expect less demand, −${Math.abs(p)}%` : 'no change expected'
+      }.${e.note ? ` (${e.note})` : ''}`,
+    })
+  }
+  if (fromPace.settled) return { ...fromPace, drivers, events: on }
+
+  // Two events on one night do not stack: the strongest one speaks, for the same reason two day rules
+  // never stack in the calendar. Then the usual ceiling applies to the whole suggestion.
+  const strongest = on.reduce((a, b) => (Math.abs(effectPercent(b)) > Math.abs(effectPercent(a)) ? b : a))
+  const most = Math.max(1, settings.mostPercent) / 100
+  const current = fromPace.current
+  const wanted = fromPace.suggested * (1 + effectPercent(strongest) / 100)
+  const suggested = tidy(Math.min(current * (1 + most), Math.max(current * (1 - most), wanted)))
+  if (on.length > 1) drivers.push({ basis: 'Rule', text: `Only the strongest event counts: ${strongest.name}.` })
+  if (Math.abs(wanted - suggested) >= 100) {
+    drivers.push({ basis: 'Rule', text: `Held to ${settings.mostPercent}%, the most a suggestion may move a price in one go.` })
+  }
+  const direction: Direction = suggested > current ? 'raise' : suggested < current ? 'lower' : 'hold'
+  return { ...fromPace, drivers, suggested, direction, events: on }
+}
+
+function paceAdvice(
+  pace: NightPace,
+  price: NightPrice,
+  type: Room['type'],
+  settings: AdviceSettings,
 ): RateAdvice {
   const drivers: Driver[] = []
   const current = price.rate

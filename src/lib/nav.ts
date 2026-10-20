@@ -13,8 +13,19 @@ export type NavPage = {
   option?: 'nightAudit'
   /** Optional small icon in front of the page name. */
   icon?: IconName
+  /** Used less often: folded under "More" in the menu until it is the page you are on. */
+  more?: boolean
 }
 export type NavModule = { id: string; label: string; icon: IconName; to: string; pages: NavPage[] }
+
+// The menu reads in three parts, the way a hotel is run: the guest side, the back of house, and the
+// business. Nothing is hidden by this; it only puts headings between the modules.
+export const SECTIONS: { label: string | null; modules: string[] }[] = [
+  { label: null, modules: ['overview'] },
+  { label: 'Guests', modules: ['frontdesk'] },
+  { label: 'Operations', modules: ['housekeeping', 'maintenance', 'pos', 'inventory', 'procurement'] },
+  { label: 'Business', modules: ['hr', 'admin'] },
+]
 
 function module(id: string, label: string, icon: IconName, pages: NavPage[]): NavModule {
   return { id, label, icon, to: pages[0].to, pages }
@@ -30,16 +41,17 @@ export const modules: NavModule[] = [
     { to: '/desk/reservations', label: 'Reservations' },
     { to: '/desk/rooms', label: 'Rooms' },
     { to: '/desk/folios', label: 'Folios' },
-    { to: '/desk/groups', label: 'Groups', feature: 'groups' },
-    { to: '/desk/sister-properties', label: 'Sister properties', feature: 'crossProperty' },
+    { to: '/desk/groups', label: 'Groups', feature: 'groups', more: true },
+    { to: '/desk/sister-properties', label: 'Sister properties', feature: 'crossProperty', more: true },
     { to: '/desk/guests', label: 'Guest profiles' },
-    { to: '/desk/feedback', label: 'Guest feedback' },
+    { to: '/desk/feedback', label: 'Guest feedback', more: true },
     { to: '/desk/companies', label: 'Corporate accounts', badge: 'companies' },
-    { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages' },
-    { to: '/desk/waiting-list', label: 'Waitlist', feature: 'waitlist' },
-    { to: '/desk/documents', label: 'Guest documents' },
-    { to: '/desk/lost-found', label: 'Lost and found' },
-    { to: '/desk/night-audit', label: 'Night audit', option: 'nightAudit' },
+    { to: '/desk/agents', label: 'Travel agents', feature: 'travelAgents', more: true },
+    { to: '/desk/messages', label: 'Guest messages', feature: 'guestMessages', more: true },
+    { to: '/desk/waiting-list', label: 'Waitlist', feature: 'waitlist', more: true },
+    { to: '/desk/documents', label: 'Guest documents', more: true },
+    { to: '/desk/lost-found', label: 'Lost and found', more: true },
+    { to: '/desk/night-audit', label: 'Night audit', option: 'nightAudit', more: true },
   ]),
   module('housekeeping', 'Housekeeping', 'housekeeping', [
     { to: '/housekeeping', label: 'Room status', end: true, badge: 'toClean' },
@@ -48,9 +60,9 @@ export const modules: NavModule[] = [
     { to: '/housekeeping/roster', label: 'Attendant roster' },
     { to: '/housekeeping/inspections', label: 'Inspections', badge: 'toInspect', feature: 'inspections' },
     { to: '/housekeeping/issues', label: 'Issues', badge: 'issues' },
-    { to: '/housekeeping/room-check', label: 'Room check', feature: 'roomCheck' },
-    { to: '/housekeeping/lost-found', label: 'Lost and found' },
-    { to: '/housekeeping/supplies', label: 'Supplies', feature: 'requests' },
+    { to: '/housekeeping/room-check', label: 'Room check', feature: 'roomCheck', more: true },
+    { to: '/housekeeping/lost-found', label: 'Lost and found', more: true },
+    { to: '/housekeeping/supplies', label: 'Supplies', feature: 'requests', more: true },
   ]),
   module('maintenance', 'Maintenance', 'maintenance', [
     { to: '/maintenance', label: 'Work orders', end: true, badge: 'workOrders' },
@@ -128,4 +140,15 @@ export function visibleModules(
 // The module a page belongs to, so its group opens by itself.
 export function moduleOf(pathname: string) {
   return modules.find((m) => m.pages.some((p) => pathname === p.to || pathname.startsWith(`${p.to}/`)))
+}
+// The page a path belongs to, for the breadcrumb in the top bar. The longest match wins, so
+// /desk/guests/g1 names Guest profiles rather than Today.
+// Screens reached from a button rather than the menu, so the top bar can still name them.
+const offMenu: NavPage[] = [{ to: '/desk/new-reservation', label: 'New reservation' }]
+
+export function pageOf(pathname: string): NavPage | undefined {
+  let best: NavPage | undefined
+  for (const p of [...modules.flatMap((m) => m.pages), ...offMenu])
+    if ((pathname === p.to || (!p.end && pathname.startsWith(`${p.to}/`))) && (!best || p.to.length > best.to.length)) best = p
+  return best
 }

@@ -8,6 +8,8 @@ import { DEFAULT_SLA } from './sla'
 import type { SlaSettings } from './sla'
 import type { AddOn } from './addOns'
 import type { TaxSettings } from './tax'
+import { LAKEVIEW_SERVICES } from './services'
+import type { BookableService } from './services'
 
 export type FeatureKey =
   | 'inspections'
@@ -36,6 +38,7 @@ export type FeatureKey =
   | 'guestValue'
   | 'loyaltyPoints'
   | 'guestPortal'
+  | 'serviceBookings'
   | 'assetRegister'
   | 'assetCosts'
   | 'preventiveMaintenance'
@@ -44,7 +47,11 @@ export type FeatureKey =
   | 'roomDowntime'
   | 'engineeringDashboard'
   | 'roomCheck'
+  | 'hkZones'
   | 'crossProperty'
+  | 'roomAutoAssign'
+  | 'multiRoom'
+  | 'travelAgents'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -104,6 +111,11 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     blurb: 'Walk the floor and compare what is really in each room with what the system believes: sleepers, skips and wrong statuses.',
   },
   {
+    key: 'hkZones',
+    label: 'Cleaning by zone',
+    blurb: 'Each attendant works a floor or part of the hotel, and the day is shared out by minutes of work, not number of rooms, with arriving guests first.',
+  },
+  {
     key: 'repairSignoff',
     label: 'Repair sign-off',
     blurb: 'A finished repair is verified before the room returns to sale.',
@@ -120,7 +132,7 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
   },
   {
     key: 'lossReports',
-    label: 'Damaged and lost',
+    label: 'Damage and loss',
     blurb: 'Staff report broken, damaged, expired or lost stock. The manager reviews it.',
   },
   {
@@ -202,6 +214,12 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       "One page a guest opens from the link the hotel sent: their stay, their bill, the form before arrival, anything they want to ask for, and what the hotel can offer them - a better room when one is genuinely free, an early arrival, a later departure, the extras. Nothing is charged until somebody at the desk agrees to it.",
   },
   {
+    key: 'serviceBookings',
+    label: 'Dining, spa and activities',
+    blurb:
+      "The hotel lists what a guest can book besides the room - a table at the restaurant, a massage, a boat trip, a city tour - with when it runs and how many it takes. The guest books a time with room left from their own page, the desk confirms it, and a priced one can go on the room bill. Needs the guest portal.",
+  },
+  {
     key: 'guestValue',
     label: 'Guest value',
     blurb:
@@ -238,6 +256,24 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
       "The front desk shows a national ID or passport to the camera and the check-in form fills itself from the strip on the card. Every field is checked against the card's own check digits and the receptionist confirms it. A driving permit has no strip and is still typed.",
   },
   {
+    key: 'roomAutoAssign',
+    label: 'Automatic room assignment',
+    blurb:
+      "The system proposes a room for every arrival without one: the right type, clean, free every night, the guest's own preferences and last room, the better rooms for VIPs and regulars. The desk sees the plan before anything is assigned, and a room somebody chose by hand is never changed. The hotel can let it run by itself each morning.",
+  },
+  {
+    key: 'multiRoom',
+    label: 'Several rooms in one booking',
+    blurb:
+      'One booker takes several rooms in one go - a family in two rooms, three colleagues - each with its own guest and room type. The rooms share a party reference, can be checked in together or one by one, and can be paid for on one bill.',
+  },
+  {
+    key: 'travelAgents',
+    label: 'Travel agents',
+    blurb:
+      'The tour operators and agents who book through the desk: who they are, their commission, and whether they collect from the guest. Each booking records its agent, and the hotel sees what it owes each one, earned on the room only and only once the stay is completed.',
+  },
+  {
     key: 'taxLines',
     label: 'Tax lines',
     blurb: 'VAT, Local Hotel Tax, service charge and the hotel\'s own taxes are itemised at check-in and on the folio. The hotel admin or owner sets the rates and the EFRIS choice.',
@@ -254,7 +290,7 @@ export const PLANS: {
     id: 'starter',
     label: 'Starter',
     blurb: 'Small hotels. Core, simple supply requests and basic stock control.',
-    features: ['requests', 'stockControl', 'lossReports', 'guestMessages'],
+    features: ['requests', 'stockControl', 'lossReports', 'guestMessages', 'multiRoom'],
   },
   {
     id: 'standard',
@@ -284,9 +320,14 @@ export const PLANS: {
       'guestValue',
       'loyaltyPoints',
       'guestPortal',
+      'serviceBookings',
       'assetRegister',
       'roomDowntime',
       'roomCheck',
+      'hkZones',
+      'roomAutoAssign',
+      'multiRoom',
+      'travelAgents',
     ],
   },
   {
@@ -320,6 +361,7 @@ export const PLANS: {
       'guestValue',
       'loyaltyPoints',
       'guestPortal',
+      'serviceBookings',
       'assetRegister',
       'assetCosts',
       'preventiveMaintenance',
@@ -328,7 +370,11 @@ export const PLANS: {
       'roomDowntime',
       'engineeringDashboard',
       'roomCheck',
+      'hkZones',
       'crossProperty',
+      'roomAutoAssign',
+      'multiRoom',
+      'travelAgents',
     ],
   },
 ]
@@ -398,6 +444,8 @@ export function featuresOf(t: Tenant): FeatureMap {
     out.batchExpiry = false
   }
   if (!out.lossReports) out.lossReversal = false
+  // Services are booked from the guest's own page, so without the page there is nowhere to book them.
+  if (!out.guestPortal) out.serviceBookings = false
   if (t.status === 'suspended') {
     for (const f of FEATURES) out[f.key] = false
   }
@@ -416,6 +464,10 @@ import type { PointsSettings } from './points'
 import { DEFAULT_LOYALTY } from './loyalty'
 import { DEFAULT_AREAS, DEFAULT_SERVICE } from './cleaning'
 import type { CleaningArea, ServiceRules } from './cleaning'
+import { DEFAULT_AUTO_ASSIGN } from './roomAssign'
+import type { AutoAssignSettings } from './roomAssign'
+import { SAMPLE_AGENTS } from './agents'
+import type { TravelAgent } from './agents'
 
 export interface HotelOptions {
   inspectionMode: 'spot' | 'every'
@@ -453,12 +505,25 @@ export interface HotelOptions {
   messaging: MessagingSettings
   /** The most that may be settled by express checkout with nobody looking at it. 0 means no ceiling. */
   expressMax: number
+  /**
+   * A guest checking out from their own page on the day is checked out at once, when express checkout
+   * allows it. Off, every online checkout waits for one click at the desk.
+   */
+  guestFinishesCheckout: boolean
+  /** Dining, spa and activities a guest can book from their own page. */
+  services: BookableService[]
   /** The hour the day closes itself, when the night audit is on. */
   nightAuditAt: string
   /** Extras the hotel sells beside the room, offered on its own booking page. */
   addOns: AddOn[]
   /** How long a repair may take before it goes up to somebody more senior. */
   sla: SlaSettings
+  /** Cleaning by zone: new work goes straight to someone, by the same rule as the plan. Off unless chosen. */
+  hkAutoAssign: boolean
+  /** Whether today's arrivals are given rooms by themselves each morning. Off unless the hotel turns it on. */
+  autoAssign: AutoAssignSettings
+  /** The travel agents this hotel deals with, and their commission. */
+  agents: TravelAgent[]
 }
 
 export const DEFAULT_OPTIONS: HotelOptions = {
@@ -480,8 +545,13 @@ export const DEFAULT_OPTIONS: HotelOptions = {
   extraChecks: [],
   messaging: DEFAULT_MESSAGING,
   expressMax: DEFAULT_EXPRESS_MAX,
+  guestFinishesCheckout: true,
+  services: [],
   nightAuditAt: DEFAULT_AUDIT_AT,
   sla: DEFAULT_SLA,
+  hkAutoAssign: false,
+  autoAssign: DEFAULT_AUTO_ASSIGN,
+  agents: SAMPLE_AGENTS,
 }
 
 export const SAMPLE_TENANTS: Tenant[] = [
@@ -489,6 +559,9 @@ export const SAMPLE_TENANTS: Tenant[] = [
   { id: 't2', name: 'Mbale Town Inn', rooms: 18, plan: 'starter', status: 'active', overrides: {}, companySize: 'small' },
   { id: 't3', name: 'Savannah Lodge', rooms: 45, plan: 'standard', status: 'overdue', overrides: {}, companySize: 'medium', group: 'Lakeview Hotels' },
 ]
+
+/** Starting lists of bookable dining, spa and activities for the sample hotels. Others start with none. */
+export const SAMPLE_SERVICES: Record<string, BookableService[]> = { t1: LAKEVIEW_SERVICES }
 
 /** Starting tax rules for the sample hotels. After this the hotel admin or owner changes them. */
 export const SAMPLE_TAX: Record<string, TaxSettings> = {

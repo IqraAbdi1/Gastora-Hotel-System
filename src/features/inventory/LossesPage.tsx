@@ -87,9 +87,9 @@ const CoinIcon = () => (
 )
 
 const TILE = {
-  warn: { on: 'border-warn/40 bg-linear-to-br from-warn/20 to-warn/5', icon: 'bg-warn text-white' },
-  brand: { on: 'border-brand/30 bg-linear-to-br from-brand/15 to-brand/5', icon: 'bg-brand text-white' },
-  bad: { on: 'border-bad/40 bg-linear-to-br from-bad/20 to-bad/5', icon: 'bg-bad text-white' },
+  warn: { on: 'border-warn/40 bg-surface', icon: 'bg-warn text-white' },
+  brand: { on: 'border-brand/30 bg-surface', icon: 'bg-brand text-white' },
+  bad: { on: 'border-bad/40 bg-surface', icon: 'bg-bad text-white' },
 }
 
 export default function LossesPage() {
@@ -241,10 +241,10 @@ export default function LossesPage() {
   const tiles = oversight ? allTiles : allTiles.filter((t) => t.id !== 'disputed')
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Damaged &amp; lost</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Damage and loss</h1>
           <p className="text-sm text-ink/60">
             Small write-offs post at once and are reviewed later. Large ones wait for the general manager.
           </p>
@@ -511,7 +511,7 @@ function Oversight({
     <Disclosure
       open={open}
       onToggle={onToggle}
-      tone={stats.high ? 'bg-linear-to-r from-bad to-ink/90' : 'bg-linear-to-r from-ink/90 to-brand'}
+      tone={stats.high ? 'bg-bad' : 'bg-surface'}
       panel={
         <div className="space-y-3">
           <p className="text-xs text-ink/60">Only the owner and hotel admin see this. Tap a number to see the reports.</p>
@@ -526,7 +526,7 @@ function Oversight({
                     type="button"
                     onClick={t.go}
                     className={`rounded-lg border p-3 text-left transition hover:shadow-md ${
-                      t.hot ? 'border-bad/30 bg-linear-to-br from-bad/15 to-bad/5' : 'border-ink/10 bg-ink/5'
+                      t.hot ? 'border-bad/30 bg-surface' : 'border-ink/10 bg-ink/5'
                     }`}
                   >
                     <span className="block text-xl font-bold">{t.value}</span>

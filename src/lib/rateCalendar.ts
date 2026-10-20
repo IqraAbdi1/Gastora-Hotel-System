@@ -4,7 +4,7 @@
 // empty in April. This is the calendar underneath that: the published rate is still the base, and the
 // calendar moves it.
 //
-// Two layers, in this order, because that is the order a hotelier says them in:
+// The layers, in this order, because that is the order a hotelier says them in:
 //
 //   1. A SEASON covers a stretch of dates and decides what the room costs then. The first season that
 //      covers the night wins, so a hotel can set a December rate and then set a higher one for the three
@@ -21,6 +21,23 @@
 // Above all three sits one more thing, and it is not a rule: an OVERRIDE, a price a person set for one
 // date and one room type. It wins outright. A manager who has decided what Saturday costs is not
 // arguing with a percentage, and the night records who decided and when.
+//
+// Then one last layer, and it belongs to the stay rather than the night: a LENGTH-OF-STAY price.
+//
+//   4. A STAY RATE takes a percentage off every night of a stay that is long enough - "3 nights or more:
+//      5% off", "7 nights or more: 12% off". The rule with the most nights that the stay reaches is the
+//      one that applies, so a ten-night guest gets the 12% and not 5% plus 12%. A stay rate can be kept
+//      to some dates (judged night by night, so a long stay that runs into Christmas pays full price for
+//      Christmas), some room types or some meal plans.
+//
+// It comes after the override on purpose. The override decides what a night costs; the stay rate is a
+// deal on the whole stay, and a guest who books a week is owed it on every night of that week, the set
+// ones included. It only exists where a stay exists: priceNight on its own, which is what the rate
+// suggestions and the calendar preview read, never applies it, because a single night has no length.
+//
+// Every price a guest or the desk is quoted - the desk's quote, the booking page, an upgrade offer - goes
+// through priceNights below (directly, or through roomTotalFor and averageNightly), so the discount is
+// worked out once and the same everywhere.
 //
 // Occupancy is the whole house, not the room type. A hotelier raises the Deluxe rate because the hotel
 // is filling, not because four Deluxes went: the guest who cannot find a Standard is the one who ends up
@@ -62,6 +79,30 @@ export interface RateSeason extends Moves {
 export interface DayRate extends Moves {
   days: number[]
 }
+
+/**
+ * A lower price per night for a longer stay. Not a Move: it only ever takes a percentage off, because
+ * "5% off each night" is the one form a guest understands without a calculator.
+ */
+export interface StayRate {
+  id: string
+  /** The stay must be at least this many nights. */
+  minNights: number
+  /** Taken off each night, as a percentage. */
+  percentOff: number
+  /** One room type, or every type when left out. */
+  type?: Room['type']
+  /** Only these meal plans, by id. Empty or left out means every plan. */
+  planIds?: string[]
+  /** Only nights between these dates, both included. Either end may be left open. */
+  from?: string
+  to?: string
+  on: boolean
+}
+
+/** The words on the quote: "Stay 3 nights or more: 5% off". */
+export const stayRateLabel = (r: StayRate): string =>
+  `Stay ${r.minNights} night${r.minNights === 1 ? '' : 's'} or more: ${r.percentOff}% off`
 
 /** One date's price, set by a person. Not a rule: it beats every rule, and it is signed. */
 export interface RateOverride {
@@ -123,6 +164,10 @@ export interface NightPrice {
   /** How full the house was when this price was worked out, where that was known. */
   sold?: number
   override?: RateOverride
+  /** The length-of-stay price applied to this night, where the stay earned one. */
+  stayRate?: StayRate
+  /** What the stay rate took off this night. */
+  stayOff?: number
 }
 
 export interface RateCalendar {
@@ -131,6 +176,8 @@ export interface RateCalendar {
   dayRates: DayRate[]
   occupancyRates: OccupancyRate[]
   overrides: RateOverride[]
+  /** Length-of-stay prices. Optional so a calendar written before they existed still prices. */
+  stayRates?: StayRate[]
 }
 
 /** How full the house is on a given night, as a percentage. Nothing known means no occupancy step. */
@@ -180,6 +227,36 @@ export function priceNight(type: Room['type'], date: string, c: RateCalendar, so
   return { date, rate, steps, season, dayRate, occupancyRate, sold, override }
 }
 
+/** What a stay is being priced as, beyond the room and the dates. */
+export interface StayOptions {
+  /** The meal plan, for stay rates kept to some plans. Left out, only rates for every plan apply. */
+  planId?: string
+  /** False to price the nights one by one with no stay rate, as the calendar preview does. */
+  lengthOfStay?: boolean
+}
+
+/** The stay rate a night of a stay this long earns, if any: the one with the most nights reached. */
+export function stayRateFor(
+  type: Room['type'],
+  date: string,
+  nights: number,
+  c: RateCalendar,
+  planId?: string,
+): StayRate | undefined {
+  return (c.stayRates ?? [])
+    .filter(
+      (r) =>
+        r.on &&
+        r.percentOff > 0 &&
+        nights >= Math.max(1, r.minNights) &&
+        (!r.type || r.type === type) &&
+        (!r.planIds || r.planIds.length === 0 || (planId !== undefined && r.planIds.includes(planId))) &&
+        (!r.from || date >= r.from) &&
+        (!r.to || date <= r.to),
+    )
+    .sort((a, b) => b.minNights - a.minNights || b.percentOff - a.percentOff)[0]
+}
+
 /** Every night of a stay. Arrival counts, the departure day does not: nobody sleeps on it. */
 export function priceNights(
   type: Room['type'],
@@ -187,23 +264,44 @@ export function priceNights(
   departure: string,
   c: RateCalendar,
   soldOn?: SoldOn,
+  opts: StayOptions = {},
 ): NightPrice[] {
   const out: NightPrice[] = []
   for (let d = arrival; d < departure; d = nextDay(d)) {
     out.push(priceNight(type, d, c, soldOn))
     if (out.length > 370) break
   }
-  return out
+  if (opts.lengthOfStay === false) return out
+
+  // The stay layer, last: it needs to know how long the stay is, which no single night does.
+  return out.map((n) => {
+    const r = stayRateFor(type, n.date, out.length, c, opts.planId)
+    if (!r) return n
+    const rate = tidy(n.rate * (1 - r.percentOff / 100))
+    return { ...n, rate, stayRate: r, stayOff: n.rate - rate, steps: [...n.steps, { label: stayRateLabel(r), rate }] }
+  })
 }
 
-/** What the room alone comes to over the stay, before any meal plan or discount. */
+/**
+ * What the stay rate took off the whole stay, and the words for it, so the desk and the booking page
+ * print the same discount line. Nothing when the stay earned none.
+ */
+export function stayDiscountOf(nights: NightPrice[]): { label: string; saving: number } | undefined {
+  const saving = nights.reduce((n, p) => n + (p.stayOff ?? 0), 0)
+  if (saving <= 0) return undefined
+  const labels = [...new Set(nights.filter((p) => p.stayRate).map((p) => stayRateLabel(p.stayRate!)))]
+  return { label: labels.join(', '), saving }
+}
+
+/** What the room alone comes to over the stay, length-of-stay price included, before any meal plan or other discount. */
 export const roomTotalFor = (
   type: Room['type'],
   arrival: string,
   departure: string,
   c: RateCalendar,
   soldOn?: SoldOn,
-): number => priceNights(type, arrival, departure, c, soldOn).reduce((n, p) => n + p.rate, 0)
+  opts?: StayOptions,
+): number => priceNights(type, arrival, departure, c, soldOn, opts).reduce((n, p) => n + p.rate, 0)
 
 /**
  * The average night of a stay, which is what goes on screen when one number has to stand for the whole
@@ -216,8 +314,9 @@ export function averageNightly(
   departure: string,
   c: RateCalendar,
   soldOn?: SoldOn,
+  opts?: StayOptions,
 ): number {
-  const nights = priceNights(type, arrival, departure, c, soldOn)
+  const nights = priceNights(type, arrival, departure, c, soldOn, opts)
   if (nights.length === 0) return c.roomRates[type] ?? 0
   return Math.round(nights.reduce((n, p) => n + p.rate, 0) / nights.length)
 }
@@ -226,7 +325,8 @@ export function averageNightly(
 export const calendarInUse = (c: RateCalendar): boolean =>
   (c.seasons ?? []).some((s) => s.on) ||
   (c.dayRates ?? []).some((d) => d.on) ||
-  (c.occupancyRates ?? []).some((o) => o.on)
+  (c.occupancyRates ?? []).some((o) => o.on) ||
+  (c.stayRates ?? []).some((r) => r.on)
 
 /** True when the nights of a stay are not all the same price, which is when a breakdown is worth showing. */
 export function varies(nights: NightPrice[]): boolean {
@@ -249,6 +349,12 @@ export function newOverrideId(list: RateOverride[]): string {
   let n = list.length + 1
   while (list.some((x) => x.id === `set-${n}`)) n += 1
   return `set-${n}`
+}
+
+export function newStayRateId(list: StayRate[]): string {
+  let n = list.length + 1
+  while (list.some((x) => x.id === `stay-${n}`)) n += 1
+  return `stay-${n}`
 }
 
 export function newOccupancyRateId(list: OccupancyRate[]): string {

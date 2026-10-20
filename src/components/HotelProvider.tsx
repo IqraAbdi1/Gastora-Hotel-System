@@ -2,7 +2,8 @@ import { useBrowserSyncedState } from '../hooks/useBrowserSyncedState'
 import type { AuditRun } from '../lib/dayRun'
 import { newKeyId } from '../lib/keys'
 import type { RoomKey } from '../lib/keys'
-import { targetFor } from '../lib/routing'
+import { newRuleId, targetFor } from '../lib/routing'
+import { partyRef } from '../lib/party'
 import type { RoutingRule } from '../lib/routing'
 import { tokenFor } from '../lib/preRegistration'
 import type { PreRegDetails } from '../lib/preRegistration'
@@ -12,6 +13,7 @@ import { guests as sampleGuests } from '../data/guests'
 import { makeBigHotel } from '../data/bigHotel'
 import { deriveGuests } from '../lib/guests'
 import { stamp } from '../lib/folio'
+import { clashingStay } from '../lib/availability'
 import type { CallOutcome } from '../lib/confirmCalls'
 import { HotelContext } from '../lib/hotelContext'
 import type { EfrisSettings } from '../lib/tax'
@@ -100,7 +102,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
 
   /** Put the demonstration back to how it started, on this browser. */
   function resetDemo() {
-    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants', 'gastora:hotel:groups', 'gastora:hotel:channels', 'gastora:hotel:channelPushes', 'gastora:hotel:feedback', 'gastora:hotel:vouchers', 'gastora:hotel:guestRequests', 'gastora:hotel:hkTasks', 'gastora:hotel:hkDetails', 'gastora:hotel:hkThreads', 'gastora:hotel:hkReadyAlerts', 'gastora:hotel:hkDeclined', 'gastora:hotel:hkDowntime']) {
+    for (const key of [...Object.values(KEYS), 'gastora:hotel:options', 'gastora:hotel:tax', 'gastora:hotel:stayTimes', 'gastora:platform:tenants', 'gastora:hotel:groups', 'gastora:hotel:channels', 'gastora:hotel:channelPushes', 'gastora:hotel:feedback', 'gastora:hotel:vouchers', 'gastora:hotel:guestRequests', 'gastora:hotel:portalPayments', 'gastora:hotel:onlineCheckouts', 'gastora:hotel:serviceBookings', 'gastora:hotel:hkTasks', 'gastora:hotel:hkDetails', 'gastora:hotel:hkThreads', 'gastora:hotel:hkReadyAlerts', 'gastora:hotel:hkDeclined', 'gastora:hotel:hkDowntime']) {
       try {
         window.localStorage.removeItem(key)
       } catch {
@@ -147,6 +149,47 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         made.push({ bookedAt: TODAY, ...input, id: nextId([...list, ...made]), status: 'booked' })
       }
       return [...list, ...made]
+    })
+  }
+
+  /**
+   * A party: several rooms for one booker. The ids are handed out against the list as this screen has
+   * it, exactly as a single booking is, and checked again inside the update so two rooms can never
+   * share a number. One bill is the folio's own routing instruction, written on every other room.
+   */
+  function addParty(inputs: NewReservation[], booker: string, oneBill: boolean, by: string): Reservation[] {
+    if (inputs.length === 0) return []
+    const made: Reservation[] = []
+    for (const input of inputs) made.push({ bookedAt: TODAY, ...input, id: nextId([...reservations, ...made]), status: 'booked' })
+    const lead = made[0]
+    const id = partyRef(lead.id)
+    const at = stamp()
+    const linked = made.map((r, i): Reservation => ({
+      ...r,
+      party: { id, booker, index: i + 1, of: made.length, ...(oneBill ? { payerId: lead.id } : {}) },
+      ...(oneBill && i > 0
+        ? { routing: [{ id: 'RT-1', category: 'Everything', toReservationId: lead.id, toGuest: lead.guest, at, by }] }
+        : {}),
+    }))
+    setReservations((list) => (list.some((x) => linked.some((y) => y.id === x.id)) ? list : [...list, ...linked]))
+    return linked
+  }
+
+  /** One room pays for the rest, or each room goes back to paying for itself. */
+  function setPartyPayer(partyId: string, payerId: string | null, by: string) {
+    setReservations((list) => {
+      const payer = payerId ? list.find((x) => x.id === payerId) : undefined
+      const at = stamp()
+      return list.map((r) => {
+        if (r.party?.id !== partyId) return r
+        // Instructions this party wrote are taken off; any others the guest gave are kept.
+        const others = (r.routing ?? []).filter((x) => !(x.category === 'Everything' && list.some((y) => y.id === x.toReservationId && y.party?.id === partyId)))
+        const routing =
+          payer && r.id !== payer.id
+            ? [...others, { id: newRuleId(others), category: 'Everything', toReservationId: payer.id, toGuest: payer.guest, at, by }]
+            : others
+        return { ...r, routing, party: { ...r.party, payerId: payer?.id } }
+      })
     })
   }
 
@@ -224,7 +267,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setReservations((list) =>
       list.map((r) =>
         r.id === reservationId && r.status === 'booked'
-          ? { ...r, roomType: toType, room: roomNumber, upgrade: { from: r.upgrade?.from ?? r.roomType, to: toType, at: stamp(), reason } }
+          ? { ...r, roomType: toType, room: roomNumber, roomBy: undefined, upgrade: { from: r.upgrade?.from ?? r.roomType, to: toType, at: stamp(), reason } }
           : r,
       ),
     )
@@ -284,6 +327,21 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
     setReservations((list) =>
       list.map((r) => {
         if (r.id !== reservationId || r.status !== 'in-house') return r
+        const payment: FolioPayment = { ...input, id: `P-${(r.payments?.length ?? 0) + 1}`, at: stamp() }
+        return { ...r, paid: r.paid + input.amount, payments: [...(r.payments ?? []), payment] }
+      }),
+    )
+  }
+
+  /**
+   * A payment the guest made from their own page (simulated provider, see portalPay.ts). In the hotel
+   * it is an ordinary folio line. Before arrival there is no folio, so it raises what has been paid on
+   * the booking the way a deposit does, and keeps a line so the desk can see where it came from.
+   */
+  function addGuestPayment(reservationId: string, input: Omit<FolioPayment, 'id' | 'at'>) {
+    setReservations((list) =>
+      list.map((r) => {
+        if (r.id !== reservationId || (r.status !== 'in-house' && r.status !== 'booked')) return r
         const payment: FolioPayment = { ...input, id: `P-${(r.payments?.length ?? 0) + 1}`, at: stamp() }
         return { ...r, paid: r.paid + input.amount, payments: [...(r.payments ?? []), payment] }
       }),
@@ -533,10 +591,12 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
       ...efrisFields(tax?.efris, `${number}${r.id}`),
       ...(r.upgrade ? { roomNote: `${r.upgrade.to}, complimentary upgrade from ${r.upgrade.from}. Charged at the ${r.upgrade.from} rate.` } : {}),
     }
-    const balance = r.total - r.paid
     setReservations((list) =>
-      list.map((x) =>
-        x.id === reservationId
+      list.map((x) => {
+        // Read from the latest record, not this render's: a payment taken a moment ago (express
+        // checkout takes the money first) must not be counted as still unpaid.
+        const balance = x.total - x.paid
+        return x.id === reservationId
           ? {
               ...x,
               status: 'checked-out' as const,
@@ -545,8 +605,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
               unpaidAtCheckout: balance > 0 ? balance : undefined,
               checkoutNote: note,
             }
-          : x,
-      ),
+          : x
+      }),
     )
     if (r.room) {
       setRooms((list) =>
@@ -563,6 +623,34 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
   // when a company price is approved or the guarantee when billing is approved.
   function setCorporate(reservationId: string, corporate: CorporateBooking, patch: Partial<Pick<Reservation, 'total' | 'guarantee'>> = {}) {
     setReservations((list) => list.map((r) => (r.id === reservationId ? { ...r, ...patch, corporate } : r)))
+  }
+
+  /**
+   * Rooms from the assignment rules. Only an empty room slot is filled: a room the desk chose by hand,
+   * or one the rules filled earlier, stays exactly as it is. Each room is checked again against the
+   * list as it is now, so a room taken between showing the plan and pressing the button is skipped.
+   * Returns how many were assigned.
+   */
+  function assignRooms(items: { reservationId: string; room: string; reason: string }[], by: string, auto: boolean): number {
+    const at = stamp()
+    let list = reservations
+    const made = new Map<string, { room: string; reason: string }>()
+    for (const item of items) {
+      const r = list.find((x) => x.id === item.reservationId)
+      if (!r || r.status !== 'booked' || r.room) continue
+      if (clashingStay(item.room, r.arrival, r.departure, list, r.id)) continue
+      list = list.map((x) => (x.id === r.id ? { ...x, room: item.room } : x))
+      made.set(r.id, item)
+    }
+    if (made.size > 0) {
+      setReservations((current) =>
+        current.map((x) => {
+          const item = made.get(x.id)
+          return item && !x.room ? { ...x, room: item.room, roomBy: { at, by, auto, reason: item.reason } } : x
+        }),
+      )
+    }
+    return made.size
   }
 
   // One place decides how a housekeeping request maps onto the room, so every screen agrees.
@@ -601,6 +689,8 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         checkIn,
         addReservation,
         addReservations,
+        addParty,
+        setPartyPayer,
         addGuest,
         updateGuest,
         mergeGuests,
@@ -611,6 +701,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         moveRoom,
         upgradeStay,
         addPayment,
+        addGuestPayment,
     recordConfirmCall,
         sendPreReg,
         openPreReg,
@@ -634,6 +725,7 @@ export default function HotelProvider({ children }: { children: ReactNode }) {
         checkOut,
         setHousekeeping,
         setCorporate,
+        assignRooms,
       }}
     >
       {children}

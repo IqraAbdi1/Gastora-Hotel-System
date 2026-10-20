@@ -108,7 +108,7 @@ export function LossInsights({
     <Disclosure
       open={open}
       onToggle={onToggle}
-      tone="bg-linear-to-r from-brand to-ink/90"
+      tone="bg-brand"
       panel={
         <div className="grid gap-3 md:grid-cols-2">
           <div className={card}>
@@ -133,7 +133,7 @@ export function LossInsights({
                       </span>
                       <span className="mt-1 block h-3 overflow-hidden rounded-full bg-ink/10">
                         <span
-                          className="block h-full rounded-full bg-linear-to-r from-brand to-brand/50"
+                          className="block h-full rounded-full bg-brand"
                           style={{ width: `${Math.max(4, (r.value / peak) * 100)}%` }}
                         />
                       </span>

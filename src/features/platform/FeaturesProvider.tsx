@@ -3,6 +3,7 @@ import { useBrowserSyncedState } from '../../hooks/useBrowserSyncedState'
 import type { ReactNode } from 'react'
 import {
   DEFAULT_OPTIONS,
+  SAMPLE_SERVICES,
   SAMPLE_TAX,
   SAMPLE_TENANTS,
   featuresOf,
@@ -153,7 +154,7 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
     // an object with last week's shape. Merging over the defaults means a setting added since then
     // exists rather than being undefined in the middle of a page.
     const saved = optionsById[tenant.id]
-    const options: HotelOptions = saved
+    const merged: HotelOptions = saved
       ? {
           ...DEFAULT_OPTIONS,
           ...saved,
@@ -173,9 +174,12 @@ export default function FeaturesProvider({ children }: { children: ReactNode }) 
           upsell: { ...DEFAULT_OPTIONS.upsell, ...(saved.upsell ?? {}) },
           limits: { ...DEFAULT_OPTIONS.limits, ...(saved.limits ?? {}) },
           service: { ...DEFAULT_OPTIONS.service, ...(saved.service ?? {}) },
+          autoAssign: { ...DEFAULT_OPTIONS.autoAssign, ...(saved.autoAssign ?? {}) },
           sla: { ...DEFAULT_OPTIONS.sla, ...(saved.sla ?? {}), targets: { ...DEFAULT_OPTIONS.sla.targets, ...(saved.sla?.targets ?? {}) } },
         }
       : DEFAULT_OPTIONS
+    // A sample hotel starts with its own list of bookable services until it saves one of its own.
+    const options: HotelOptions = saved?.services ? merged : { ...merged, services: SAMPLE_SERVICES[tenant.id] ?? [] }
     const inspectionMode: InspectionMode = features.inspections ? options.inspectionMode : 'off'
     return {
       tenants,

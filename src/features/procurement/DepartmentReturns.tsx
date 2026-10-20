@@ -62,7 +62,7 @@ function ReturnDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
       <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-surface">
-        <div className="flex items-center justify-between bg-linear-to-r from-good to-brand px-5 py-4 text-white">
+        <div className="flex items-center justify-between bg-good px-5 py-4 text-white">
           <div>
             <h2 className="text-lg font-semibold">Send stock back to the store</h2>
             <p className="mt-0.5 text-xs text-white/85">
@@ -178,7 +178,7 @@ export default function DepartmentReturns({ department }: { department: Departme
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-linear-to-r from-good to-brand px-4 py-3 text-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-good px-4 py-3 text-white shadow-sm">
         <div className="min-w-0">
           <p className="text-sm font-semibold">Unused stock? Send it back to the store</p>
           <p className="text-xs text-white/85">

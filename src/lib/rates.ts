@@ -1,5 +1,7 @@
-import type { DayRate, OccupancyRate, RateOverride, RateSeason } from './rateCalendar'
+import type { DayRate, OccupancyRate, RateOverride, RateSeason, StayRate } from './rateCalendar'
 import type { Promo } from './promos'
+import type { DemandEvent } from './demandEvents'
+import { SAMPLE_EVENTS } from '../data/rates'
 import type { RateRule } from './rateRules'
 import type { Room } from '../types'
 
@@ -59,8 +61,15 @@ export interface RatesPolicy {
   occupancyRates: OccupancyRate[]
   /** Prices a person set for one date, which beat every rule above. */
   overrides: RateOverride[]
+  /** Less per night for a longer stay, applied last, to every night of a stay that is long enough. */
+  stayRates: StayRate[]
   /** Codes the hotel has given out, each with its own limits and its own tally. */
   promos: Promo[]
+  /**
+   * Conferences, holidays, matches: what the hotel knows is coming that its booking history does not.
+   * The hotel's own input. It only moves rate suggestions, never a price.
+   */
+  events: DemandEvent[]
 }
 
 export const DEFAULT_RATES: RatesPolicy = {
@@ -95,10 +104,15 @@ export const DEFAULT_RATES: RatesPolicy = {
     { id: 'busy-1', name: 'Filling up', atLeast: 80, how: 'percent', value: 15, on: false },
   ],
   overrides: [],
+  // One rule, switched on, because it only ever lowers a price and a week-long guest asking for a better
+  // rate is the most common conversation at a Kampala desk. Room only and bed and breakfast; half board
+  // is already the hotel's best-value package.
+  stayRates: [{ id: 'stay-1', minNights: 3, percentOff: 5, planIds: ['room-only', 'bb'], on: true }],
   // One example, switched off, so a hotel can see the shape of a code before writing its own.
   promos: [
     { id: 'promo-1', code: 'EARLYBIRD', name: 'Booked a month ahead', how: 'percent', value: 10, maxUses: 0, used: 0, minNights: 2, on: false },
   ],
+  events: SAMPLE_EVENTS,
 }
 
 /** The wording a hotel starts with, built from its own check-in and check-out times. */

@@ -20,6 +20,8 @@ import {
 } from './hkModel'
 import type { HkRoom, HkStatus } from './hkModel'
 import ShortageBanner from './ShortageBanner'
+import ZonePlanDialog from './ZonePlanDialog'
+import { useFeatures } from '../platform/featuresContext'
 import { useRoomOverlays } from './useRoomOverlays'
 
 const NEEDS = 'Needs action'
@@ -44,6 +46,8 @@ export default function HousekeepingPage() {
   const navigate = useNavigate()
   const big = shared.length > BIG_HOTEL
   const { overlays, openRoom, reportIssue, newTask } = useRoomOverlays()
+  const { features, options } = useFeatures()
+  const [zonePlan, setZonePlan] = useState(false)
 
   // A big hotel opens on the rooms that need work, not on 400 rows.
   const [status, setStatus] = useState(big ? NEEDS : ALL)
@@ -201,10 +205,30 @@ export default function HousekeepingPage() {
               <Badge tone="brand">Rule</Badge>
               {plan.length} open task{plan.length === 1 ? ' has' : 's have'} no attendant.
             </p>
-            <Button onClick={() => plan.forEach((p) => hk.assignTask(p.task.id, p.attendant))}>Assign fairly</Button>
+            <div className="flex flex-wrap gap-2">
+              {features.hkZones && <Button onClick={() => setZonePlan(true)}>Share out by zone</Button>}
+              <Button
+                variant={features.hkZones ? 'secondary' : 'primary'}
+                onClick={() => plan.forEach((p) => hk.assignTask(p.task.id, p.attendant))}
+              >
+                Assign fairly
+              </Button>
+            </div>
           </div>
         </Card>
       )}
+      {features.hkZones && plan.length === 0 && !asking && hk.counts.openTasks > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink/10 bg-surface px-4 py-2.5 text-sm text-ink/70">
+          <span>
+            Every open task has someone on it.
+            {options.hkAutoAssign ? ' New work is handed out by zone as it comes in.' : ''}
+          </span>
+          <Button size="sm" variant="secondary" onClick={() => setZonePlan(true)}>
+            Review the plan by zone
+          </Button>
+        </div>
+      )}
+      {zonePlan && <ZonePlanDialog onClose={() => setZonePlan(false)} onRoster={() => navigate('/housekeeping/roster')} />}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (

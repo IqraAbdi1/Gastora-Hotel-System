@@ -82,7 +82,7 @@ export function StockCountPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Stock counts</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">Stock counts</h1>
           <p className="text-sm text-ink/60">
             {counter
               ? 'Count blind: the book quantity stays hidden until you submit. Then explain every variance and post the count.'
@@ -122,7 +122,7 @@ export function StockCountPage() {
       </div>
 
       {counter && due.length > 0 && (
-        <div className="rounded-xl border border-brand/20 bg-linear-to-r from-brand/10 to-good/10 p-4">
+        <div className="rounded-xl border border-brand/20 bg-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-semibold text-ink">

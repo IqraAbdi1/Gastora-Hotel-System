@@ -13,8 +13,8 @@
 //
 // Pure rules only: no React.
 
-import { depositForStay, freeByType, nightsOf, planFor, stayTotalBetween } from './booking'
-import { averageNightly } from './rateCalendar'
+import { depositForStay, freeByType, nightlyForStay, nightsOf, stayTotalBetween } from './booking'
+import { priceNights, stayDiscountOf } from './rateCalendar'
 import type { SoldOn } from './rateCalendar'
 import type { RatesPolicy } from './rates'
 import { refusedBy } from './rateRules'
@@ -45,6 +45,8 @@ export interface Offer {
   deposit: number
   /** Set when the hotel will not sell these dates at all, with the reason the hotel wrote. */
   refusal?: string
+  /** The length-of-stay discount already inside the total, with the words the guest is shown. */
+  stayDeal?: { label: string; saving: number }
 }
 
 export const MAX_ADULTS_PER_ROOM = 3
@@ -85,10 +87,11 @@ export function offersFor(
         planId: plan.id,
         // A website never sells past the house. The overbooking allowance is the desk's to spend.
         free: Math.max(0, free[type]),
-        nightly: averageNightly(type, s.arrival, s.departure, rates, soldOn) + planFor(plan.id, rates).extraPerNight,
+        nightly: nightlyForStay(type, plan.id, s.arrival, s.departure, rates, soldOn),
         total: stayTotalBetween(type, plan.id, s.arrival, s.departure, rates, soldOn),
         deposit: depositForStay(type, plan.id, nights, rates, { arrival: s.arrival, departure: s.departure }, soldOn),
         refusal: no?.why,
+        stayDeal: stayDiscountOf(priceNights(type, s.arrival, s.departure, rates, soldOn, { planId: plan.id })),
       })
     }
   }

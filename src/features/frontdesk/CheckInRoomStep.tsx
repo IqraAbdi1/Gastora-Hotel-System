@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Badge } from '../../components/ui'
 import { floorLabel, floorOf } from '../../lib/rooms'
+import type { Proposal } from '../../lib/roomAssign'
 import type { Reservation, Room } from '../../types'
 import ArrivalRoomHelp from './ArrivalRoomHelp'
 
@@ -18,6 +19,7 @@ export default function CheckInRoomStep({
   reservation,
   value,
   onChange,
+  suggestion,
 }: {
   type: string
   ready: Room[]
@@ -27,6 +29,8 @@ export default function CheckInRoomStep({
   reservation: Reservation
   value: string
   onChange: (room: string) => void
+  /** The room the assignment rules propose, when the hotel has them and the stay has no room yet. */
+  suggestion?: Proposal
 }) {
   const [q, setQ] = useState('')
   const [floor, setFloor] = useState('all')
@@ -37,8 +41,13 @@ export default function CheckInRoomStep({
     () =>
       ready
         .filter((r) => (floor === 'all' || floorOf(r) === Number(floor)) && (q.trim() === '' || r.number.includes(q.trim())))
-        .sort((a, b) => Number(b.number === booked) - Number(a.number === booked) || Number(a.number) - Number(b.number)),
-    [ready, floor, q, booked],
+        .sort(
+          (a, b) =>
+            Number(b.number === booked) - Number(a.number === booked) ||
+            Number(b.number === suggestion?.room) - Number(a.number === suggestion?.room) ||
+            Number(a.number) - Number(b.number),
+        ),
+    [ready, floor, q, booked, suggestion?.room],
   )
   const shown = list.slice(0, SHOW)
 
@@ -54,8 +63,22 @@ export default function CheckInRoomStep({
     )
   }
 
+  const suggested = suggestion?.room && ready.some((r) => r.number === suggestion.room) ? suggestion : undefined
+
   return (
     <div className="space-y-4">
+      {suggested && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand/25 bg-brand/[0.06] px-3 py-2 text-sm">
+          <span>
+            <b>Suggested: {suggested.reason}</b>
+          </span>
+          {value !== suggested.room && (
+            <button type="button" className="text-sm font-semibold text-brand" onClick={() => onChange(suggested.room as string)}>
+              Use it
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         <input
           value={q}
@@ -96,9 +119,11 @@ export default function CheckInRoomStep({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xl font-bold text-ink">{r.number}</span>
                 {r.number === booked && <Badge tone="brand">Booked room</Badge>}
+                {r.number !== booked && r.number === suggested?.room && <Badge tone="brand">Suggested</Badge>}
               </div>
               <p className="mt-0.5 text-xs text-ink/60">
                 {floorLabel(floorOf(r))} · {r.type}
+                {r.tags?.length ? ` · ${r.tags.join(', ')}` : ''}
               </p>
               <div className="mt-2">
                 <Badge tone="good" dot>

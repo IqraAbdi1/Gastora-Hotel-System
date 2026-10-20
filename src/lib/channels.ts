@@ -246,7 +246,11 @@ const SOURCE_NAME: Record<string, string> = {
   email: 'Email',
   'walk-in': 'Walked in',
   ota: 'A travel agent, unnamed',
+  agent: 'Travel agents',
 }
+
+/** The room part of a booking: an agent is paid on the room, not on the extras. */
+const roomOnly = (r: Reservation): number => Math.max(0, r.total - (r.charges ?? []).reduce((n, c) => n + c.amount, 0))
 
 const DIRECT_SOURCES = ['online', 'front desk', 'phone', 'email', 'walk-in']
 
@@ -267,8 +271,9 @@ export function productionBy(reservations: Reservation[], from: string, to: stri
   for (const r of reservations) {
     if (r.arrival < from || r.arrival > to) continue
     if (r.share && !r.share.primary) continue
-    const key = r.channel ? `ch:${r.channel.id}` : `src:${r.source ?? 'front desk'}`
-    const name = r.channel ? r.channel.name : SOURCE_NAME[r.source ?? 'front desk'] ?? 'Unknown'
+    // A named travel agent gets its own line, like a channel, because it costs a commission too.
+    const key = r.channel ? `ch:${r.channel.id}` : r.agent ? `ag:${r.agent.id}` : `src:${r.source ?? 'front desk'}`
+    const name = r.channel ? r.channel.name : r.agent ? `${r.agent.name} (travel agent)` : SOURCE_NAME[r.source ?? 'front desk'] ?? 'Unknown'
     const line = row(key, name, !r.channel && DIRECT_SOURCES.includes(r.source ?? 'front desk'))
 
     if (r.status === 'cancelled' || r.status === 'no-show') {
@@ -279,7 +284,7 @@ export function productionBy(reservations: Reservation[], from: string, to: stri
     line.bookings += 1
     line.roomNights += nights
     line.money += r.total
-    line.commission += r.channel ? commissionOn(r.total, r.channel) : 0
+    line.commission += r.channel ? commissionOn(r.total, r.channel) : r.agent ? commissionOn(roomOnly(r), r.agent) : 0
   }
 
   const out = [...rows.values()]

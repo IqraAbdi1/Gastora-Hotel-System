@@ -9,16 +9,21 @@ import { dayMonth, nightsBetween, ugx } from '../../lib/format'
 import { reservationsNeedingAttention, summarizeDay, upcomingArrivals } from '../../lib/frontdesk'
 import { useHotel } from '../../lib/hotelContext'
 import { stayHistory } from '../../lib/loyalty'
+import { partyLabel, partyOf, stillIn } from '../../lib/party'
 import { buildRuleSuggestions } from '../../lib/rules'
 import type { Guest, Reservation } from '../../types'
 import { useAuth } from '../auth/authContext'
 import { useHousekeeping } from '../housekeeping/hkContext'
 import ShortageBanner from '../housekeeping/ShortageBanner'
+import AssignRoomsButton from './AssignRoomsDialog'
 import AttentionPanel from './AttentionPanel'
 import CheckInPanel from './CheckInPanel'
 import ConfirmCallsCard from './ConfirmCallsCard'
 import GuestRequestsCard from './GuestRequestsCard'
 import ExpressCheckoutCard from './ExpressCheckoutCard'
+import OnlineCheckoutCard from './OnlineCheckoutCard'
+import ServiceBookingsCard from './ServiceBookingsCard'
+import { useOnlineCheckouts } from '../portal/useOnlineCheckouts'
 import ReservationPanel from './ReservationPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import TasksCard from './TasksCard'
@@ -51,6 +56,7 @@ function GuestCell({ r, guests, reservations }: { r: Reservation; guests: Guest[
             {stays === 1 ? 'Been before' : `${stays} stays`}
           </Badge>
         )}
+        {r.party && <Badge tone="brand">{partyLabel(partyOf(reservations, r).filter(stillIn).length)}</Badge>}
       </p>
       <p className="text-xs text-ink/55">{r.id}</p>
     </div>
@@ -72,7 +78,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 // Buttons that sit on the green banner.
 const onBrand =
   'inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
-const onBrandGhost = `${onBrand} border-white/25 bg-white/10 text-white hover:bg-white/20`
+const onBrandGhost = `${onBrand} border-ink/15 bg-surface text-ink/80 hover:border-brand/40 hover:text-ink`
 
 function SeeAll({ count, to, noun }: { count: number; to: string; noun: string }) {
   if (count <= SHOW) return null
@@ -87,6 +93,7 @@ function SeeAll({ count, to, noun }: { count: number; to: string; noun: string }
 
 export default function TodayPage() {
   const { reservations, rooms, guests } = useHotel()
+  const { checkouts } = useOnlineCheckouts()
   const { readyRooms, dismissReady } = useHousekeeping()
   const [checkIn, setCheckIn] = useState<{ id: string; room?: string } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
@@ -117,7 +124,10 @@ export default function TodayPage() {
       cell: (r) => (
         <div>
           <p>{r.roomType}</p>
-          <p className="text-xs text-ink/55">{r.room ? `Room ${r.room}` : 'Not assigned'}</p>
+          <p className="text-xs text-ink/55">
+            {r.room ? `Room ${r.room}` : 'Not assigned'}
+            {r.room && r.roomBy ? (r.roomBy.auto ? ' · assigned this morning' : ' · assigned by the rules') : ''}
+          </p>
         </div>
       ),
     },
@@ -165,6 +175,9 @@ export default function TodayPage() {
         <div>
           <p>Room {r.room}</p>
           {r.departure < TODAY && <p className="text-xs font-medium text-bad">Was due {dayMonth(r.departure)}</p>}
+          {checkouts.some((x) => x.reservationId === r.id && x.state === 'requested') && (
+            <p className="text-xs font-medium text-brand">Checking out online</p>
+          )}
         </div>
       ),
     },
@@ -199,26 +212,24 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-linear-to-br from-brand-deep to-brand px-5 py-5 text-white shadow-sm sm:px-6 sm:py-6">
-        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-accent/25 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <section>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/70">
-              <span>Front desk · {todayLabel}</span>
-              <DataSourceBadge onDark />
-            </div>
-            <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">
               {greeting()}
               {user ? `, ${user.name.split(' ')[0]}` : ''}
             </h1>
-            <p className="mt-1 text-sm text-white/80">
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/60">
+              <span>{todayLabel}</span>
+              <span aria-hidden="true">·</span>
+              <DataSourceBadge />
+              <span aria-hidden="true">·</span>
               {plural(day.expected.length, 'arrival', 'arrivals')} still expected ·{' '}
               {plural(day.leaving.length, 'departure', 'departures')} ·{' '}
               {plural(day.owing.length, 'balance', 'balances')} due
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 lg:flex-nowrap">
             <button
               type="button"
               onClick={() => setPanel('attention')}
@@ -242,7 +253,7 @@ export default function TodayPage() {
               <Icon name="sparkles" className="h-4 w-4" />
               Suggestions
               {suggestions.length > 0 && (
-                <span className="rounded-full bg-white/20 px-1.5 text-xs font-bold leading-5">{suggestions.length}</span>
+                <span className="rounded-full bg-ink/8 px-1.5 text-xs font-bold leading-5">{suggestions.length}</span>
               )}
             </button>
             <Link to="/desk/rooms" className={onBrandGhost}>
@@ -318,8 +329,16 @@ export default function TodayPage() {
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="min-w-0 space-y-6 xl:col-span-2">
           <GuestRequestsCard />
+          <ServiceBookingsCard />
 
-          <Card icon="arrival" title="Arrivals today" count={day.expected.length} description="Booked to arrive today and not yet checked in." padded={false}>
+          <Card
+            icon="arrival"
+            title="Arrivals today"
+            count={day.expected.length}
+            description="Booked to arrive today and not yet checked in."
+            actions={<AssignRoomsButton />}
+            padded={false}
+          >
             <DataTable
               columns={arrivalColumns}
               rows={day.expected.slice(0, SHOW)}
@@ -329,6 +348,8 @@ export default function TodayPage() {
             />
             <SeeAll count={day.expected.length} to="/desk/reservations?view=arrivals" noun="arrivals" />
           </Card>
+
+          <OnlineCheckoutCard />
 
           <Card icon="departure" title="Departures" count={day.leaving.length} description="Due out today, plus anyone past their departure date." padded={false}>
             <DataTable

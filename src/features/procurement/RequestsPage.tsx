@@ -104,10 +104,10 @@ export default function RequestsPage({ department, scope }: { department?: Depar
             : 'Ask for what you need. Management replies.'
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <h1 className="text-[26px] font-bold leading-tight tracking-tight text-ink">{title}</h1>
           <p className="text-sm text-ink/60">{blurb}</p>
         </div>
         {can('raiseRequest') && scope !== 'finance' && (
@@ -373,7 +373,7 @@ function RequestCard({ r }: { r: SupplyRequest }) {
       {open && (
         <div className="space-y-3 border-t border-ink/10 p-4 text-sm">
           {(r.reason || waitingOn[r.status]) && (
-            <div className="rounded-lg bg-linear-to-r from-brand/10 to-transparent px-3 py-2">
+            <div className="rounded-lg bg-surface px-3 py-2">
               {r.reason && <p className="text-ink/80">{r.reason}</p>}
               {waitingOn[r.status] && <p className="text-xs font-medium text-ink/60">{waitingOn[r.status]}</p>}
             </div>
@@ -502,7 +502,7 @@ function RequestCard({ r }: { r: SupplyRequest }) {
           )}
 
           {receiving && (
-            <div className="space-y-2 rounded-lg bg-linear-to-br from-good/10 to-brand/5 p-3">
+            <div className="space-y-2 rounded-lg bg-surface p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">What arrived now</p>
                             {r.items.map((i, n) =>
                 stillDue[n] > 0 ? (

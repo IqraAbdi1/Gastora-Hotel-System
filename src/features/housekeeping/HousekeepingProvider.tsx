@@ -9,12 +9,16 @@ import type { UsedPart } from '../../lib/parts'
 import { newSpellId } from '../../lib/downtime'
 import type { Spell } from '../../lib/downtime'
 import { HK_KEYS } from './hkStorage'
+import { MAX_ROOM_PHOTOS, STORAGE_FULL_MESSAGE, isRealPhoto, isStorageFull, roomHasSpace } from '../../lib/roomPhotos'
+import type { RoomPhoto } from '../../lib/roomPhotos'
 import { HkContext } from './hkContext'
 import type { BlockKind, ExceptionKind, HkValue, NewTask } from './hkContext'
 import {
   CHECKIN_TIME,
   PUBLIC_AREA,
   RUSH_NOTE,
+  SAMPLE_ROSTER,
+  attendants,
   clock,
   cleanTypes,
   defaultDetails,
@@ -28,6 +32,8 @@ import {
   zoneOf,
 } from './hkModel'
 import type { DefectStatus, HkRoom, HkTask, RoomDefect, RoomDetails, RoomMessage, TaskType } from './hkModel'
+import { allocate } from '../../lib/hkAllocation'
+import type { AllocationPlan, RosterEntry, WorkItem } from '../../lib/hkAllocation'
 import { AREA_TIMES, areaDueOn, declinedRun, linenDue, minutesBetween, needsWelfareCheck, tooQuick } from '../../lib/cleaning'
 
 const exceptionLabel: Record<ExceptionKind, string> = {
@@ -98,6 +104,11 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   // Every stretch of a room being off sale, open and closed. Kept rather than worked out afterwards:
   // the room's status only says where it is now, and "for how long" cannot be recovered from that.
   const [spells, setSpells] = useBrowserSyncedState<Spell[]>(HK_KEYS.downtime, [])
+  // Who is on today, where and when. Carries over day to day until the head of housekeeping changes it.
+  const [savedRoster, setSavedRoster] = useBrowserSyncedState<RosterEntry[]>(HK_KEYS.roster, SAMPLE_ROSTER)
+  // Cleaning by zone, "assign new tasks automatically": the highest task number already looked at, so
+  // only work raised after this point is handed out by itself. Work a supervisor unassigns stays unassigned.
+  const [autoMark, setAutoMark] = useState(() => tasks.reduce((m, t) => Math.max(m, t.id), 0))
   // Counts rooms considered for a spot-check, so "1 in N" is steady and easy to demonstrate.
   const spotCounter = useRef(0)
 
@@ -270,6 +281,62 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
       return priority === t.priority ? t : { ...t, priority }
     })
   }, [tasks, rooms, arrivals])
+
+  // ---- cleaning by zone ----
+  // Every attendant appears, so someone added to the staff list can be put on the roster.
+  const roster = useMemo<RosterEntry[]>(
+    () =>
+      attendants
+        .filter((a) => a !== 'Unassigned')
+        .map((name) => savedRoster.find((r) => r.name === name) ?? { name, zone: '', shift: 'off' as const }),
+    [savedRoster],
+  )
+
+  const zones = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of rooms) set.add(zoneOf(r))
+    for (const a of options.areas) if (a.where.trim()) set.add(a.where.trim())
+    return [...set].sort()
+  }, [rooms, options.areas])
+
+  function workItems(list: HkTask[]): WorkItem[] {
+    return list.map((t) => ({
+      id: t.id,
+      place: t.room,
+      type: t.type,
+      roomType: t.area ? undefined : roomByNumber.get(t.room)?.type,
+      zone: t.zone,
+      priority: t.priority,
+      status: t.status,
+      attendant: t.attendant,
+      dueTime: t.dueTime,
+      arrivingToday: !t.area && arrivals.byRoom.has(t.room),
+      linen: t.linen,
+    }))
+  }
+
+  /** The plan written onto the tasks. Checked against the tasks as they are now, so started work never moves. */
+  function withPlan(current: HkTask[], plan: AllocationPlan): HkTask[] {
+    const placed = new Map<number, { name: string; order: number }>()
+    for (const p of plan.people) p.items.forEach((x, i) => placed.set(x.item.id, { name: p.name, order: i }))
+    return current.map((t) => {
+      const to = placed.get(t.id)
+      if (!to || !isActive(t)) return t
+      if (t.status === 'In Progress') return { ...t, order: to.order }
+      return { ...t, attendant: to.name, order: to.order, status: 'Assigned' as const }
+    })
+  }
+
+  const autoOn = features.hkZones && options.hkAutoAssign
+  const topId = tasks.reduce((m, t) => Math.max(m, t.id), 0)
+  if (topId !== autoMark) {
+    setAutoMark(topId)
+    const fresh = autoOn ? liveTasks.filter((t) => t.id > autoMark && t.status === 'Unassigned') : []
+    if (fresh.length) {
+      const plan = allocate(workItems(liveTasks), roster, { only: new Set(fresh.map((t) => t.id)) })
+      if (plan.people.length) setTasks((current) => withPlan(current, plan))
+    }
+  }
 
   // An alert ends as soon as the room is no longer clean (checked in, or dirty again).
   const staleAlerts = Object.keys(readyAlerts).filter((n) => roomByNumber.get(n)?.status !== 'clean')
@@ -706,9 +773,50 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     }))
   }
 
-  function addPhoto(room: string) {
-    patchDetails(room, (d) => ({ ...d, photos: [...d.photos, `Photo ${d.photos.length + 1}`] }))
-    log(room, 'Room photo added', 'Photo placeholder added.')
+  /**
+   * Photos are big, and the browser keeps only a few megabytes for the whole record. The shared storage hook
+   * quietly carries on in memory when the browser is full, which would lose the photo on the next refresh
+   * without a word. So the new record is written here first: if the browser refuses it, the person is told
+   * and nothing changes.
+   */
+  function storeFails(next: Record<string, RoomDetails>): string | undefined {
+    try {
+      window.localStorage.setItem(HK_KEYS.details, JSON.stringify(next))
+      return undefined
+    } catch (error) {
+      return isStorageFull(error) ? STORAGE_FULL_MESSAGE : 'The photo could not be saved on this device.'
+    }
+  }
+
+  function addPhoto(room: string, photo?: { src: string; by: string }): string | undefined {
+    if (!photo) {
+      patchDetails(room, (d) => ({ ...d, photos: [...d.photos, `Photo ${d.photos.length + 1}`] }))
+      log(room, 'Room photo added', 'Photo placeholder added.')
+      return undefined
+    }
+    const current = details[room] ?? defaultDetails()
+    if (!roomHasSpace(current.photos)) {
+      return `A room keeps up to ${MAX_ROOM_PHOTOS} photos. Remove one before adding another.`
+    }
+    const item: RoomPhoto = { id: uid(), src: photo.src, by: photo.by || 'Housekeeping', day: TODAY, time: clock() }
+    const updated = { ...current, photos: [...current.photos, item] }
+    const failed = storeFails({ ...details, [room]: updated })
+    if (failed) return failed
+    patchDetails(room, (d) => ({ ...d, photos: [...d.photos, item] }))
+    log(room, 'Room photo added', 'Photo taken.', item.by)
+    return undefined
+  }
+
+  function removePhoto(room: string, index: number, by = 'Housekeeping') {
+    const target = (details[room] ?? defaultDetails()).photos[index]
+    if (target === undefined) return
+    patchDetails(room, (d) => ({ ...d, photos: d.photos.filter((_, i) => i !== index) }))
+    log(
+      room,
+      'Room photo removed',
+      isRealPhoto(target) ? `Photo taken by ${target.by} at ${target.time} removed.` : `${target} removed.`,
+      by,
+    )
   }
 
   // ---- defects and maintenance ----
@@ -723,30 +831,49 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
   // full maintenance there is no separate "request" step, so reporting is requesting.
   function reportDefect(
     room: string,
-    input: { category: string; severity: RoomDefect['severity']; description: string; blocksRoom?: BlockKind; assetId?: string },
-  ) {
+    input: {
+      category: string
+      severity: RoomDefect['severity']
+      description: string
+      blocksRoom?: BlockKind
+      assetId?: string
+      photos?: RoomPhoto[]
+    },
+  ): string | undefined {
     const text = input.description.trim()
     const status: DefectStatus = input.blocksRoom || !features.maintenanceFull ? 'Maintenance Requested' : 'Open'
-    patchDetails(room, (d) => ({
-      ...d,
-      defects: [
-        {
-          id: d.defects.reduce((m, x) => Math.max(m, x.id), 0) + 1,
-          category: input.category,
-          severity: input.severity,
-          description: text,
-          status,
-          reportedAt: clock(),
-          reportedOn: TODAY,
-          reportedIso: new Date().toISOString(),
-          blocksRoom: input.blocksRoom,
-          assetId: input.assetId,
-        },
-        ...d.defects,
-      ],
-    }))
-    log(room, 'Defect reported', text)
+    const fresh = (d: RoomDetails, photos?: RoomPhoto[]): RoomDefect => ({
+      id: d.defects.reduce((m, x) => Math.max(m, x.id), 0) + 1,
+      category: input.category,
+      severity: input.severity,
+      description: text,
+      status,
+      reportedAt: clock(),
+      reportedOn: TODAY,
+      reportedIso: new Date().toISOString(),
+      blocksRoom: input.blocksRoom,
+      assetId: input.assetId,
+      photos: photos?.length ? photos : undefined,
+    })
+    // The problem itself must never be lost because a photo did not fit. Without room for the photos,
+    // it is saved without them and the person is told.
+    let photos = input.photos
+    let warning: string | undefined
+    if (photos?.length) {
+      const current = details[room] ?? defaultDetails()
+      const failed = storeFails({
+        ...details,
+        [room]: { ...current, defects: [fresh(current, photos), ...current.defects] },
+      })
+      if (failed) {
+        photos = undefined
+        warning = `The problem was reported, but its photos were not kept. ${failed}`
+      }
+    }
+    patchDetails(room, (d) => ({ ...d, defects: [fresh(d, photos), ...d.defects] }))
+    log(room, 'Defect reported', photos?.length ? `${text} (${photos.length} photo${photos.length === 1 ? '' : 's'})` : text)
     if (input.blocksRoom) setException(room, input.blocksRoom, text)
+    return warning
   }
 
   /** The parts a repair used. The stock itself moves in the store, not here. */
@@ -823,6 +950,10 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     })
   }
 
+  function setRosterEntry(name: string, patch: Partial<Omit<RosterEntry, 'name'>>) {
+    setSavedRoster(roster.map((r) => (r.name === name ? { ...r, ...patch } : r)))
+  }
+
   const value: HkValue = {
     rooms: hkRooms,
     tasks: liveTasks,
@@ -851,6 +982,7 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     setMinibarUsed,
     setLinenFound,
     addPhoto,
+    removePhoto,
     reportDefect,
     spells,
     setDefectParts,
@@ -861,6 +993,11 @@ export default function HousekeepingProvider({ children }: { children: ReactNode
     verifyDefect,
     resolveDefect: finishDefect,
     blockedByRepair,
+    roster,
+    setRosterEntry,
+    zones,
+    planByZone: (reshare) => allocate(workItems(liveTasks), roster, { reshare }),
+    applyPlan: (plan) => setTasks((current) => withPlan(current, plan)),
   }
 
   return <HkContext.Provider value={value}>{children}</HkContext.Provider>

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import Switch from '../../components/Switch'
-import { Button } from '../../components/ui'
+import { Badge, Button, Card, PageHeader, Tabs } from '../../components/ui'
 import { useHotel } from '../../lib/hotelContext'
-import { FEATURES } from '../../lib/features'
+import { FEATURES, PLANS } from '../../lib/features'
+import { slugOf } from '../../lib/bookingEngine'
+import { dayMonth } from '../../lib/format'
 import { AREA_FREQUENCY_LABEL, newAreaId } from '../../lib/cleaning'
 import type { AreaFrequency, CleaningArea } from '../../lib/cleaning'
 import { useFeatures } from '../platform/featuresContext'
@@ -11,20 +13,92 @@ const box =
   'mt-1 block w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm font-normal tabular-nums'
 const cell = 'min-w-0 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm'
 
+type SettingsTab = 'hotel' | 'desk' | 'housekeeping' | 'maintenance'
+
+// The first tab: what the hotel has, and the one link it needs to hand out.
+function YourHotel() {
+  const { tenant, features } = useFeatures()
+  const [copied, setCopied] = useState(false)
+  const plan = PLANS.find((p) => p.id === tenant.plan)
+  const slug = slugOf(tenant.name)
+  const link = `${window.location.origin}/book/${slug}`
+  const on = FEATURES.filter((f) => features[f.key])
+  const off = FEATURES.filter((f) => !features[f.key])
+
+  function copy() {
+    navigator.clipboard?.writeText(link).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      {features.bookingEngine && (
+        <Card title="Your booking page" description="Put this link on your website, your Instagram bio and your Google listing. Guests book and pay their deposit there.">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="min-w-0 flex-1 truncate rounded-lg border border-ink/10 bg-canvas px-3 py-2 font-mono text-sm text-ink">
+              {slug}.gastora.ug/book
+            </p>
+            <Button variant="ghost" onClick={copy}>
+              {copied ? 'Copied' : 'Copy link'}
+            </Button>
+            <a href={`/book/${slug}`} target="_blank" rel="noreferrer" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">
+              Open
+            </a>
+          </div>
+          <p className="mt-2 text-xs text-ink/50">
+            The address above is the one your hotel gets when it goes live. In this demonstration, Copy gives the link that works on
+            this computer.
+          </p>
+        </Card>
+      )}
+
+      <Card
+        title="Your plan"
+        actions={<Badge tone="brand">{plan?.label ?? tenant.plan}</Badge>}
+        description={`${on.length} of ${FEATURES.length} features are on. To add one, contact Gastora.`}
+      >
+        <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          {on.map((f) => (
+            <li key={f.key} className="flex items-start gap-2 text-sm">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-good" aria-hidden="true" />
+              <span>
+                <span className="font-medium text-ink">{f.label}</span>
+                <span className="block text-xs text-ink/55">{f.blurb}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {off.length > 0 && (
+          <details className="mt-4 border-t border-ink/10 pt-3 text-sm">
+            <summary className="cursor-pointer font-semibold text-brand">Not on your plan ({off.length})</summary>
+            <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+              {off.map((f) => (
+                <li key={f.key} className="text-ink/55">
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </Card>
+    </div>
+  )
+}
+
 export default function HotelSettingsPage() {
   const { tenant, features, options, setOptions, stayTimes, setStayTimes } = useFeatures()
   const { resetDemo } = useHotel()
   const [resetAt, setResetAt] = useState('')
+  const [tab, setTab] = useState<SettingsTab>('hotel')
 
   const patchArea = (id: string, patch: Partial<CleaningArea>) =>
     setOptions({ areas: options.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
-      <div>
-        <h1 className="text-xl font-semibold text-ink">Hotel settings</h1>
-        <p className="mt-1 text-sm text-ink/60">{tenant.name}</p>
-      </div>
+    <div className="max-w-4xl space-y-5">
+      <PageHeader title="Hotel settings" description={`${tenant.name}. How your hotel runs: the rules the system follows for you.`} />
 
       {tenant.status === 'overdue' && (
         <div className="rounded-lg bg-warn/10 px-4 py-3 text-sm text-ink">
@@ -39,31 +113,22 @@ export default function HotelSettingsPage() {
         </div>
       )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
-        <h2 className="font-semibold text-ink">Your features</h2>
-        <ul className="mt-2 divide-y divide-ink/10">
-          {FEATURES.map((f) => (
-            <li key={f.key} className="flex items-center justify-between gap-3 py-2.5">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-ink">{f.label}</p>
-                <p className="text-xs text-ink/60">{f.blurb}</p>
-              </div>
-              {features[f.key] ? (
-                <span className="rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-medium text-good">
-                  On
-                </span>
-              ) : (
-                <span className="rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-medium text-ink/60">
-                  Not on your plan, contact Gastora
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Tabs
+        label="Settings"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'hotel', label: 'Your hotel' },
+          { key: 'desk', label: 'Front desk' },
+          { key: 'housekeeping', label: 'Housekeeping' },
+          ...(features.slaEscalation ? [{ key: 'maintenance' as const, label: 'Maintenance' }] : []),
+        ]}
+      />
 
-      {features.slaEscalation && (
-        <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'hotel' && <YourHotel />}
+
+      {tab === 'maintenance' && features.slaEscalation && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-semibold text-ink">Repair targets</h2>
@@ -145,7 +210,8 @@ export default function HotelSettingsPage() {
         </section>
       )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Returning guests</h2>
@@ -253,8 +319,10 @@ export default function HotelSettingsPage() {
           </>
         )}
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Approving money off a folio</h2>
         <p className="mt-1 text-xs text-ink/60">
           Rule: the bigger the amount, the more senior the approval. The manager types their own PIN; the front desk cannot
@@ -300,8 +368,10 @@ export default function HotelSettingsPage() {
           />
         </div>
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Lost and found</h2>
         <label className="mt-2 block max-w-xs text-sm font-medium text-ink">
           Keep lost property for (days)
@@ -317,9 +387,10 @@ export default function HotelSettingsPage() {
           number.
         </p>
       </section>
+      )}
 
-      {features.expressCheckout && (
-        <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && features.expressCheckout && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-5">
           <h2 className="font-semibold text-ink">Leaving without stopping at the desk</h2>
           <p className="mt-1 text-xs text-ink/60">
             Rule: only a stay secured by a card or a company account can settle itself. A deposit already taken cannot be
@@ -338,10 +409,27 @@ export default function HotelSettingsPage() {
             Above this a person looks at it before the guest leaves. 0 means no ceiling, which is a decision rather than
             a setting: it says any bill at all may be charged with nobody watching.
           </p>
+          {features.guestPortal && (
+            <div className="mt-4 flex items-start justify-between gap-4 border-t border-ink/10 pt-3">
+              <div>
+                <p className="text-sm font-medium text-ink">Guests finish online check-out themselves</p>
+                <p className="mt-0.5 text-xs text-ink/55">
+                  On the day they leave, a guest who checks out from their own page is checked out at once when the rule
+                  above allows it. Off, each one waits for one click at the desk on the Today page.
+                </p>
+              </div>
+              <Switch
+                on={options.guestFinishesCheckout}
+                label="Guests finish online check-out themselves"
+                onChange={(v) => setOptions({ guestFinishesCheckout: v })}
+              />
+            </div>
+          )}
         </section>
       )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Guest records</h2>
         <p className="mt-1 text-xs text-ink/60">
           Rule: a guest's booking, the identification taken at check-in and their invoices are kept because the stay and
@@ -362,8 +450,10 @@ export default function HotelSettingsPage() {
           they must. Estimate: tax records are kept far longer than this; confirm the period with your accountant.
         </p>
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'housekeeping' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Servicing a room with a guest in it</h2>
         <p className="mt-1 text-xs text-ink/60">
           Rule: every occupied room is serviced each day. These two numbers decide what that means here.
@@ -403,8 +493,30 @@ export default function HotelSettingsPage() {
           </label>
         </div>
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'housekeeping' && features.hkZones && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-ink">Assign new tasks automatically</h2>
+              <p className="mt-1 text-xs text-ink/60">
+                Cleaning by zone. New work, such as a room just checked out, goes straight to the attendant on that
+                floor or area with the least to do, and lands in her list in order. Off: it waits for the head of
+                housekeeping to share it out.
+              </p>
+            </div>
+            <Switch
+              on={options.hkAutoAssign}
+              label="Assign new tasks automatically"
+              onChange={(v) => setOptions({ hkAutoAssign: v })}
+            />
+          </div>
+        </section>
+      )}
+
+      {tab === 'housekeeping' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-ink">Public areas</h2>
@@ -472,8 +584,43 @@ export default function HotelSettingsPage() {
           + Add an area
         </button>
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && features.roomAutoAssign && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-ink">Assign rooms each morning</h2>
+              <p className="mt-1 text-xs text-ink/60">
+                At the hour below, every arrival for the day that has no room is given one by the assignment rules, as if the desk had
+                pressed Assign rooms. A room somebody chose by hand is never changed. Off unless you turn it on.
+              </p>
+            </div>
+            <Switch
+              on={options.autoAssign.on}
+              label="Assign rooms each morning"
+              onChange={(v) => setOptions({ autoAssign: { ...options.autoAssign, on: v } })}
+            />
+          </div>
+          {options.autoAssign.on && (
+            <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
+              Run at
+              <input
+                type="time"
+                value={options.autoAssign.at}
+                onChange={(e) => e.target.value && setOptions({ autoAssign: { ...options.autoAssign, at: e.target.value } })}
+                className={box}
+              />
+              <span className="mt-1 block text-xs font-normal text-ink/55">
+                {options.autoAssign.lastRun ? `Last ran on ${dayMonth(options.autoAssign.lastRun)}. ` : ''}In this prototype it runs only while the app is open.
+              </span>
+            </label>
+          )}
+        </section>
+      )}
+
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Night audit</h2>
@@ -500,8 +647,10 @@ export default function HotelSettingsPage() {
           </label>
         )}
       </section>
+      )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'desk' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Check-in and check-out</h2>
         <p className="mt-1 text-xs text-ink/60">
           Rule: rooms are promised from the check-in time. Early check-in is free when a clean room is ready; otherwise the
@@ -546,9 +695,10 @@ export default function HotelSettingsPage() {
           When no room and no upgrade is possible, the front desk is offered a task to move the guest there.
         </p>
       </section>
+      )}
 
-      {features.inspections && (
-        <section className="rounded-xl border border-ink/10 bg-surface p-4">
+      {tab === 'housekeeping' && features.inspections && (
+        <section className="rounded-xl border border-ink/10 bg-surface p-5">
           <h2 className="font-semibold text-ink">Room inspections</h2>
           <p className="mt-1 text-xs text-ink/60">
             These are rules decide which cleaned rooms a supervisor must check.
@@ -623,7 +773,8 @@ export default function HotelSettingsPage() {
         </section>
       )}
 
-      <section className="rounded-xl border border-ink/10 bg-surface p-4 shadow-sm">
+      {tab === 'hotel' && (
+      <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <p className="text-sm font-semibold text-ink">The demonstration</p>
         <p className="mt-0.5 text-xs text-ink/60">
           Bookings, rooms and guests are kept in this browser so that the guest's own pages - the pre-arrival form and the
@@ -643,6 +794,7 @@ export default function HotelSettingsPage() {
           {resetAt && <span className="ml-3 text-xs text-good">Reset at {resetAt}</span>}
         </div>
       </section>
+      )}
     </div>
   )
 }

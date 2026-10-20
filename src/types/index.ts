@@ -5,7 +5,9 @@ import type { GroupLink } from '../lib/groups'
 import type { RoutingRule } from '../lib/routing'
 import type { LegLink, ShareLink } from '../lib/sharing'
 import type { PreReg } from '../lib/preRegistration'
-export type { PreReg, Express, Release, GroupLink, RoutingRule, ShareLink, LegLink }
+import type { PartyLink } from '../lib/party'
+import type { AgentLink } from '../lib/agents'
+export type { PartyLink, PreReg, Express, Release, GroupLink, RoutingRule, ShareLink, LegLink }
 
 export type RoomStatus = 'clean' | 'dirty' | 'occupied' | 'blocked'
 
@@ -24,6 +26,8 @@ export type Room = {
   status: RoomStatus
   hk?: HkState
   hkReason?: string
+  /** What sets this room apart, such as "Lake view", "Quiet" or "Near the lift". Used to match guest preferences. */
+  tags?: string[]
 }
 
 export type Cancellation = {
@@ -154,7 +158,9 @@ export type Reservation = {
   guestId?: string
   plan?: string
   guarantee?: GuaranteeType
-    source?: 'walk-in' | 'front desk' | 'phone' | 'email' | 'online' | 'ota'
+    source?: 'walk-in' | 'front desk' | 'phone' | 'email' | 'online' | 'ota' | 'agent'
+  /** The travel agent that made the booking, with the commission agreed when it was made. */
+  agent?: AgentLink
   adults?: number
   children?: number
   overrideReason?: string
@@ -188,6 +194,20 @@ export type Reservation = {
   share?: ShareLink
   /** One stay across more than one room, a night or more in each. */
   legs?: LegLink
+  /** Set when the room was filled in by the assignment rules rather than picked by a person. */
+  roomBy?: RoomAssignment
+  /** One of several rooms booked together by one booker. */
+  party?: PartyLink
+}
+
+/** How a room came to be on a booking before arrival, so the desk can tell a suggestion from a choice. */
+export type RoomAssignment = {
+  at: string
+  by: string
+  /** True when the hotel's morning run did it with nobody pressing anything. */
+  auto: boolean
+  /** The one line the rules gave: "203, clean, lake view, as last time". */
+  reason: string
 }
 export type RoomMove = {
   at: string
