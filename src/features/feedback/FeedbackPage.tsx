@@ -39,7 +39,7 @@ export default function FeedbackPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Guest feedback"
-        description="Complaints, compliments and suggestions, with what was done about them."
+        description="Complaints, compliments and what was done."
         actions={<Button onClick={() => setLogging(true)}>Write one down</Button>}
       />
 
@@ -59,10 +59,6 @@ export default function FeedbackPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-ink/55">
-            One guest complaining about a room is an opinion. Three is a fault, and it is cheaper to find it than to
-            keep apologising for it.
-          </p>
         </Card>
       )}
 
@@ -313,8 +309,7 @@ function ResolveDialog({
           </Field>
         </div>
         <p className="text-xs text-ink/55">
-          Anything given away is written here, not posted. Taking money off a bill is done on the folio, where it is
-          approved and shows on the invoice.
+          Recorded only. Take money off a bill on the folio.
         </p>
       </div>
     </Modal>

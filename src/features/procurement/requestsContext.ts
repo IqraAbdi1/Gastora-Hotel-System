@@ -170,7 +170,8 @@ export interface RequestsValue {
   /** Issues what the store has and raises the requisition for the rest. unitCosts lines up with the request's items. */
   requisition: (id: string, unitCosts: number[]) => string | null
   approve: (id: string) => string | null
-  purchase: (id: string, supplier: string) => string | null
+  /** unitCosts (optional, in the request's item order): the prices a supplier quoted, from an awarded RFQ. */
+  purchase: (id: string, supplier: string, unitCosts?: number[]) => string | null
   /** Goods arrive. A short delivery keeps the balance on the order, or closes it short with a reason. */
   receive: (id: string, input?: ReceiveInput) => string | null
   markBought: (id: string, reply?: string) => string | null

@@ -330,7 +330,7 @@ export default function RoomsPage() {
 
             {selected.status === 'dirty' && (
               <p className="rounded-lg bg-warn/10 p-3 text-warn">
-                This room needs cleaning before it can be used for a check-in. Housekeeping marks it clean.
+                Needs cleaning before check-in.
               </p>
             )}
             {selected.status === 'blocked' && (

@@ -62,7 +62,7 @@ export default function MessagesPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Guest messages"
-        description="Written by the system from the hotel's own wording. Nobody has to remember to send them."
+        description="Written automatically from the hotel's wording."
         actions={
           outbox.length > 0 ? (
             <Button onClick={() => sendAll(me)}>Send all {outbox.length}</Button>
@@ -126,9 +126,9 @@ export default function MessagesPage() {
       )}
 
       {view === 'outbox' && (
-        <Card title="Waiting to go" description="Check the wording, then send. Nothing goes out on its own unless the hotel has asked for that." padded>
+        <Card title="Waiting to go" description="Check the wording, then send." padded>
           {shownOutbox.length === 0 ? (
-            <p className="text-sm text-ink/60">{outbox.length === 0 ? 'Nothing waiting. Messages appear here as bookings are made and guests arrive.' : 'Nothing waiting matches that search.'}</p>
+            <p className="text-sm text-ink/60">{outbox.length === 0 ? 'Nothing waiting.' : 'Nothing waiting matches that search.'}</p>
           ) : (
             <ul className="space-y-3">
               {shownOutbox.map((m) => (
@@ -200,7 +200,7 @@ export default function MessagesPage() {
       {view === 'wording' && (
         <Card
           title="The hotel's wording"
-          description="Every message the guest receives. Edit it, or switch one off without touching the rest."
+          description="Every message guests receive. Edit or switch off."
           padded
         >
           <div className="mb-4 rounded-lg bg-brand/[0.06] p-3 text-xs text-ink/70">
@@ -286,13 +286,12 @@ export default function MessagesPage() {
           <label className="mt-4 flex items-start gap-2 text-sm text-ink/80">
             <input type="checkbox" className="mt-1" checked={settings.autoSend} onChange={(e) => patch({ autoSend: e.target.checked })} />
             <span>
-              Send without asking. Off, the system writes each message and somebody at the desk presses send. On, it goes by itself.
-              <span className="block text-xs text-ink/55">Most hotels leave this off for the first weeks, while the wording settles.</span>
+              Send without asking.
+              <span className="block text-xs text-ink/55">Off: the desk presses send for each one.</span>
             </span>
           </label>
           <p className="mt-4 rounded-lg bg-ink/[0.04] p-3 text-xs text-ink/65">
-            In this prototype nothing leaves the building. A message marked sent is the hotel's record that it went; connecting a real WhatsApp
-            or SMS provider is one change, in one place.
+            Demo only. No messages are actually sent.
           </p>
         </Card>
       )}

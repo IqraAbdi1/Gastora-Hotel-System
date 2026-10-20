@@ -263,7 +263,7 @@ export default function ReservationsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Reservations"
-        description="Click a booking to see it without leaving this page. Guests due today have a Check in button."
+        description="Click a booking to open it."
         actions={<AssignRoomsButton size="md" />}
       />
 

@@ -66,9 +66,8 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 text-base leading-7 text-white/70">
-              Manage front desk operations, housekeeping, restaurant services,
-              inventory, finance, guests, and business performance from one
-              connected workspace.
+              Front desk, housekeeping, restaurant, inventory and finance in one
+              workspace.
             </p>
           </div>
 
@@ -180,7 +179,7 @@ export default function LoginPage() {
             <div className="mt-6 rounded-2xl border border-ink/10 bg-surface p-5">
               <p className="text-sm font-semibold text-ink">Demo accounts</p>
               <p className="mt-1 text-xs text-ink/60">
-                Prototype only. Click one to sign in, no password needed. Or type its email with any password.
+                Click one to sign in. No password needed.
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {hotel.map((u) => (

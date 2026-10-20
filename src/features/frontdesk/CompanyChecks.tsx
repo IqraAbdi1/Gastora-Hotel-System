@@ -241,7 +241,7 @@ export default function CompanyChecks({ r }: { r: Reservation }) {
       </ul>
 
       {error && !lpoForm && <p className="rounded-lg bg-bad/10 px-3 py-2 text-sm font-medium text-bad">{error}</p>}
-      <p className="text-xs text-ink/55">Check-in confirms the guest, the LPO and the approver with the guest in front of you.</p>
+      <p className="text-xs text-ink/55">Guest, LPO and approver are confirmed at check-in.</p>
 
       <details className="text-xs text-ink/60">
         <summary className="cursor-pointer font-semibold">Company history ({c.log.length})</summary>

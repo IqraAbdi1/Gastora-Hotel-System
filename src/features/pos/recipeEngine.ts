@@ -68,15 +68,27 @@ export function validateRecipe(ingredients: RecipeIngredient[], stock: StockItem
     if (ingredient.wastePercent !== undefined && (!Number.isFinite(ingredient.wastePercent) || ingredient.wastePercent < 0 || ingredient.wastePercent >= 100)) {
       issues.push(`Waste percentage for ${item.name} must be between 0 and 99.99.`)
     }
+    if (ingredient.yieldPercent !== undefined && (!Number.isFinite(ingredient.yieldPercent) || ingredient.yieldPercent <= 0 || ingredient.yieldPercent > 100)) {
+      issues.push(`Yield for ${item.name} must be between 1 and 100%.`)
+    }
   }
   return [...new Set(issues)]
 }
 
-function requiredStockQuantity(ingredient: RecipeIngredient, item: StockItem): number | null {
+/**
+ * Stock to issue for a net recipe quantity: divided by the trim yield, then by (1 - waste%).
+ * With no yield set this is exactly the original waste-only rule.
+ */
+export function grossQuantity(converted: number, ingredient: Pick<RecipeIngredient, 'wastePercent' | 'yieldPercent'>): number {
+  const waste = ingredient.wastePercent ?? 0
+  const yieldShare = ingredient.yieldPercent && ingredient.yieldPercent > 0 ? Math.min(100, ingredient.yieldPercent) / 100 : 1
+  return converted / yieldShare / (1 - waste / 100)
+}
+
+export function requiredStockQuantity(ingredient: RecipeIngredient, item: StockItem): number | null {
   const converted = convertQuantity(ingredient.qty, ingredient.unit || item.unit, item.unit)
   if (converted === null || converted <= 0) return null
-  const waste = ingredient.wastePercent ?? 0
-  return converted / (1 - waste / 100)
+  return grossQuantity(converted, ingredient)
 }
 
 export function calculateAvailability(
@@ -147,7 +159,7 @@ export const SEED_RECIPES: Recipes = {
     { stockId: 'fnb-oil', qty: 10, unit: 'ml' },
   ],
   m3: [
-    { stockId: 'fnb-fish', qty: 180, unit: 'g', wastePercent: 4 },
+    { stockId: 'fnb-fish', qty: 180, unit: 'g', wastePercent: 4, yieldPercent: 85 },
     { stockId: 'fnb-oil', qty: 15, unit: 'ml' },
     { stockId: 'fnb-lemon', qty: 0.25, unit: 'piece' },
   ],

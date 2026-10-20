@@ -35,7 +35,7 @@ function YourHotel() {
   return (
     <div className="space-y-5">
       {features.bookingEngine && (
-        <Card title="Your booking page" description="Put this link on your website, your Instagram bio and your Google listing. Guests book and pay their deposit there.">
+        <Card title="Your booking page" description="Share this link. Guests book and pay the deposit there.">
           <div className="flex flex-wrap items-center gap-3">
             <p className="min-w-0 flex-1 truncate rounded-lg border border-ink/10 bg-canvas px-3 py-2 font-mono text-sm text-ink">
               {slug}.gastora.ug/book
@@ -48,8 +48,7 @@ function YourHotel() {
             </a>
           </div>
           <p className="mt-2 text-xs text-ink/50">
-            The address above is the one your hotel gets when it goes live. In this demonstration, Copy gives the link that works on
-            this computer.
+            The live address. In this demo, Copy gives a local link.
           </p>
         </Card>
       )}
@@ -98,18 +97,16 @@ export default function HotelSettingsPage() {
 
   return (
     <div className="max-w-4xl space-y-5">
-      <PageHeader title="Hotel settings" description={`${tenant.name}. How your hotel runs: the rules the system follows for you.`} />
+      <PageHeader title="Hotel settings" description={`${tenant.name}. How your hotel runs.`} />
 
       {tenant.status === 'overdue' && (
         <div className="rounded-lg bg-warn/10 px-4 py-3 text-sm text-ink">
-          <strong>Payment overdue.</strong> Your paid features stay on for now. Please settle your
-          account to avoid them being switched off.
+          <strong>Payment overdue.</strong> Please settle your account to keep paid features on.
         </div>
       )}
       {tenant.status === 'suspended' && (
         <div className="rounded-lg bg-bad/10 px-4 py-3 text-sm text-ink">
-          <strong>Account suspended.</strong> Paid features are off. Your data is safe and returns
-          when your account is settled.
+          <strong>Account suspended.</strong> Paid features are off. Your data is safe.
         </div>
       )}
 
@@ -133,9 +130,7 @@ export default function HotelSettingsPage() {
             <div className="min-w-0">
               <h2 className="font-semibold text-ink">Repair targets</h2>
               <p className="mt-1 text-xs text-ink/60">
-                How long a repair may take before it goes up. The answer target is how long before anybody picks it
-                up; the fix target is how long before it is closed. A repair waiting for a part from the store does
-                not go up: its clock is stopped.
+                Time allowed before a repair is escalated. Paused while waiting for parts.
               </p>
             </div>
             <Switch
@@ -216,8 +211,7 @@ export default function HotelSettingsPage() {
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Returning guests</h2>
             <p className="mt-1 text-xs text-ink/60">
-               When a guest reaches a tier on finished stays or nights, whichever comes first. The discount is on the
-              room only, and never on top of a company price.
+              Tiers by stays or nights. Room only, never with a company price.
             </p>
           </div>
           <Switch
@@ -233,7 +227,7 @@ export default function HotelSettingsPage() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-ink">Give the discount automatically</p>
                 <p className="text-xs text-ink/60">
-                  Off means the front desk sees the reward but a manager must approve it with their PIN.
+                  Off: a manager approves it with their PIN.
                 </p>
               </div>
               <Switch
@@ -325,8 +319,7 @@ export default function HotelSettingsPage() {
       <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Approving money off a folio</h2>
         <p className="mt-1 text-xs text-ink/60">
-          Rule: the bigger the amount, the more senior the approval. The manager types their own PIN; the front desk cannot
-          type it for them.
+          Bigger amounts need more senior approval.
         </p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {(
@@ -357,8 +350,7 @@ export default function HotelSettingsPage() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-ink">Take the approver's photo</p>
             <p className="text-xs text-ink/60">
-              The camera takes one picture when the PIN is accepted, so a borrowed PIN shows the wrong face. If the computer
-              has no camera it is recorded as no photo.
+              One photo when the PIN is accepted.
             </p>
           </div>
           <Switch
@@ -383,8 +375,7 @@ export default function HotelSettingsPage() {
           />
         </label>
         <p className="mt-1 text-xs text-ink/55">
-          After this an item is flagged as held too long and may be disposed of. Your council or your own policy decides the
-          number.
+          After this an item may be disposed of.
         </p>
       </section>
       )}
@@ -393,8 +384,7 @@ export default function HotelSettingsPage() {
         <section className="rounded-xl border border-ink/10 bg-surface p-5">
           <h2 className="font-semibold text-ink">Leaving without stopping at the desk</h2>
           <p className="mt-1 text-xs text-ink/60">
-            Rule: only a stay secured by a card or a company account can settle itself. A deposit already taken cannot be
-            charged again, so those guests always settle at the desk.
+            Only stays secured by a card or company account.
           </p>
           <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
             Settle by itself up to (UGX)
@@ -406,16 +396,14 @@ export default function HotelSettingsPage() {
             />
           </label>
           <p className="mt-1 text-xs text-ink/55">
-            Above this a person looks at it before the guest leaves. 0 means no ceiling, which is a decision rather than
-            a setting: it says any bill at all may be charged with nobody watching.
+            Above this, staff check first. 0 means no limit.
           </p>
           {features.guestPortal && (
             <div className="mt-4 flex items-start justify-between gap-4 border-t border-ink/10 pt-3">
               <div>
                 <p className="text-sm font-medium text-ink">Guests finish online check-out themselves</p>
                 <p className="mt-0.5 text-xs text-ink/55">
-                  On the day they leave, a guest who checks out from their own page is checked out at once when the rule
-                  above allows it. Off, each one waits for one click at the desk on the Today page.
+                  Off: the desk confirms each one on the Today page.
                 </p>
               </div>
               <Switch
@@ -432,9 +420,7 @@ export default function HotelSettingsPage() {
       <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Guest records</h2>
         <p className="mt-1 text-xs text-ink/60">
-          Rule: a guest's booking, the identification taken at check-in and their invoices are kept because the stay and
-          the law require them. The profile — what they like, how often they come, what they earn — is kept only while
-          the guest allows it.
+          Bookings, ID and invoices are always kept. Profiles only with consent.
         </p>
         <label className="mt-3 block max-w-xs text-sm font-medium text-ink">
           Keep a guest profile for (months after their last stay)
@@ -446,8 +432,7 @@ export default function HotelSettingsPage() {
           />
         </label>
         <p className="mt-1 text-xs text-ink/55">
-          After this the profile is cleared and the guest is no longer recognised. Their stays and invoices stay, because
-          they must. Estimate: tax records are kept far longer than this; confirm the period with your accountant.
+          Then the profile is cleared. Stays and invoices remain.
         </p>
       </section>
       )}
@@ -456,7 +441,7 @@ export default function HotelSettingsPage() {
       <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Servicing a room with a guest in it</h2>
         <p className="mt-1 text-xs text-ink/60">
-          Rule: every occupied room is serviced each day. These two numbers decide what that means here.
+          Occupied rooms are serviced daily.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-medium text-ink">
@@ -488,7 +473,7 @@ export default function HotelSettingsPage() {
               className={box}
             />
             <span className="mt-1 block text-xs font-normal text-ink/55">
-              A room nobody has entered for days is a welfare question, not a cleaning one.
+              A welfare check, not cleaning.
             </span>
           </label>
         </div>
@@ -501,9 +486,7 @@ export default function HotelSettingsPage() {
             <div className="min-w-0">
               <h2 className="font-semibold text-ink">Assign new tasks automatically</h2>
               <p className="mt-1 text-xs text-ink/60">
-                Cleaning by zone. New work, such as a room just checked out, goes straight to the attendant on that
-                floor or area with the least to do, and lands in her list in order. Off: it waits for the head of
-                housekeeping to share it out.
+                New work goes to the least busy attendant in that zone.
               </p>
             </div>
             <Switch
@@ -521,7 +504,7 @@ export default function HotelSettingsPage() {
           <div>
             <h2 className="font-semibold text-ink">Public areas</h2>
             <p className="mt-1 text-xs text-ink/60">
-              Corridors, the lobby, the pool. They go on the roster with the rooms and into the cleaning record.
+              Corridors, lobby, pool. Cleaned with the rooms.
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-brand/10 px-2 py-1 text-xs font-semibold text-brand-deep">
@@ -592,8 +575,7 @@ export default function HotelSettingsPage() {
             <div className="min-w-0">
               <h2 className="font-semibold text-ink">Assign rooms each morning</h2>
               <p className="mt-1 text-xs text-ink/60">
-                At the hour below, every arrival for the day that has no room is given one by the assignment rules, as if the desk had
-                pressed Assign rooms. A room somebody chose by hand is never changed. Off unless you turn it on.
+                Gives a room to every unassigned arrival. Hand-picked rooms stay.
               </p>
             </div>
             <Switch
@@ -612,7 +594,7 @@ export default function HotelSettingsPage() {
                 className={box}
               />
               <span className="mt-1 block text-xs font-normal text-ink/55">
-                {options.autoAssign.lastRun ? `Last ran on ${dayMonth(options.autoAssign.lastRun)}. ` : ''}In this prototype it runs only while the app is open.
+                {options.autoAssign.lastRun ? `Last ran on ${dayMonth(options.autoAssign.lastRun)}. ` : ''}Runs only while the app is open.
               </span>
             </label>
           )}
@@ -625,8 +607,7 @@ export default function HotelSettingsPage() {
           <div className="min-w-0">
             <h2 className="font-semibold text-ink">Night audit</h2>
             <p className="mt-1 text-xs text-ink/60">
-              The end-of-day check: arrivals that never came, guests who should have left, and tonight's room charges. Switch
-              it off if your hotel does not close the day this way.
+              The end-of-day check of arrivals, departures and charges.
             </p>
           </div>
           <Switch on={options.nightAudit} label="Night audit" onChange={(v) => setOptions({ nightAudit: v })} />
@@ -641,8 +622,7 @@ export default function HotelSettingsPage() {
               className={box}
             />
             <span className="mt-1 block text-xs font-normal text-ink/55">
-              At this hour the day closes itself: the figures are recorded and a booking that never arrived becomes a no-show, so
-              tomorrow's arrivals are true. Somebody can still close it earlier by hand.
+              The day closes itself at this hour. No-shows are recorded.
             </span>
           </label>
         )}
@@ -653,8 +633,7 @@ export default function HotelSettingsPage() {
       <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <h2 className="font-semibold text-ink">Check-in and check-out</h2>
         <p className="mt-1 text-xs text-ink/60">
-          Rule: rooms are promised from the check-in time. Early check-in is free when a clean room is ready; otherwise the
-          guest waits. Late check-out is free until the hour below, then half a night, then a full night.
+          Early check-in is free when a clean room is ready.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(
@@ -680,7 +659,7 @@ export default function HotelSettingsPage() {
         </div>
         <p className="mt-2 text-xs text-ink/55">
           After {stayTimes.lateHalfUntil} a full night is charged for leaving late. Arriving before {stayTimes.earlyFreeFrom} costs half a
-          night, and before {stayTimes.earlyFullBefore} a full one, because the guest has slept a night the hotel could have sold.
+          night, and before {stayTimes.earlyFullBefore} a full one.
         </p>
         <label className="mt-3 block max-w-sm text-sm font-medium text-ink">
           Partner hotel for overflow (optional)
@@ -692,7 +671,7 @@ export default function HotelSettingsPage() {
           />
         </label>
         <p className="mt-1 text-xs text-ink/55">
-          When no room and no upgrade is possible, the front desk is offered a task to move the guest there.
+          Used when no room or upgrade is free.
         </p>
       </section>
       )}
@@ -701,7 +680,7 @@ export default function HotelSettingsPage() {
         <section className="rounded-xl border border-ink/10 bg-surface p-5">
           <h2 className="font-semibold text-ink">Room inspections</h2>
           <p className="mt-1 text-xs text-ink/60">
-            These are rules decide which cleaned rooms a supervisor must check.
+            Which cleaned rooms a supervisor must check.
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -745,7 +724,7 @@ export default function HotelSettingsPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink">Always inspect rooms with a guest arriving today</p>
                   <p className="text-xs text-ink/60">
-                    Off means a pure percentage, even for rooms promised to an arriving guest.
+                    Off: a pure percentage.
                   </p>
                 </div>
                 <Switch
@@ -761,7 +740,7 @@ export default function HotelSettingsPage() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink">Rushed rooms skip inspection</p>
               <p className="text-xs text-ink/60">
-                A room the front desk asked for first goes straight to ready, so the guest is not kept waiting.
+                Rushed rooms go straight to ready.
               </p>
             </div>
             <Switch
@@ -777,9 +756,7 @@ export default function HotelSettingsPage() {
       <section className="rounded-xl border border-ink/10 bg-surface p-5">
         <p className="text-sm font-semibold text-ink">The demonstration</p>
         <p className="mt-0.5 text-xs text-ink/60">
-          Bookings, rooms and guests are kept in this browser so that the guest's own pages - the pre-arrival form and the
-          bill - see what the front desk sees when they are opened in another tab. Two tabs on this machine share it; two
-          devices do not, which needs the real server.
+          Sample data is kept in this browser and shared between its tabs.
         </p>
         <div className="mt-3">
           <Button

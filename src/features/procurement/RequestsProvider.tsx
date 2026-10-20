@@ -159,6 +159,21 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
     }
   }, [setStock, setStores, setBudgets, setBatches])
 
+  // Area I: add the food, drinks and spares suppliers to a saved supplier list once; keep every saved row.
+  useEffect(() => {
+    const marker = 'gastora.inventory.areaISuppliers.v1'
+    try {
+      if (window.localStorage.getItem(marker) === '1') return
+      setSuppliers((current) => {
+        const known = new Set(current.map((s) => s.name.trim().toLowerCase()))
+        return [...current, ...SAMPLE_SUPPLIERS.filter((s) => !known.has(s.name.trim().toLowerCase()))]
+      })
+      window.localStorage.setItem(marker, '1')
+    } catch {
+      // Browser storage unavailable: the sample list already has them.
+    }
+  }, [setSuppliers])
+
   const who = user?.name ?? 'Someone'
   // A hotel only sees requests of its own way of working.
   const requests = all.filter((r) => r.flow === flow)
@@ -742,20 +757,22 @@ export default function RequestsProvider({ children }: { children: ReactNode }) 
       return 'There is nothing to approve here.'
     },
 
-    purchase: (id, supplier) => {
+    purchase: (id, supplier, unitCosts) => {
       const r = find(id)
       if (!r) return 'Request not found.'
       if (!can('purchase')) return 'Only procurement can raise a purchase order.'
       if (r.status !== 'Approved') return 'This requisition is not approved yet.'
       if (!suppliers.some((s) => s.active && s.name === supplier)) return 'Pick a supplier from the list.'
+      // Area I: an awarded quotation carries the supplier's own prices onto the order.
+      const items = unitCosts ? r.items.map((i, n) => ({ ...i, unitCost: unitCosts[n] > 0 ? unitCosts[n] : i.unitCost })) : r.items
       const po: PurchaseOrder = {
         id: `PO-${poSeq.current++}`,
         requestId: r.id,
         supplier,
         createdAt: new Date().toISOString(),
         by: who,
-        items: r.items,
-        total: requestTotal(r),
+        items,
+        total: requestTotal({ items }),
         status: 'Ordered',
       }
       setOrders((os) => [po, ...os])

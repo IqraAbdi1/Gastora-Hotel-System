@@ -105,13 +105,12 @@ export default function RequestsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Requests</h1>
-        <p className="text-sm text-ink/60">Rooms the front desk needs first. Answer with a ready time, or start cleaning.</p>
+        <p className="text-sm text-ink/60">Rooms the front desk needs first.</p>
       </div>
 
       {open.length === 0 ? (
         <p className="rounded-xl border border-ink/10 bg-surface p-6 text-sm text-ink/60">
-          No requests from the front desk right now. When a guest is waiting for a room, the front desk can rush one from the
-          check-in screen and it appears here.
+          No requests from the front desk right now.
         </p>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">

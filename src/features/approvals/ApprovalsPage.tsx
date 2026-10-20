@@ -96,7 +96,7 @@ export default function ApprovalsPage() {
       </Card>
 
       <p className="text-xs text-ink/55">
-        Rule: if a photo is not the person whose PIN was used, the PIN was borrowed. Change that PIN and ask why.
+        Wrong face on a photo means a borrowed PIN. Change that PIN.
       </p>
     </div>
   )

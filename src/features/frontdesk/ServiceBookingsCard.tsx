@@ -60,7 +60,7 @@ export default function ServiceBookingsCard() {
       icon="calendar"
       title="Dining, spa and activities"
       count={waiting.length}
-      description="Booked by guests from their own pages. Check with the department, then confirm."
+      description="Guest bookings to check and confirm."
       padded
     >
       {waiting.length > 0 ? (
@@ -167,8 +167,7 @@ export default function ServiceBookingsCard() {
       )}
 
       <p className="mt-3 text-xs text-ink/45">
-        <Badge tone="neutral">Rule</Badge> A booking holds its places from the moment the guest asks, so no time is sold
-        twice. Declining or cancelling gives them back.
+        <Badge tone="neutral">Rule</Badge> Places are held from the request. Declining frees them.
       </p>
     </Card>
   )

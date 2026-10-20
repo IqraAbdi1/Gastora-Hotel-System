@@ -64,7 +64,7 @@ export default function BillPage() {
         )}
       </div>
       <p className="mt-4 text-xs text-ink/55">
-        Shown as at {TODAY}. If anything here is not as you expected, reply to the message and the hotel will look at it.
+        As at {TODAY}. Questions? Reply to the hotel's message.
       </p>
 
       <GuestFeedbackForm stay={stay} />

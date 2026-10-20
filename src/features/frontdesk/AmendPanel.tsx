@@ -146,7 +146,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
                 />
               </label>
             </div>
-            {inHouse && <p className="text-xs text-ink/60">The guest is in the house, so only the departure can change (extend or shorten).</p>}
+            {inHouse && <p className="text-xs text-ink/60">Guest is in house: only the departure can change.</p>}
 
             <label className="block text-sm font-medium">
               Reason
@@ -184,7 +184,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
 
                 {check.blockedByRoom && (
                   <p className="rounded-lg bg-bad/10 p-3 text-sm text-bad">
-                    Room {r.room} is booked by another guest on those nights, so the stay cannot be extended in this room.
+                    Room {r.room} is booked by another guest on those nights.
                   </p>
                 )}
                 {check.roomLost && (
@@ -222,7 +222,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
                       className={`${field} mt-1`}
                     />
                     <span className="mt-1 block text-xs font-normal text-ink/60">
-                      Manager approval is simulated here. The real system asks a manager to approve and logs who did.
+                      Approval is simulated in this demo.
                     </span>
                   </label>
                 )}
@@ -230,7 +230,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
             )}
 
             <p className="text-xs text-ink/60">
-              This hotel: free to change {rates.changeFreeDays} or more days before arrival. Closer than that, moving or shortening a booking costs {rates.changeFeeNights} night{rates.changeFeeNights === 1 ? '' : 's'}. Extending is always free. The nightly rate and the deposit stay with the booking.
+              Free to change {rates.changeFreeDays}+ days before arrival, then {rates.changeFeeNights} night{rates.changeFeeNights === 1 ? '' : 's'}. Extending is always free.
             </p>
           </div>
 

@@ -187,7 +187,7 @@ export default function RoomCheckPage() {
       <PageHeader
         eyebrow="Housekeeping"
         title="Room check"
-        description="Walk the floor, write what is actually in each room, and compare it with what the system believes."
+        description="Walk the floor and compare rooms with the system."
         actions={
           open ? (
             <Button onClick={finish}>Finish the walk</Button>
@@ -221,7 +221,7 @@ export default function RoomCheckPage() {
               title="Every room"
               icon="list"
               count={open.rooms.length}
-              description="Including the rooms the system believes are empty. A sleeper is only ever found in a room nobody thought to look at."
+              description="Including rooms shown as empty."
               padded={false}
             >
               <DataTable columns={walkColumns} rows={open.rooms} rowKey={(r) => r.room} />
@@ -231,7 +231,7 @@ export default function RoomCheckPage() {
               title="Differences"
               icon="alert"
               count={toSettle.length}
-              description="Raising one marks the room as a discrepancy for the front desk and housekeeping to settle. Nothing here changes a booking: only a person can say which side is right."
+              description="Raising one flags the room. Bookings are not changed."
               padded={false}
             >
               {toSettle.length === 0 ? (
@@ -249,7 +249,7 @@ export default function RoomCheckPage() {
         <Card>
           <EmptyState
             title="No room check running"
-            hint="Start one and walk the floor. It takes a few minutes and it is the only way a sleeper is ever found."
+            hint="Start one and walk the floor."
             action={<Button onClick={startWalk}>Start a room check</Button>}
           />
         </Card>

@@ -205,7 +205,7 @@ export function NewReservationForm({
   if (company && !companyAccount) problems.push('Choose the company, or untick "Book for a company".')
   if (companyPlan) problems.push(...companyPlan.errors)
   if (!agentOk) problems.push('Choose the travel agent who made the booking.')
-  if (multi && company) problems.push('A company booking takes one room at a time here. For several company rooms, use Groups.')
+  if (multi && company) problems.push('One room per company booking. Use Groups for more.')
   if (multi && extraRefusal.some(Boolean)) problems.push('One of the extra rooms is on dates the hotel has closed for that room type.')
   if (multi && extrasFull) problems.push('One of the extra rooms is past what the hotel allows to be oversold.')
   if (multi && extrasOver && !(override && reason.trim().length >= 5)) problems.push('An extra room oversells its type. A manager override and a reason are needed.')
@@ -438,7 +438,7 @@ export function NewReservationForm({
               </label>
             </div>
             <p className="text-sm text-ink/60">
-              {datesOk ? `${nights} night${nights === 1 ? '' : 's'}` : 'Departure must be after arrival, and arrival cannot be in the past.'}
+              {datesOk ? `${nights} night${nights === 1 ? '' : 's'}` : 'Departure must be after arrival, and arrival not in the past.'}
             </p>
           </div>
           </Card>
@@ -538,7 +538,7 @@ export function NewReservationForm({
                 <p className="font-semibold text-bad">{RULE_LABEL[refusal.rule.kind]}: these dates cannot be sold.</p>
                 <p className="mt-0.5 text-ink/75">{refusal.why}</p>
                 <p className="mt-1 text-xs text-ink/55">
-                  The hotel sets this in Rates and policies. It is not an availability problem and no override gets around it.
+                  Set in Rates and policies. Cannot be overridden.
                 </p>
               </div>
             )}
@@ -580,7 +580,7 @@ export function NewReservationForm({
           {!walkin && features.multiRoom && (
             <Card
               title="Rooms in this booking"
-              description="One room unless you add more. Every extra room is its own booking for the same dates and rate plan, linked to this one."
+              description="Each extra room is a linked booking, same dates and rate."
               padded
             >
               <div className="space-y-3">
@@ -667,8 +667,7 @@ export function NewReservationForm({
                       <span>
                         <b>The booker pays for every room on one bill</b>
                         <span className="block text-xs text-ink/60">
-                          Charges on the other rooms go to the booker's bill, and the desk can settle every room in one go. The room money
-                          stays on each room.
+                          Extras on other rooms go to the booker's bill.
                         </span>
                       </span>
                     </label>
@@ -700,7 +699,7 @@ export function NewReservationForm({
                     )}
                     {company && (
                       <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">
-                        A company booking takes one room at a time here. For several company rooms, use Groups.
+                        One room per company booking. Use Groups for more.
                       </p>
                     )}
                   </>
@@ -787,7 +786,7 @@ export function NewReservationForm({
 
             {likely.length > 0 && (
               <div className="space-y-2 rounded-lg bg-warn/10 p-3 text-sm">
-                <p className="font-semibold text-warn">Possible duplicate. Rule check: same phone, same name or a very similar name.</p>
+                <p className="font-semibold text-warn">Possible duplicate: same phone or a similar name.</p>
                 {likely.map((m) => (
                   <div key={m.guest.id} className="flex items-center justify-between gap-3">
                     <span>
@@ -870,7 +869,7 @@ export function NewReservationForm({
               </label>
             </div>
             <p className="text-xs text-ink/60">
-              Payment is simulated here. In the real system, mobile money and card bookings are confirmed only after the payment provider confirms (BR-FO-10).
+              Payment is simulated in this demo.
               {deposit > 0 && ` Recorded as ${method}.`}
             </p>
           </div>
@@ -925,7 +924,7 @@ export function NewReservationForm({
                 <p className="text-xs text-ink/60">Given automatically by the hotel's loyalty rules.</p>
               )}
               {companyPlan?.selected.length ? (
-                <p className="text-xs text-warn">A company price already applies, so the loyalty discount is not added on top.</p>
+                <p className="text-xs text-warn">Not added on top of a company price.</p>
               ) : null}
             </div>
           )}

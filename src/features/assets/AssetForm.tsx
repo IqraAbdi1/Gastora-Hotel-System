@@ -100,7 +100,7 @@ export default function AssetForm({
         <Field
           label="Where it is"
           required
-          hint="Plant room, Kitchen, Roof, Laundry — wherever a technician would go to find it."
+          hint="For example: Plant room, Kitchen, Roof."
           error={showProblem('where') ? PROBLEM_TEXT.where : undefined}
         >
           {(id) => (
@@ -160,7 +160,7 @@ export default function AssetForm({
                 />
               )}
             </Field>
-            <Field label="Years expected" hint={`How long the hotel expects to use it. ${DEFAULT_LIFE_YEARS} if left empty.`}>
+            <Field label="Years expected" hint={`Expected years of use. Default ${DEFAULT_LIFE_YEARS}.`}>
               {(id) => (
                 <Input
                   id={id}

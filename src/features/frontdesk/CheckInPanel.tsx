@@ -483,7 +483,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                           <div>
                             <p className="text-sm font-semibold text-ink">Show the ID to the camera</p>
                             <p className="text-xs text-ink/60">
-                              A national ID or passport fills these fields by itself. A driving permit is typed.
+                              Fills in from a national ID or passport.
                             </p>
                           </div>
                           <Button variant={scanned ? 'ghost' : 'primary'} onClick={() => setScanOpen(true)}>
@@ -500,8 +500,8 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                             </div>
                             {!sameName(scanned.idName, r.guest) && (
                               <p className="rounded-lg bg-warn/[0.1] p-2.5 text-sm text-ink/80">
-                                The ID is in the name <strong>{scanned.idName}</strong> and the booking is in the name <strong>{r.guest}</strong>. That is
-                                normal when somebody else booked the room, but the person in front of you is the one whose ID this is.
+                                The ID is in the name <strong>{scanned.idName}</strong> and the booking is in the name <strong>{r.guest}</strong>. Fine if
+                                someone else booked.
                               </p>
                             )}
                           </div>
@@ -533,10 +533,6 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                       </Field>
                       <Field label="Nationality">{(id) => <Input id={id} value={nationality} onChange={(e) => setNationality(e.target.value)} />}</Field>
                     </div>
-                    <p className="mt-4 text-xs text-ink/55">
-                      The ID is checked against the guest in front of you. What the card reader captures is kept with the stay; the hotel does not
-                      keep a separate photograph.
-                    </p>
                     {scanOpen && <IdScanSheet photo={idPhoto} onUse={applyScan} onClose={() => setScanOpen(false)} />}
                   </Card>
                 )}
@@ -605,7 +601,7 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                     <SignaturePad onChange={setSignature} />
                     <label className="mt-4 flex items-start gap-2 text-sm">
                       <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-1" />
-                      <span>The guest has read and accepted the hotel terms and conditions (required).</span>
+                      <span>The guest accepts the hotel terms and conditions (required).</span>
                     </label>
                     <label className="mt-2 flex items-start gap-2 text-sm">
                       <input
@@ -615,9 +611,8 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                         className="mt-1"
                       />
                       <span>
-                        <span className="font-medium">Remember me for next time.</span> The guest joins the hotel's
-                        returning-guest programme: their stays are counted, their preferences kept, and any reward
-                        offered on the next visit (optional).
+                        <span className="font-medium">Remember me for next time.</span> Joins the returning-guest programme
+                        (optional).
                       </span>
                     </label>
                     <label className="mt-2 flex items-start gap-2 text-sm">
@@ -637,14 +632,12 @@ export default function CheckInPanel({ reservation: initial, room: preferred, on
                     <div className="mt-3 rounded-lg border border-ink/10 bg-canvas/60 p-2.5 text-xs text-ink/70">
                       <p className="font-semibold text-ink">What the hotel keeps, and why</p>
                       <p className="mt-0.5">
-                        The booking, the ID shown at check-in and the bill are kept because the law and this stay
-                        require them, whatever the guest answers above. The two optional ticks are the only parts the
-                        guest chooses, and either can be withdrawn later.
+                        Booking, ID and bill are kept by law. Optional ticks can be withdrawn later.
                       </p>
                     </div>
 
                     <p className="mt-3 text-xs text-ink/55">
-                      The signature is personal data. In this prototype it is kept in memory only. In the real system it is stored securely and shown only to authorised staff.
+                      The signature is shown only to authorised staff.
                     </p>
                   </Card>
                 )}

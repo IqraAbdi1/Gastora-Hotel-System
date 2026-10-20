@@ -238,7 +238,7 @@ export default function MyTasksPage() {
         <Card>
           <EmptyState
             title="This page is for room attendants"
-            hint="It shows the work given to whoever is signed in. Your account is not on the housekeeping staff list."
+            hint="Your account is not on the housekeeping list."
           />
         </Card>
       </div>
@@ -293,7 +293,7 @@ export default function MyTasksPage() {
           <Card>
             <EmptyState
               title="Nothing on your list"
-              hint="Your supervisor gives out the work. Anything handed to you shows up here."
+              hint="Work assigned to you shows here."
             />
           </Card>
         )}

@@ -130,7 +130,7 @@ export default function NotificationBell() {
               )}
             </div>
             <p className="border-t border-ink/10 px-4 py-2 text-[11px] text-ink/50">
-              Sample data: worked out in this browser from the current bookings and tasks. Not saved or shared.
+              Sample data from this browser.
             </p>
           </div>
         </>

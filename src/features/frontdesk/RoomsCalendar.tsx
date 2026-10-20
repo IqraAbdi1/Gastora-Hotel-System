@@ -269,7 +269,7 @@ export default function RoomsCalendar() {
 
       {big && !filtersOn && (
         <p className="text-xs text-ink/60">
-          This is a large hotel, so the room types are folded. Open one, or filter by floor or search, to see its rooms. The numbers at the bottom always cover the whole hotel.
+          Room types are folded. Open one or filter to see rooms.
         </p>
       )}
 

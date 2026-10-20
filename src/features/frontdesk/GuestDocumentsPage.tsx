@@ -202,7 +202,7 @@ export default function GuestDocumentsPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Guest documents"
-        description="Every registration card, folio, receipt and tax invoice. Search, open and print."
+        description="Registration cards, folios, receipts and tax invoices."
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

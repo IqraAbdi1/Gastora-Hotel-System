@@ -371,6 +371,10 @@ export const SAMPLE_SUPPLIERS: Supplier[] = [
   { id: 'sup2', name: 'Mukwano Wholesale', phone: '0700 000 102', supplies: 'Soap, toiletries, paper goods', active: true },
   { id: 'sup3', name: 'Nile Linen House', phone: '0700 000 103', supplies: 'Sheets, towels, linen', active: true },
   { id: 'sup4', name: 'Local market', phone: '', supplies: 'Small urgent items', active: true },
+  // Area I: suppliers for food, drinks and spares, so quotations and contracts cover the whole store.
+  { id: 'sup5', name: 'Kakira Fresh Foods', phone: '0700 000 105', supplies: 'Poultry, rice, fresh produce', active: true },
+  { id: 'sup6', name: 'Crown Beverages Ltd', phone: '0700 000 106', supplies: 'Soft drinks, beer, water', active: true },
+  { id: 'sup7', name: 'Katwe Hardware and Plumbing', phone: '0700 000 107', supplies: 'Taps, bulbs, plumbing and electrical spares', active: true },
 ]
 /** Which department a head can endorse. The general manager can endorse any. */
 export const headDepartment: Partial<Record<RoleId, Department>> = {

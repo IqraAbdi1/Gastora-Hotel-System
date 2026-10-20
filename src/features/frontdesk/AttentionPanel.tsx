@@ -34,7 +34,7 @@ export default function AttentionPanel({
           <span className="mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-good/10 text-good">
             <Icon name="check" className="h-6 w-6" />
           </span>
-          <EmptyState title="All clear" hint="No missed arrivals, overdue stays, unguaranteed arrivals or rooms short." />
+          <EmptyState title="All clear" hint="Nothing needs attention." />
         </div>
       ) : (
         <div className="space-y-5">

@@ -154,8 +154,7 @@ export default function PayNow({ stay, balance, onClose }: { stay: Reservation; 
         </div>
 
         <p className="text-xs text-ink/50">
-          <Badge tone="neutral">Simulated</Badge> No money moves in this demonstration and no payment provider is
-          contacted. The waiting is real, though: the hotel only records a payment once the provider answers.
+          <Badge tone="neutral">Simulated</Badge> No money moves in this demo.
         </p>
       </div>
     </Modal>
@@ -185,7 +184,7 @@ export function Receipt({ p }: { p: GuestPayment }) {
         <Row k="Paid" v={ugx(p.amount)} strong />
         <Row k="Still owed" v={p.balanceAfter > 0 ? ugx(p.balanceAfter) : 'Nothing'} />
       </dl>
-      <p className="text-xs text-ink/50">Simulated payment: the provider reference is made up for the demonstration.</p>
+      <p className="text-xs text-ink/50">Simulated payment. The reference is made up.</p>
     </div>
   )
 }

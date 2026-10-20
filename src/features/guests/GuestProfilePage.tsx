@@ -176,8 +176,7 @@ export default function GuestProfilePage() {
           </dl>
           {!full && (
             <p className="mt-2 text-xs text-ink/55">
-              The home address, the identification and what this guest has spent over the years are part of the
-              hotel's record rather than the desk's work, so they are kept for the manager.
+              Address, ID and spending are shown to managers only.
             </p>
           )}
         </Card>
@@ -202,8 +201,7 @@ export default function GuestProfilePage() {
               {guest.preferences?.other && <p className="mt-2 text-sm text-ink/75">{guest.preferences.other}</p>}
               {full && tags.some(isSensitiveTag) && (
                 <p className="mt-2 text-xs text-ink/55">
-                  The amber ones are dietary or access needs. The law treats those as sensitive, and the guest agreed
-                  to the hotel keeping them.
+                  Amber: sensitive needs, kept with consent.
                 </p>
               )}
             </>
@@ -227,9 +225,8 @@ export default function GuestProfilePage() {
             ))}
           </ul>
           <p className="mt-2 text-xs text-ink/55">
-            {guest.consentAt ? `Last answered ${guest.consentAt}.` : 'Not answered yet.'} The booking, the
-            identification shown at check-in and the bills are kept whatever these say, because the law and the stay
-            require them.
+            {guest.consentAt ? `Last answered ${guest.consentAt}.` : 'Not answered yet.'} Bookings, ID and bills
+            are always kept by law.
           </p>
         </Card>
         )}
@@ -238,7 +235,7 @@ export default function GuestProfilePage() {
           <Card title="The programme" icon="money" padded>
             {!known ? (
               <p className="text-sm text-ink/70">
-                This guest has not agreed to be remembered between stays, so they earn nothing and no tier is counted.
+                Not opted in, so nothing is earned.
               </p>
             ) : (
               <>
@@ -279,7 +276,7 @@ export default function GuestProfilePage() {
           title="What they are worth"
           icon="money"
           padded
-          description="Counted from what they actually paid. Nothing here guesses what they will spend next."
+          description="From what they actually paid."
         >
           <div className="grid gap-3 sm:grid-cols-4">
             {[
@@ -317,11 +314,6 @@ export default function GuestProfilePage() {
             </ul>
           )}
 
-          <p className="mt-2 text-xs text-ink/55">
-            The yearly figure is money they have already paid, spread over the time the hotel has known them. It is
-            the fair way to compare a guest of five years with a guest of five months, but it is a rate, not a
-            promise: on a few months of history it moves a long way on one more stay.
-          </p>
         </Card>
       )}
 

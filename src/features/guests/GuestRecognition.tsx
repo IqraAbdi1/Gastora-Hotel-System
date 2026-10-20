@@ -35,8 +35,7 @@ export default function GuestRecognition({
     if (compact) return null
     return (
       <div className="rounded-lg border border-ink/10 bg-canvas/60 p-2.5 text-xs text-ink/60">
-        Not in the returning-guest programme, so no history is kept or shown. Ask at check-in whether they would
-        like the hotel to remember them.
+        Not in the returning-guest programme. Ask at check-in.
       </div>
     )
   }

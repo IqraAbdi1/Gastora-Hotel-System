@@ -58,7 +58,7 @@ export default function PreferenceChips({
       </div>
       <Input value={note} onChange={(e) => onNote(e.target.value)} placeholder="Anything else to remember for next time" />
       <p className="text-xs text-ink/55">
-        Saved on the guest, so it is here next time. Keep it factual: a guest can ask to see what the hotel wrote about them.
+        Keep it factual. Guests can ask to see it.
       </p>
 
       <div className="rounded-lg border border-info/25 bg-info/[0.07] p-2.5">
@@ -74,9 +74,7 @@ export default function PreferenceChips({
             className="mt-1"
           />
           <span>
-            <span className="font-medium">Diet and access needs.</span> The guest agrees to the hotel keeping these
-            between stays. Ask separately: what someone eats can say what they believe or what is wrong with their
-            health, and the law treats it as sensitive.
+            <span className="font-medium">Diet and access needs.</span> Sensitive data. Ask the guest separately.
           </span>
         </label>
         <div className="mt-2 flex flex-wrap gap-1.5">

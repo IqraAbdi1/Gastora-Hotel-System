@@ -61,13 +61,12 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
       icon="money"
       count={advice.length}
       padded
-      description="Rules reading pace, occupancy and the events the hotel entered. Nothing changes until somebody approves it."
+      description="From pace, occupancy and events. Nothing changes until approved."
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <p className="text-xs text-ink/60">
-          Each suggestion says what it rests on: a <strong className="text-ink/80">Rule</strong> is something counted,
-          an <strong className="text-ink/80">Estimate</strong> is the forecast, which any conference nobody told us
-          about will beat, and <strong className="text-ink/80">Your input</strong> is an event the hotel entered below.
+          <strong className="text-ink/80">Rule</strong>: counted. <strong className="text-ink/80">Estimate</strong>: forecast.{' '}
+          <strong className="text-ink/80">Your input</strong>: an event you entered.
         </p>
         <Select
           value={type}
@@ -83,8 +82,7 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
 
       {advice.length === 0 ? (
         <p className="mt-3 rounded-lg bg-good/[0.08] p-3 text-sm text-ink/75">
-          Nothing to suggest for {type} rooms. Every night ahead is either filling the way this hotel usually fills,
-          too far off to act on, or already priced by hand.
+          Nothing to suggest for {type} rooms.
         </p>
       ) : (
         <ul className="mt-3 space-y-2">
@@ -155,7 +153,7 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
             ))}
           </ul>
           <p className="mt-1 text-xs text-ink/55">
-            A price set by hand beats every rule in the calendar. Putting it back returns the night to the rules.
+            Hand-set prices override the calendar.
           </p>
         </div>
       )}
@@ -185,8 +183,7 @@ export default function RateAdviceCard({ nights }: { nights: NightPace[] }) {
             ))}
           </ul>
           <p className="mt-3 text-xs text-ink/55">
-            Approving sets this one night's {open.type} price and signs it with your name. It does not change the
-            published rate, the season, or any other night.
+            Sets this one night's {open.type} price only, signed with your name.
           </p>
         </Modal>
       )}

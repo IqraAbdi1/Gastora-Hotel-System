@@ -11,6 +11,14 @@ export type IconName =
   | 'hr'
   | 'admin'
   | 'apps'
+  // Area K
+  | 'reports'
+  // Area G
+  | 'events'
+  // Area H
+  | 'accounting'
+  // Area L: AI and automation layer.
+  | 'automation'
 
 const paths: Record<IconName, ReactNode> = {
   overview: (
@@ -77,6 +85,39 @@ const paths: Record<IconName, ReactNode> = {
       <circle cx="9" cy="12" r="3" />
       <path d="M4 18h10" />
       <circle cx="17" cy="18" r="3" />
+    </>
+  ),
+  reports: (
+    <>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M22 20H2" />
+    </>
+  ),
+  // Area G: events and sales (a calendar with a star)
+  events: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+      <path d="M12 12.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" />
+    </>
+  ),
+  // Area H: a ledger book
+  accounting: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8" />
+      <path d="M8 12h8" />
+      <path d="M8 16h5" />
+    </>
+  ),
+  // Area L: automation
+  automation: (
+    <>
+      <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
     </>
   ),
   apps: (

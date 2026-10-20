@@ -31,7 +31,7 @@ export default function ZonePlanDialog({ onClose, onRoster }: { onClose: () => v
     <Modal
       wide
       title="Share out by zone"
-      description="Each person stays on her own floor or area where she can, and the minutes of work are evened out. Rooms with a guest arriving today and urgent work come first in each list."
+      description="Each person keeps her own zone. Arrivals and urgent work first."
       onClose={onClose}
       footer={
         <>
@@ -65,8 +65,7 @@ export default function ZonePlanDialog({ onClose, onRoster }: { onClose: () => v
           <p className="flex flex-wrap items-center gap-2 text-xs text-ink/60">
             <Badge tone="brand">Rule</Badge>
             {plan.people.length} on today &middot; {hoursAndMinutes(total)} of work in all &middot; typical minutes: departure{' '}
-            {TASK_MINUTES['Departure Clean']}, stayover {TASK_MINUTES['Stay Over']}, public area {TASK_MINUTES['Public Area']}. A
-            Deluxe room counts a third more, a suite double.
+            {TASK_MINUTES['Departure Clean']}, stayover {TASK_MINUTES['Stay Over']}, public area {TASK_MINUTES['Public Area']}.
           </p>
         )}
 
@@ -137,10 +136,6 @@ export default function ZonePlanDialog({ onClose, onRoster }: { onClose: () => v
             {plan.unplaced.map((w) => placeLabel(w.place)).join(', ')}.
           </p>
         )}
-        <p className="text-xs text-ink/50">
-          Walking between floors is not measured, only avoided. The minutes are typical figures, not this hotel&apos;s own
-          timings.
-        </p>
       </div>
     </Modal>
   )

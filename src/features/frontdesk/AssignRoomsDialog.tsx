@@ -56,7 +56,7 @@ export function AssignRoomsDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="Assign rooms for today's arrivals"
-      description="The plan the rules propose. Nothing is assigned until you press the button, and a room somebody already chose is never changed."
+      description="Nothing is assigned until you confirm. Chosen rooms stay."
       onClose={onClose}
       wide
       footer={
@@ -87,8 +87,7 @@ export function AssignRoomsDialog({ onClose }: { onClose: () => void }) {
     >
       {done !== null ? (
         <p className="rounded-lg bg-good/10 p-3 text-sm font-semibold text-good">
-          {done} room{done === 1 ? '' : 's'} assigned. The rooms show on the arrivals list and on each booking; the desk can still change any
-          of them at check-in.
+          {done} room{done === 1 ? '' : 's'} assigned. You can still change them at check-in.
         </p>
       ) : rows.length === 0 ? (
         <p className="text-sm text-ink/60">Every arrival today already has a room.</p>
@@ -96,8 +95,7 @@ export function AssignRoomsDialog({ onClose }: { onClose: () => void }) {
         <div className="space-y-3">
           <DataTable columns={columns} rows={rows} rowKey={(x) => x.r.id} />
           <p className="text-xs text-ink/55">
-            In order: VIPs, guests who have stayed before, longer stays, then whoever booked first. Each gets a clean room of the booked type,
-            free every night, matched to what their profile asks for.
+            Order: VIPs, returning guests, longer stays, then first booked.
           </p>
         </div>
       )}

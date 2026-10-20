@@ -309,7 +309,7 @@ export default function WorkOrdersPage() {
           title="Past target"
           icon="alert"
           count={late.length}
-          description="Repairs that have gone over the time the hotel allows. A repair waiting for a part is not here: its clock is stopped."
+          description="Repairs over target. Waiting for parts is excluded."
           padded={false}
         >
           <ul className="divide-y divide-ink/10">

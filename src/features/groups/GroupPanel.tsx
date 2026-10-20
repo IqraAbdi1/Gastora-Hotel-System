@@ -169,14 +169,13 @@ export default function GroupPanel({ block, onClose }: { block: GroupBlock; onCl
                 </div>
                 {block.billing === 'agent-net' && bill.net !== undefined && (
                   <div className="mt-1 rounded-lg bg-warn/[0.08] p-2 text-xs text-ink/75">
-                    Staff only: the hotel receives {ugx(bill.net)} and the agent keeps {ugx(bill.margin ?? 0)}. Nothing the guest is given
-                    shows either figure.
+                    Staff only: the hotel receives {ugx(bill.net)} and the agent keeps {ugx(bill.margin ?? 0)}.
                   </div>
                 )}
               </div>
             </dl>
             <p className="mt-1 text-xs text-ink/55">
-              The guest column is what each person settles for themselves before they leave, whatever the organiser is paying.
+              Guests settle their own column before leaving.
             </p>
           </div>
         )}
@@ -207,10 +206,6 @@ export default function GroupPanel({ block, onClose }: { block: GroupBlock; onCl
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-ink/55">
-            Names can be filled in days ahead from the organiser's list, or one at a time as people walk up to the desk. A room with nobody's
-            name on it is still a room out of inventory.
-          </p>
         </div>
 
         {block.note && (
@@ -277,7 +272,7 @@ function NameDialog({
         </div>
       </div>
       <p className="mt-3 text-xs text-ink/55">
-        This becomes an ordinary booking in the guest's own name, still part of the block. Check-in is the same as any other arrival.
+        Becomes a normal booking in the block.
       </p>
     </Modal>
   )

@@ -125,7 +125,7 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
                       className={`${field} mt-1`}
                     />
                     <span className="mt-1 block text-xs font-normal text-ink/60">
-                      Manager approval is simulated here. The real system asks a manager to approve and logs who did.
+                      Approval is simulated in this demo.
                     </span>
                   </label>
                 )}
@@ -133,8 +133,8 @@ export default function CancelPanel({ reservation: r, mode, onClose, onDone }: P
                 {/* The wording follows this hotel's own settings, so it cannot drift from what is charged. */}
                 <p className="text-xs text-ink/60">
                   {isNoShow
-                    ? `This hotel charges ${nightWord(rates.noShowNights)} for a no-show, whatever the guarantee: kept from the deposit if one was paid, with the rest refunded; charged to the card or the company otherwise; and nothing at all where there was no guarantee. In the real system this is allowed after the release time (${rates.releaseTime} for bookings with no guarantee).`
-                    : `This hotel is free to cancel ${rates.cancelFreeDays} or more days before arrival. Closer than that, ${nightWord(rates.cancelChargeNights)} is kept from what the guest paid and the rest is refunded. Refunds are simulated here. Real mobile money refunds go through the payment provider.`}
+                    ? `No-show charge: ${nightWord(rates.noShowNights)}, from the deposit, card or company. Nothing without a guarantee.`
+                    : `Free to cancel ${rates.cancelFreeDays}+ days before arrival. After that, ${nightWord(rates.cancelChargeNights)} is kept and the rest refunded.`}
                 </p>
               </>
             )}

@@ -76,15 +76,14 @@ export default function RatesPoliciesPage() {
       <PageHeader
         eyebrow="Admin"
         title="Rates and policies"
-        description={`${tenant.name}. What an ordinary guest pays, and the rules for changing or cancelling.`}
+        description={`${tenant.name}. Prices and change rules.`}
         meta={<Badge tone={editable ? 'good' : 'neutral'}>{editable ? 'You can edit' : 'View only'}</Badge>}
       />
 
       <div className="rounded-xl border border-info/25 bg-info/[0.07] p-3 text-sm text-ink/80">
         <p className="font-semibold text-ink">These are the hotel's normal prices.</p>
         <p className="mt-0.5 text-xs">
-          A company with an agreed price is not affected: those prices sit on the company's own account under Companies, and
-          only apply to its bookings.
+          Company agreed prices are set under Companies.
           {withAgreements.length > 0 && ` ${withAgreements.length} company account${withAgreements.length === 1 ? ' has' : 's have'} agreed prices.`}
         </p>
       </div>
@@ -106,9 +105,6 @@ export default function RatesPoliciesPage() {
               </Field>
             ))}
           </div>
-          <p className="mt-2 text-xs text-ink/55">
-            Changing a rate affects new bookings only. A booking already taken keeps the price it was sold at.
-          </p>
         </Card>
 
         <RateCalendarCard rates={rates} set={set} />
@@ -212,7 +208,7 @@ export default function RatesPoliciesPage() {
           title="Deposit"
           icon="money"
           padded
-          description="What the desk asks for when it takes a booking. The desk can still change it."
+          description="What the desk asks for at booking."
         >
           <div className="space-y-2">
             {(['floor', 'nights', 'percent'] as DepositMode[]).map((m) => (
@@ -294,9 +290,7 @@ export default function RatesPoliciesPage() {
           </div>
 
           <p className="mt-2 text-xs text-ink/55">
-            A no-show keeps {rates.noShowNights} night{rates.noShowNights === 1 ? '' : 's'} of this, and the rest is
-            refunded. A booking on a company account is not asked for a deposit: the account and its LPO are the
-            guarantee.
+            A no-show keeps {rates.noShowNights} night{rates.noShowNights === 1 ? '' : 's'} of this. Company bookings need no deposit.
           </p>
         </Card>
 
@@ -338,26 +332,19 @@ export default function RatesPoliciesPage() {
             </Field>
           </div>
           <div className="mt-3">
-            <Field label="Release an unguaranteed booking at" hint="A booking with no deposit and no card is let go at this time on the arrival day.">
+            <Field label="Release an unguaranteed booking at" hint="Applies to bookings with no deposit or card.">
               {(id) => <Input id={id} type="time" className="w-40" value={rates.releaseTime} onChange={(e) => e.target.value && set({ releaseTime: e.target.value })} />}
             </Field>
             <label className="mt-2 flex items-start gap-2 text-sm text-ink/80">
               <input type="checkbox" className="mt-1" checked={rates.autoRelease} onChange={(e) => set({ autoRelease: e.target.checked })} />
               <span>
                 Put the room back on sale by itself at that time.
-                <span className="block text-xs text-ink/55">
-                  Off, the front desk is told the room can be resold and presses the button. On, the hour does it and says so. A guest who
-                  confirmed by phone is never released by the clock either way.
-                </span>
+                <span className="block text-xs text-ink/55">Guests who confirmed by phone are never released.</span>
               </span>
             </label>
           </div>
           <div className="mt-4">
             <p className="text-sm font-medium text-ink/80">When rooms may be sold</p>
-            <p className="mt-0.5 text-xs text-ink/55">
-              The other half of a price list is refusing: no one-night bookings over a festival weekend, no arrivals the day a conference takes
-              the house, nothing at all while a wing is painted. Read in order, so a closed week can have one day reopened inside it.
-            </p>
             <ul className="mt-2 space-y-2">
               {rates.rules.map((rule) => (
                 <li key={rule.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 p-2 text-sm">
@@ -464,8 +451,7 @@ export default function RatesPoliciesPage() {
           <div className="mt-4">
             <p className="text-sm font-medium text-ink/80">How far past full this hotel will sell</p>
             <p className="mt-0.5 text-xs text-ink/55">
-              Every hotel oversells a little and most pretend they do not. Naming the number is what stops a manager overriding five times in a
-              row and waking up with nowhere to put three families. 0 means the type is never oversold.
+              0 means never oversold.
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(['Standard', 'Deluxe', 'Suite'] as const).map((t) => (
@@ -497,7 +483,7 @@ export default function RatesPoliciesPage() {
           title="House rules shown to the guest"
           icon="list"
           padded
-          description="Printed on the registration card at check-in. Write whatever this hotel needs the guest to agree to."
+          description="Printed on the registration card at check-in."
           actions={
             rates.houseRules ? (
               <Button size="sm" variant="secondary" onClick={() => set({ houseRules: '' })}>

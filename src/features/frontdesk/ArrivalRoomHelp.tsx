@@ -109,8 +109,7 @@ export default function ArrivalRoomHelp({ reservation: r, force = false }: { res
         </div>
         {early && (
           <p className="mt-1 text-xs text-ink/70">
-            Check-in time is {stayTimes.checkInTime}. Rule: early check-in is free when a clean room is ready; otherwise the
-            guest waits. Offer a seat and a drink.
+            Check-in is from {stayTimes.checkInTime}. Free early if a clean room is ready.
           </p>
         )}
         {tell.length > 0 ? (
@@ -155,7 +154,7 @@ export default function ArrivalRoomHelp({ reservation: r, force = false }: { res
       {plan.state === 'none' && (
         <div className="rounded-lg border border-bad/30 bg-bad/10 p-3">
           <p className="text-sm font-semibold text-bad">No room can be given right now</p>
-          <p className="mt-0.5 text-xs text-ink/70">Nothing of this type can be rushed and no higher room is free. Find another room, or move the guest to a partner hotel.</p>
+          <p className="mt-0.5 text-xs text-ink/70">Nothing to rush and no upgrade free. Try a partner hotel.</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {taskMade ? (
               <p className="text-xs font-semibold text-good">Task created for the front desk.</p>

@@ -194,7 +194,7 @@ export function StatusForm({ a }: { a: CorporateAccount }) {
       <Box>
         <p className="text-sm font-semibold">{to.label}</p>
         {to.to !== 'active' && (
-          <p className="text-xs text-ink/60">New bookings cannot be billed to the company while it is not active. Existing bookings are not changed.</p>
+          <p className="text-xs text-ink/60">New bookings cannot be billed while inactive.</p>
         )}
         <Field label="Reason" required={to.to !== 'active'}>
           {(id) => <Input id={id} value={reason} onChange={(e) => setReason(e.target.value)} />}
@@ -317,7 +317,7 @@ export function ContactFields({
               </label>
             ))}
             <p className="text-xs text-ink/55">
-              One person holds one role. Whoever books a stay cannot also approve the company paying for it.
+              One role per person. A booker cannot approve charges.
             </p>
             {both && <p className="text-xs font-medium text-bad">This contact has both rights. Choose one before saving.</p>}
           </fieldset>
@@ -346,7 +346,7 @@ export function ContactForm({ a, contact, onDone }: { a: CorporateAccount; conta
     >
       <Box>
         <p className="text-sm font-semibold">{c.id ? `Edit ${contact.name}` : 'New contact'}</p>
-        <p className="text-xs text-ink/60">Only add rights the company has confirmed in writing. Keep the confirmation on file.</p>
+        <p className="text-xs text-ink/60">Only add rights the company confirmed in writing.</p>
         <ContactFields value={c} onChange={setC} />
         <FormError error={error} />
         <div className="flex gap-2">

@@ -135,7 +135,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-5">
         <PageHeader eyebrow="Overview" title="Dashboard" />
-        <p className="rounded-xl bg-ink/5 p-4 text-sm text-ink/70">There is no dashboard for your role. Open your own pages from the menu.</p>
+        <p className="rounded-xl bg-ink/5 p-4 text-sm text-ink/70">No dashboard for your role. Use the menu.</p>
       </div>
     )
   }
@@ -220,7 +220,7 @@ export default function DashboardPage() {
                 </li>
               )}
               {owedTotal === 0 && mix.blocked === 0 && overLimit.length === 0 && (!features.stockControl || lowStock.length === 0) && (
-                <li className="text-ink/55">Nothing is waiting. Everything is settled, every room is in sale and stock is above its levels.</li>
+                <li className="text-ink/55">Nothing is waiting.</li>
               )}
             </ul>
           </Card>
@@ -363,7 +363,7 @@ export default function DashboardPage() {
             icon="check"
             count={records.length}
             padded
-            description="Read by someone who is not on the list. A photo that is not the person whose PIN was used means the PIN was borrowed."
+            description="A wrong face means a borrowed PIN."
           >
             {records.length === 0 ? (
               <p className="text-sm text-ink/55">Nothing has been approved yet.</p>
@@ -415,8 +415,7 @@ export default function DashboardPage() {
       )}
 
       <p className="text-xs text-ink/50">
-        Occupancy, the average room rate and RevPAR are worked out from this hotel's bookings and folios. Days after today are
-        what is already booked, not money earned. The loyalty and tax settings used are this hotel's own.
+        Future days show bookings, not money earned.
         {options.loyalty.on ? '' : ' Returning-guest rewards are switched off.'}
       </p>
     </div>

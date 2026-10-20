@@ -77,7 +77,7 @@ export default function RateCalendarCard({
       title="Rate calendar"
       icon="calendar"
       padded
-      description="When the published rate is not the price. A season sets it, then a day of the week moves it."
+      description="Seasons and weekdays that change the published rate."
     >
       <div className="space-y-5">
         <section>
@@ -292,10 +292,6 @@ export default function RateCalendarCard({
             <p className="text-sm font-medium text-ink/80">When the house is filling</p>
             <span className="text-xs text-ink/55">The whole hotel that night, not the room type.</span>
           </div>
-          <p className="mt-0.5 text-xs text-ink/55">
-            The last room of the night is worth more than the first, and a hotel that charges the same for both is
-            giving the difference away. The highest step that the night reaches is the one that applies.
-          </p>
           <ul className="mt-2 space-y-2">
             {busy.map((o) => (
               <li key={o.id} className="rounded-lg border border-ink/10 p-2.5">
@@ -430,13 +426,11 @@ export default function RateCalendarCard({
             </span>
           </div>
           <p className="mt-1 text-xs text-ink/55">
-            Room only, before any meal plan, company price or loyalty discount. A booking already taken keeps the price it
-            was sold at.
+            Room only. Existing bookings keep their price.
           </p>
           {events.length > 0 && (
             <p className="mt-1 text-xs text-ink/55">
-              Events are the hotel's own input, marked here but never priced: they only move the suggestions on the revenue
-              page, which a person approves.
+              Events only move revenue suggestions, never prices.
             </p>
           )}
         </section>

@@ -179,7 +179,7 @@ export default function RoomDetailPanel({
               title="Room photos"
               icon="sparkles"
               count={photoCount}
-              description={`What the room looked like, with who took each photo and when. Up to ${MAX_ROOM_PHOTOS} are kept per room.`}
+              description={`Who took each photo and when. Up to ${MAX_ROOM_PHOTOS}.`}
               actions={
                 <TakePhotoButton
                   disabled={!roomHasSpace(details.photos)}

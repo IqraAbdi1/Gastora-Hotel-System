@@ -211,8 +211,7 @@ export default function PartsDialog({
           {error && <p className="mt-2 text-sm font-medium text-bad">{error}</p>}
           {!mayIssue && (
             <p className="mt-2 text-xs text-ink/60">
-              You cannot take stock off the shelf, so this is recorded as a request. The store issues it at the
-              counter and the cost lands on this job then.
+              Recorded as a request. The store issues it.
             </p>
           )}
         </Card>
@@ -221,11 +220,11 @@ export default function PartsDialog({
           title="On this job"
           icon="money"
           count={list.length}
-          description={`Parts used so far: ${ugx(partsTotal(list))}. A part still with the store has cost nothing yet.`}
+          description={`Parts used so far: ${ugx(partsTotal(list))}.`}
           padded={false}
         >
           {list.length === 0 ? (
-            <EmptyState title="Nothing used yet" hint="Add what the repair consumed, so the machine's record is true." />
+            <EmptyState title="Nothing used yet" hint="Add what the repair used." />
           ) : (
             <DataTable columns={columns} rows={list} rowKey={(p) => p.id} />
           )}

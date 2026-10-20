@@ -41,7 +41,7 @@ export default function TaskForm({ presetRoom = '', onClose }: { presetRoom?: st
   return (
     <Modal
       title="New task"
-      description="Dirty rooms, the daily service and the public areas on the schedule appear by themselves. Use this for anything else."
+      description="For work not created automatically."
       onClose={onClose}
       footer={
         <>

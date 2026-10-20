@@ -96,7 +96,7 @@ export default function IssuesPage() {
         title="Rooms with an issue"
         icon="alert"
         count={flagged.length}
-        description="Resetting sends a vacant room back to dirty so it is cleaned before it is sold. A room held out of sale by a repair is released when maintenance closes it."
+        description="Reset sends a vacant room back to dirty."
         padded={false}
       >
         {flagged.length === 0 ? (
@@ -140,7 +140,7 @@ export default function IssuesPage() {
         title="Defects"
         icon="alert"
         count={defects.length}
-        description="Report a problem from a room's detail panel. Maintenance closes the repair."
+        description="Report from a room's panel. Maintenance closes it."
         padded={false}
         actions={
           <Select

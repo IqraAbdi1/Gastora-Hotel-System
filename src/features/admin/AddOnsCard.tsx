@@ -124,8 +124,7 @@ export default function AddOnsCard({
         </Button>
       </div>
       <p className="mt-2 text-xs text-ink/55">
-        An extra bought at booking is posted to the folio straight away, so it is on the bill, in the tax lines and on
-        a company invoice by the same road as a charge the desk posts by hand. It is not part of the deposit.
+        Extras go on the bill at booking. Not part of the deposit.
       </p>
     </Card>
   )

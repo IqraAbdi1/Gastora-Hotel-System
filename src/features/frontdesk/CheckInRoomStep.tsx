@@ -158,9 +158,9 @@ export default function CheckInRoomStep({
 
       <p className="text-xs text-ink/55">
         {list.length > SHOW
-          ? `Showing ${SHOW} of ${list.length} ready rooms. Search or pick a floor to narrow it. `
+          ? `Showing ${SHOW} of ${list.length} ready rooms. `
           : `${list.length} ready room${list.length === 1 ? '' : 's'}. `}
-        Only clean rooms that are free for the whole stay are listed.
+        Clean and free for the whole stay.
       </p>
     </div>
   )

@@ -41,7 +41,7 @@ export default function GroupDistributionCard() {
       icon="list"
       count={sisters.length + 1}
       padded
-      description={`${group}. Each hotel sells where it chooses; this is all of them at once.`}
+      description={`${group}. Every hotel's channels.`}
     >
       <ul className="space-y-2">
         {[tenant, ...sisters].map((t) => {
@@ -80,14 +80,12 @@ export default function GroupDistributionCard() {
 
       {done && (
         <p className="mt-3 rounded-lg bg-good/[0.1] p-3 text-sm text-good">
-          {tenant.name}'s channels, commissions and room names were copied to {done}. Open {done} to check the names
-          that channel uses for its rooms, which are its own.
+          Channels copied to {done}. Check its room names there.
         </p>
       )}
 
       <p className="mt-3 text-xs text-ink/55">
-        A hotel's rates, restrictions and prices stay its own. Only the channel set-up is copied, and the push history
-        is not, because it did not happen there.{' '}
+        Only the channel set-up is copied, not prices.{' '}
         <button type="button" className="font-semibold text-brand" onClick={() => selectTenant(sisters[0].id)}>
           Switch to {sisters[0].name}
         </button>{' '}

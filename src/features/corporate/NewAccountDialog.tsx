@@ -53,7 +53,7 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
     <Modal
       wide
       title="New company account"
-      description="A manager approves it before any stay can be billed to the company. It starts with no credit."
+      description="Needs manager approval. Starts with no credit."
       onClose={onClose}
       footer={
         <>
@@ -111,8 +111,7 @@ export default function NewAccountDialog({ onClose, onCreated }: { onClose: () =
         <section className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/50">Charge approver</h3>
           <p className="text-xs text-ink/60">
-            A different person who approves the company paying, for example their finance or admin manager. Can be added later, but
-            no stay can be billed to the company until there is one.
+            Not the booker. Needed before any stay is billed.
           </p>
           <ContactFields value={approver} onChange={setApprover} fixedRole />
           {samePerson && (

@@ -64,13 +64,13 @@ export default function TaxSettingsPage() {
       <PageHeader
         eyebrow="Admin"
         title="Taxes and EFRIS"
-        description={`${tenant.name}. Set what this hotel charges and how its invoices are fiscalised.`}
+        description={`${tenant.name}. Taxes and invoice fiscalisation.`}
         meta={<Badge tone={editable ? 'good' : 'neutral'}>{editable ? 'You can edit' : 'View only'}</Badge>}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <fieldset disabled={!editable} className="min-w-0 space-y-5">
-          <Card title="VAT" icon="money" padded description="Rule: 18% on accommodation. Switch off if the hotel is not VAT registered.">
+          <Card title="VAT" icon="money" padded description="18% on accommodation. Off if not VAT registered.">
             <div className="space-y-3">
               <Row title="Charge VAT">
                 <Switch on={tax.vatOn} label="Charge VAT" onChange={(v) => set({ vatOn: v })} />
@@ -123,7 +123,7 @@ export default function TaxSettingsPage() {
             </div>
           </Card>
 
-          <Card title="Service charge" icon="sparkles" padded description="A percentage of the room charge. Leave at 0 if the hotel does not charge one.">
+          <Card title="Service charge" icon="sparkles" padded description="Percent of the room charge. 0 for none.">
             <div className="max-w-40">
               <Field label="Service charge %">
                 {(id) => <Input id={id} inputMode="decimal" value={String(tax.servicePercent)} onChange={(e) => set({ servicePercent: Math.min(25, num(e.target.value)) })} />}
@@ -131,7 +131,7 @@ export default function TaxSettingsPage() {
             </div>
           </Card>
 
-          <Card title="Other taxes and fees" icon="list" padded count={tax.custom.length} description="Add any tax or fee the hotel must collect, for example a city levy or a tourism fee. Each one is added on top at check-in.">
+          <Card title="Other taxes and fees" icon="list" padded count={tax.custom.length} description="City levy, tourism fee and similar. Added at check-in.">
             <div className="space-y-3">
               {tax.custom.length === 0 && <p className="text-sm text-ink/55">None added yet.</p>}
               {tax.custom.map((c) => (
@@ -164,7 +164,7 @@ export default function TaxSettingsPage() {
             </div>
           </Card>
 
-          <Card title="URA EFRIS" icon="check" padded description="EFRIS is URA's system for fiscal invoices. A registered business sends each invoice to URA and gets back a fiscal document number and a verification code.">
+          <Card title="URA EFRIS" icon="check" padded description="URA's fiscal invoice system.">
             <div className="space-y-3">
               <Segmented<EfrisStatus>
                 label="EFRIS status"
@@ -197,7 +197,7 @@ export default function TaxSettingsPage() {
               {efrisMissing && <p className="text-xs font-medium text-warn">Add the TIN and device number before invoices can be fiscalised.</p>}
               {efris.status === 'notSet' && <p className="text-xs font-medium text-warn">Invoices will say "Not fiscalised" until you choose Registered or Exempt.</p>}
               <p className="rounded-lg bg-brand/[0.06] p-3 text-xs text-ink/65">
-                AI (preview/sample): in this prototype the fiscal number and verification code are made up on screen. A real connection needs the hotel's EFRIS details from URA and a server that sends each invoice and stores URA's reply. The hotel admin or owner decides whether the hotel is registered or exempt.
+                Sample only: fiscal numbers here are made up.
               </p>
             </div>
           </Card>

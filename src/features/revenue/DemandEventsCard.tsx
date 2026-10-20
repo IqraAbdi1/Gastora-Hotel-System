@@ -66,21 +66,16 @@ export default function DemandEventsCard() {
       icon="calendar"
       count={events.length}
       padded
-      description="Conferences, holidays, matches: what you know is coming that the booking history does not."
+      description="Conferences, holidays and matches you know are coming."
       actions={
         <Button size="sm" onClick={() => setEditing(blank(events))}>
           Add an event
         </Button>
       }
     >
-      <p className="text-xs text-ink/60">
-        Each event moves the suggestions for its nights up or down, and is shown there as{' '}
-        <strong className="text-ink/80">Your input</strong>: something the hotel said, not something measured.
-        Nothing changes a price until somebody approves it.
-      </p>
 
       {list.length === 0 ? (
-        <p className="mt-3 text-sm text-ink/60">No events yet. Suggestions read pace and occupancy alone.</p>
+        <p className="text-sm text-ink/60">No events yet. Suggestions read pace and occupancy alone.</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {list.map((e) => {
@@ -123,7 +118,7 @@ export default function DemandEventsCard() {
       {removing && (
         <ConfirmDialog
           title={`Delete ${removing.name || 'this event'}?`}
-          message="Suggestions for its nights go back to reading pace and occupancy alone. Prices already approved stay as they are."
+          message="Approved prices stay as they are."
           confirmLabel="Delete"
           danger
           onCancel={() => setRemoving(null)}
@@ -157,7 +152,7 @@ function EventForm({
   return (
     <Modal
       title={isNew ? 'Add an event' : `Edit ${event.name}`}
-      description="What you expect, in your own words. It moves suggestions, never a price."
+      description="Moves suggestions, never a price."
       onClose={onClose}
       footer={
         <div className="flex flex-wrap justify-end gap-2">

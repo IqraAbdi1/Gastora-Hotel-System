@@ -108,8 +108,7 @@ export default function BookPage() {
     return (
       <Shell hotel={tenant.name}>
         <Note>
-          This demonstration is showing <strong>{tenant.name}</strong>. Each hotel's booking page carries its own name
-          and its own rooms; switch hotels on the platform admin page to see another one.
+          This demo is showing <strong>{tenant.name}</strong>. Switch hotels on the platform admin page.
         </Note>
       </Shell>
     )
@@ -367,8 +366,7 @@ export default function BookPage() {
             })}
           </ul>
           <p className="text-xs text-ink/55">
-            Prices are for the dates you chose and include every night of your stay. Nothing is held until the deposit
-            is paid.
+            Prices cover every night. Nothing is held until the deposit is paid.
           </p>
         </section>
       )}
@@ -415,7 +413,7 @@ export default function BookPage() {
             })}
           </ul>
           <p className="text-xs text-ink/55">
-            Extras are added to your bill at the hotel and are not part of the deposit.
+            Extras go on your bill, not the deposit.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setStep('details')}>
@@ -566,8 +564,7 @@ export default function BookPage() {
               </Button>
             </div>
             <p className="mt-3 text-xs text-ink/50">
-              No money moves in this demonstration and no payment provider is contacted. The waiting is real, though:
-              mobile money is approved on the handset and the hotel only confirms a booking once the provider answers.
+              Demo only. No money moves.
             </p>
           </div>
         </section>
@@ -594,7 +591,7 @@ export default function BookPage() {
             <div className="rounded-xl border border-brand/30 bg-brand/[0.06] p-4">
               <p className="font-semibold text-ink">Save time when you arrive</p>
               <p className="mt-1 text-sm text-ink/75">
-                Fill in your details now and the desk only has to check your identification when you arrive.
+                Fill in your details now for a faster check-in.
               </p>
               <a
                 href={portalLink(window.location.origin, bookingId, search.arrival)}
@@ -603,7 +600,7 @@ export default function BookPage() {
                 Fill in my details
               </a>
               <p className="mt-2 text-xs text-ink/55">
-                This page holds your booking and your bill for the whole stay. The hotel sends you the link as well.
+                The hotel also sends you this link.
               </p>
             </div>
           )}
@@ -734,7 +731,7 @@ function Shell({
         {hero && (
           <div className="relative mx-auto mt-14 max-w-5xl">
             <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">Your stay at {hotel}</h1>
-            <p className="mt-3 max-w-xl text-white/85">Book directly with the hotel for its own best price. Pay the deposit by mobile money or card.</p>
+            <p className="mt-3 max-w-xl text-white/85">Book direct for the best price. Pay by mobile money or card.</p>
           </div>
         )}
       </header>

@@ -70,7 +70,7 @@ export default function WaitlistPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Waitlist"
-        description="Guests the hotel could not take. When a room comes free, the system says whose it is."
+        description="Guests waiting for a room to come free."
         actions={<Button onClick={() => setAdding(true)}>Add someone</Button>}
       />
 
@@ -88,7 +88,7 @@ export default function WaitlistPage() {
       {ready.length > 0 && (
         <Card
           title="A room has come free"
-          description="Offered, never held. The room stays on sale until somebody actually books it."
+          description="Offered, not held. It stays on sale."
           icon="bed"
           count={ready.length}
           padded
@@ -261,7 +261,7 @@ function AddDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (input: Par
   return (
     <Modal
       title="Add someone to the waiting list"
-      description="The hotel could not take them today. The system will say when their room comes free."
+      description="You will be told when a room comes free."
       onClose={onClose}
       footer={
         <div className="flex justify-end gap-2">
@@ -304,7 +304,7 @@ function AddDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (input: Par
         </div>
       </div>
       <p className="mt-3 text-xs text-ink/55">
-        A room is never held for the waiting list. When one comes free it is offered for two hours, and it stays on sale the whole time.
+        A free room is offered for two hours, never held.
       </p>
     </Modal>
   )

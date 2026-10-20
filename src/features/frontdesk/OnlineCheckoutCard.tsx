@@ -100,8 +100,7 @@ export default function OnlineCheckoutCard() {
         </div>
       )}
       <p className="mt-2 text-xs text-ink/55">
-        Same rule as express checkout: only a stay with nothing owed, or a card or company account to charge, can go
-        without stopping at the desk.
+        Only stays with nothing owed, or a card or company to charge.
       </p>
     </Card>
   )

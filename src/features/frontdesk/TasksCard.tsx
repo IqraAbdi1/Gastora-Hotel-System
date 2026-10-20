@@ -154,7 +154,7 @@ export default function TasksCard() {
         ) : tasks.length === 0 ? (
           <EmptyState
             title="No tasks yet"
-            hint="Add follow-ups such as confirming a company booking or preparing for an arrival."
+            hint="Add follow-ups for the desk."
             action={
               <Button size="sm" variant="secondary" onClick={() => setAdding(true)}>
                 Add the first task

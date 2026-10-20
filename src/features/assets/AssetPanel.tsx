@@ -164,7 +164,7 @@ export default function AssetPanel({
           </div>
 
           {showCosts && (
-            <Card title="What it is worth" icon="money" description="Rule: the cost spread evenly over the years the hotel expects to use it.">
+            <Card title="What it is worth" icon="money" description="Cost spread evenly over its expected life.">
               <div className="grid gap-3 sm:grid-cols-3">
                 <Line label="Cost" value={asset.cost === undefined ? 'Not recorded' : ugx(asset.cost)} />
                 <Line label="Worth now" value={worth === undefined ? 'Cannot say' : ugx(worth)} />
@@ -173,13 +173,13 @@ export default function AssetPanel({
               {used !== undefined && (
                 <p className="mt-3 text-sm text-ink/70">
                   {used >= 1
-                    ? 'It has passed the years it was bought for. Anything spent on it from here is spent on borrowed time.'
+                    ? 'It has passed its expected life.'
                     : `About ${Math.round(used * 100)}% of its expected life has gone.`}
                 </p>
               )}
               {worth === undefined && (
                 <p className="mt-3 text-sm text-ink/60">
-                  A value needs both what it cost and the day it was bought. Add them and this fills in.
+                  Add the cost and purchase date to see a value.
                 </p>
               )}
             </Card>
@@ -249,7 +249,7 @@ export default function AssetPanel({
             title="Service plans"
             icon="calendar"
             count={myPlans.length}
-            description="Plans are kept on the planned work page. This is what covers this machine."
+            description="Plans covering this machine."
           >
             {myPlans.length === 0 ? (
               <EmptyState title="Nothing is scheduled for it" hint="Add a plan on the planned work page." />

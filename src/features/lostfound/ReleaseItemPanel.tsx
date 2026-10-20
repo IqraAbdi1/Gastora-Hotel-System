@@ -135,8 +135,7 @@ export default function ReleaseItemPanel({
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Who stayed in {item.foundIn} then</p>
                 {stays.length === 0 ? (
                   <p className="mt-1 text-sm text-ink/60">
-                    No stay covers that date, so the hotel cannot check this against a guest. Ask for more detail before handing
-                    it over.
+                    No stay covers that date. Ask for more detail first.
                   </p>
                 ) : (
                   <div className="mt-2 space-y-2">
@@ -269,8 +268,7 @@ export default function ReleaseItemPanel({
               ) : (
                 <section className="space-y-3">
                   <p className="rounded-xl border border-ink/10 bg-canvas p-3 text-sm text-ink/70">
-                    Nothing is deleted. The item stays in the list showing it was disposed of, with the reason and who
-                    approved it.
+                    The item stays in the list, marked disposed.
                   </p>
                   <Field label="Why" required hint="Kept past the hotel's time limit, perishable, given to charity.">
                     {(id) => <Input id={id} value={reason} onChange={(e) => setReason(e.target.value)} />}

@@ -72,7 +72,7 @@ export default function TaskFormDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="New task"
-      description="Kept in this browser tab only for now. It is not shared with other staff and is lost on reload."
+      description="Kept in this tab only. Lost on reload."
       onClose={onClose}
       footer={
         <>

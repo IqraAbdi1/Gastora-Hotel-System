@@ -132,7 +132,7 @@ export default function MoveRoomPanel({ reservation: r, onClose, onDone }: Props
         ) : free.length === 0 ? (
           <div className="space-y-4 p-5">
             <p className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm text-warn">
-              No clean room is free for the rest of this stay. Ask housekeeping to clean one first, then move the guest.
+              No clean room is free for this stay. Ask housekeeping first.
             </p>
             <Button variant="secondary" className="w-full" onClick={onClose}>
               Back
@@ -274,8 +274,7 @@ export default function MoveRoomPanel({ reservation: r, onClose, onDone }: Props
                   </Field>
                 </div>
                 <p className="mt-2 text-xs text-ink/55">
-                  The move is saved on the booking with your name, the time and this reason, and it prints on the guest's
-                  receipt.
+                  Saved with your name and printed on the receipt.
                 </p>
               </section>
             </div>

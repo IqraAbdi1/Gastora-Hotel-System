@@ -58,7 +58,7 @@ function AgentDialog({ agent, onSave, onClose }: { agent: TravelAgent; onSave: (
           <span>
             <b>The agent collects payment from the guest</b>
             <span className="block text-xs text-ink/60">
-              {a.collectsPayment ? BILLING_LABEL.net : BILLING_LABEL.commission}. Changing this does not change bookings already made.
+              {a.collectsPayment ? BILLING_LABEL.net : BILLING_LABEL.commission}. Past bookings are not changed.
             </span>
           </span>
         </label>
@@ -221,7 +221,7 @@ export default function TravelAgentsPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Travel agents"
-        description="The agents who book through the desk, and what is owed. Commission is earned on the room only, once the stay is completed."
+        description="Agents and what is owed. Commission on room only, after the stay."
         actions={<Button onClick={() => setEditing(blank)}>Add an agent</Button>}
       />
 
@@ -245,7 +245,7 @@ export default function TravelAgentsPage() {
           empty={{ title: 'No agent bookings yet', hint: 'Choose "Travel agent" under Booked via on a new reservation.' }}
         />
       </Card>
-      <p className="text-xs text-ink/55">Nothing is paid or invoiced from here. These are the figures to take to the accounts.</p>
+      <p className="text-xs text-ink/55">Figures only. Nothing is paid from here.</p>
 
       {editing && <AgentDialog agent={editing} onSave={save} onClose={() => setEditing(null)} />}
       {opened && <ReservationPanel reservation={opened} onClose={() => setOpenId(null)} />}

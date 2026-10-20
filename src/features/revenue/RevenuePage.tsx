@@ -130,16 +130,12 @@ export default function RevenuePage() {
       <PageHeader
         eyebrow="Admin"
         title="Revenue management"
-        description={`${tenant.name}. How fast the next ${AHEAD} nights are filling, against the way this hotel usually fills.`}
+        description={`${tenant.name}. How the next ${AHEAD} nights are filling.`}
       />
 
       {thin && (
         <div className="rounded-xl border border-warn/30 bg-warn/[0.08] p-3 text-sm text-ink/80">
-          <p className="font-semibold text-ink">There is not much history yet.</p>
-          <p className="mt-0.5 text-xs">
-            Pace is measured against this hotel's own past nights. Until there are a few months of them, the
-            comparison is weak and the likely finish is left blank rather than guessed.
-          </p>
+          <p className="font-semibold text-ink">Not much history yet, so pace is a weak guide.</p>
         </div>
       )}
 
@@ -180,7 +176,7 @@ export default function RevenuePage() {
         title="Where the next thirty nights stand"
         icon="money"
         padded
-        description="The rooms already sold for the nights ahead, beside the thirty nights just gone."
+        description="Sold ahead, beside the last thirty nights."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -196,13 +192,8 @@ export default function RevenuePage() {
           ))}
         </div>
         <p className="mt-3 text-sm text-ink/70">
-          <span className="font-semibold text-ink">{ugx(forward.revenue)}</span> of room money is already sold for the
-          nights ahead, counted at the prices those bookings were taken at. A rate rise does not enrich a booking
-          already made.
-        </p>
-        <p className="mt-1 text-xs text-ink/55">
-          The nights ahead are still filling, so their occupancy is meant to be below what the past thirty achieved.
-          The question is whether it is further below than usual, which is what the table answers.
+          <span className="font-semibold text-ink">{ugx(forward.revenue)}</span> of room money already sold for the
+          nights ahead.
         </p>
       </Card>
 
@@ -211,17 +202,11 @@ export default function RevenuePage() {
         icon="calendar"
         count={nights.length}
         padded={false}
-        description="Ahead or behind is measured against this hotel's own build-up at the same number of days out."
+        description="Compared with this hotel's usual build-up."
       >
         <DataTable columns={columns} rows={nights} rowKey={(n) => n.date} />
       </Card>
 
-      <p className="text-xs text-ink/55">
-        The likely finish is what is on the books divided by the share this hotel normally holds by now. It is a
-        projection of this hotel's own habit, not a prediction of the world: a conference, a funeral or a closed road
-        will beat it, and nothing here knows about those unless the hotel enters them as events. Even then the likely
-        finish is left as pace says; only the suggestions move.
-      </p>
     </div>
   )
 }

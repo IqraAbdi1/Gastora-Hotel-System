@@ -158,7 +158,7 @@ export default function AssetsPage() {
       <PageHeader
         eyebrow="Maintenance"
         title="Asset register"
-        description="Everything the hotel owns that can break: where it is, what it cost, and what has gone wrong with it."
+        description="Equipment, where it is, what it cost and its faults."
         actions={<Button onClick={() => setEditing(emptyAsset())}>Add equipment</Button>}
       />
 

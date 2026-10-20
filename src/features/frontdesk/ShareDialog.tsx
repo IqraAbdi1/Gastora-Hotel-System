@@ -54,10 +54,6 @@ export default function ShareDialog({
           </span>
         </label>
       </div>
-      <p className="mt-3 text-xs text-ink/55">
-        The room is counted once, not twice: the second booking holds no room of its own, so the hotel does not think it has sold a room it
-        still has. Each guest checks out on their own bill.
-      </p>
     </Modal>
   )
 }

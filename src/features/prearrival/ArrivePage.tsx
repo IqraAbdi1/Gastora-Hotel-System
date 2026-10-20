@@ -35,7 +35,7 @@ export default function ArrivePage() {
     return (
       <Shell hotel={tenant.name}>
         <p className="text-sm text-ink/70">
-          This link is no longer open. If you are arriving today, the front desk will take your details when you get here.
+          This link is closed. The front desk will take your details.
         </p>
       </Shell>
     )
@@ -137,8 +137,7 @@ export default function ArrivePage() {
           <span>I would like to hear from the hotel about offers.</span>
         </label>
         <p className="pt-1 text-xs text-ink/60">
-          Your booking, the identification shown at check-in and your bill are kept because the law and your stay require it. The last two above are
-          your choice and you can change your mind at any time.
+          Your booking, ID and bill are kept by law. The last two ticks are optional.
         </p>
       </div>
 
@@ -155,7 +154,7 @@ export default function ArrivePage() {
         {!ready && <span className="text-xs text-ink/60">ID type, ID number, nationality, phone and the house rules are needed.</span>}
       </div>
       <p className="mt-3 text-xs text-ink/55">
-        Bring the ID itself. The desk still has to see it; this only saves the typing.
+        Please bring your ID. The desk still needs to see it.
       </p>
     </Shell>
   )

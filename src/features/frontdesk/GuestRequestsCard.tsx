@@ -83,14 +83,12 @@ export default function GuestRequestsCard() {
                 </p>
                 {r.price && r.offerKind !== 'upgrade' && !openFolio(r.reservationId) && (
                   <p className="mt-1 text-xs text-ink/60">
-                    Their bill is not open until they check in, so this goes on it then. It stays on this card until
-                    it does.
+                    Goes on their bill at check-in.
                   </p>
                 )}
                 {r.offerKind === 'upgrade' && (
                   <p className="mt-1 text-xs text-warn">
-                    Agreeing records the price. The room still has to be moved by somebody, and only if one is
-                    still free.
+                    Agreeing records the price. The move is still to do.
                   </p>
                 )}
               </div>
@@ -151,10 +149,6 @@ export default function GuestRequestsCard() {
         </div>
       )}
 
-      <p className="mt-2 text-xs text-ink/55">
-        An offer the guest accepted is still only a request: a room free when the page was open may be taken by now,
-        and the guest is told either way.
-      </p>
       <p className="mt-1 text-xs text-ink/45">
         <Badge tone="neutral">Rule</Badge> Offers are only shown for rooms genuinely free on those nights.
       </p>

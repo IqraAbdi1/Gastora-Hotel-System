@@ -60,7 +60,7 @@ export default function RelationshipsCard({ guest }: { guest: Guest }) {
       icon="guests"
       count={links.length}
       padded
-      description="The people they travel with, the company that pays, the agent that sold the stay."
+      description="Travel companions, company and agent."
     >
       {links.length === 0 ? (
         <p className="text-sm text-ink/55">Nothing linked yet.</p>

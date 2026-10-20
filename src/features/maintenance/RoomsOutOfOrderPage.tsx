@@ -50,7 +50,7 @@ export default function RoomsOutOfOrderPage() {
         title="Rooms off sale"
         icon="bed"
         count={blocked.length}
-        description="Out of order is removed from sale until it is fixed. Out of service is a short block the hotel sets itself."
+        description="Out of order until fixed. Out of service is a short block."
         padded={false}
       >
         {blocked.length === 0 ? (

@@ -9,6 +9,8 @@ export type NotificationType =
   | 'departure-attention'
   | 'task-overdue'
   | 'lost-found-claim'
+  // Area L: AI and automation layer (anomalies, escalations, workflow notifications).
+  | 'automation-alert'
 
 export type NotificationSeverity = 'info' | 'warn' | 'bad'
 
@@ -48,4 +50,5 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   'departure-attention': 'Departure',
   'task-overdue': 'Overdue task',
   'lost-found-claim': 'Lost and found',
+  'automation-alert': 'Automation',
 }

@@ -90,13 +90,13 @@ export default function DowntimeCard() {
         title="Downtime"
         icon="money"
         count={rows.length}
-        description="A night counts when the room was still off sale at check-in time, so a tap fixed before lunch costs nothing."
+        description="Nights still off sale at check-in time."
         padded={false}
       >
         {rows.length === 0 ? (
           <EmptyState
             title="No room has been off sale"
-            hint="A room taken out of order or out of service is counted from the moment it leaves sale."
+            hint="Rooms are counted from when they leave sale."
           />
         ) : (
           <DataTable columns={columns} rows={rows} rowKey={(r) => r.room} />
@@ -104,9 +104,7 @@ export default function DowntimeCard() {
         <p className="border-t border-ink/10 px-4 py-3 text-xs text-ink/60">
           <Badge tone="brand">Estimate</Badge>{' '}
           <span className="ml-1">
-            The money is the room&apos;s own price for those nights, as of {dayMonth(TODAY)}. It is the most they
-            could have been worth, not money taken out of the bank: on a night the hotel did not sell out, the room
-            might not have sold anyway.
+            At the room&apos;s price as of {dayMonth(TODAY)}. A maximum, not money lost.
           </span>
         </p>
       </Card>

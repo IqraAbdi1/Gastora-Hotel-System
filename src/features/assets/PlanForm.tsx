@@ -105,7 +105,7 @@ export default function PlanForm({
 
         <Field
           label="Warn this many days ahead"
-          hint="The job appears on the list this far before it falls due, so somebody can plan it."
+          hint="Shows on the list this many days early."
         >
           {(id) => (
             <Input

@@ -168,7 +168,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
 
         {r.roomBy && r.room && r.status === 'booked' && (
           <p className="rounded-lg bg-canvas px-3 py-2 text-xs text-ink/70">
-            Room {r.roomBy.reason}. Proposed by the assignment rules; the desk can still pick another room at check-in.
+            Room {r.roomBy.reason}. Can be changed at check-in.
           </p>
         )}
 
@@ -225,7 +225,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                     {d.signature && (
                       <img src={d.signature} alt="Guest signature" className="max-h-24 rounded-lg border border-ink/10 bg-white" />
                     )}
-                    <p className="text-xs text-ink/60">Personal data. In the real system only authorised staff can open this.</p>
+                    <p className="text-xs text-ink/60">Personal data. Authorised staff only.</p>
                   </div>
                 )}
               </div>
@@ -308,7 +308,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
                   </div>
                   {preState === 'filled in' && (
                     <p className="mt-1 text-xs text-ink/60">
-                      Their answers are waiting in the check-in form. Check them against the ID when they arrive.
+                      Answers are in the check-in form. Check against the ID.
                     </p>
                   )}
                   {preState !== 'filled in' && (
@@ -396,8 +396,7 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
               </div>
             )}
             <p className="mt-1 text-xs text-ink/55">
-              The hotel's own record of who could open this room and until when. Writing the card itself belongs to the door-lock vendor, and
-              in this prototype nothing is written.
+              Record of who can open this room, and until when.
             </p>
           </div>
         )}

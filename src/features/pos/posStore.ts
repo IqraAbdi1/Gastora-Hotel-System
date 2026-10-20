@@ -1,6 +1,7 @@
 import { POS_SCHEMA_VERSION, POS_SCHEMA_VERSION_KEY, POS_STORAGE_KEYS } from './posTypes'
 import type { HeldOrder, KitchenStatus, Product, Recipes } from './posTypes'
 import { SEED_RECIPES } from './recipeEngine'
+import { EXTRA_PRODUCTS, EXTRA_RECIPES } from './posSeed'
 
 /**
  * Versioned, non-destructive migration for existing browser data.
@@ -51,7 +52,10 @@ export function migratePosStorage(): void {
           delete product.stock
           return product
         }) as Product[]
-        window.localStorage.setItem(POS_STORAGE_KEYS.products, JSON.stringify(migratedProducts))
+        // v4: menu items for the new outlet types, added only where the id is missing.
+        const ids = new Set(migratedProducts.map((product) => product?.id))
+        const added = EXTRA_PRODUCTS.filter((product) => !ids.has(product.id))
+        window.localStorage.setItem(POS_STORAGE_KEYS.products, JSON.stringify([...migratedProducts, ...added]))
       }
     }
 
@@ -60,7 +64,7 @@ export function migratePosStorage(): void {
     const parsedRecipes: unknown = rawRecipes === null ? {} : JSON.parse(rawRecipes)
     if (parsedRecipes && typeof parsedRecipes === 'object' && !Array.isArray(parsedRecipes)) {
       const existing = parsedRecipes as Recipes
-      const merged: Recipes = { ...SEED_RECIPES, ...existing }
+      const merged: Recipes = { ...SEED_RECIPES, ...EXTRA_RECIPES, ...existing }
       window.localStorage.setItem(POS_STORAGE_KEYS.recipes, JSON.stringify(merged))
     }
 

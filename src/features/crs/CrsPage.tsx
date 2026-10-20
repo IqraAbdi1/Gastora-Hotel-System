@@ -53,7 +53,7 @@ export default function CrsPage() {
         <PageHeader eyebrow="Front desk" title="Sister properties" />
         <Card title="This hotel stands on its own" padded>
           <p className="text-sm text-ink/70">
-            It is not part of an owner's group, so there is nowhere to send a booking. Gastora sets the owner when the hotel signs up.
+            It is not part of a group. Gastora sets this at sign-up.
           </p>
         </Card>
       </div>
@@ -116,10 +116,6 @@ export default function CrsPage() {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-xs text-ink/55">
-          In this prototype every demonstration hotel shares one set of rooms, so only this property's figure is real. A sister property is
-          asked rather than read, which is also how a careful group works across two systems: the other hotel answers for its own rooms.
-        </p>
       </Card>
 
       {mine.length > 0 && (
@@ -264,8 +260,7 @@ function AskDialog({
         </Field>
       </div>
       <p className="mt-3 text-xs text-ink/55">
-        The other hotel answers for its own rooms: it can take this or say it cannot. Nothing of this hotel's guests, bills or takings goes
-        with it.
+        The other hotel accepts or declines. Only this booking is shared.
       </p>
     </Modal>
   )

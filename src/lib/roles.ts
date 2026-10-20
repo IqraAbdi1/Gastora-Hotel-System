@@ -73,6 +73,12 @@ const ALL_HOTEL = [
   '/procurement',
   '/hr',
   '/finance',
+  // Area K: management reports
+  '/reports',
+  // Area G: events and sales
+  '/events',
+  // Area H
+  '/accounting',
 ]
 
 // One table for who sees what. The real backend enforces the same table; the screens only hide things.
@@ -82,7 +88,8 @@ export const ROLES: Role[] = [
     label: 'Owner',
     blurb: 'Everything, including approvals.',
     landing: '/dashboard',
-    allow: [...ALL_HOTEL, '/admin', '/guest'],
+    // Area L: '/automation' added.
+    allow: [...ALL_HOTEL, '/admin', '/guest', '/automation'],
     actions: [
       'changeSettings',
       'raiseRequest',
@@ -103,7 +110,8 @@ export const ROLES: Role[] = [
     label: 'Hotel admin',
     blurb: 'Runs the system: settings, staff and roles.',
     landing: '/admin',
-    allow: [...ALL_HOTEL, '/admin', '/guest'],
+    // Area L: '/automation' added.
+    allow: [...ALL_HOTEL, '/admin', '/guest', '/automation'],
     actions: ['changeSettings', 'raiseRequest', 'manageStock', 'requestCorporate', 'manageCorporate', 'seeGuestRecord'],
     canViewAs: true,
   },
@@ -112,7 +120,8 @@ export const ROLES: Role[] = [
     label: 'General manager',
     blurb: 'Runs operations and approves requisitions.',
     landing: '/dashboard',
-    allow: [...ALL_HOTEL, '/admin/revenue', '/admin/channels'],
+    // Area M: '/admin/security' (read only without changeSettings; works privacy requests)
+    allow: [...ALL_HOTEL, '/admin/revenue', '/admin/channels', '/admin/security', '/automation'],
     actions: [
       'raiseRequest',
       'endorseRequest',
@@ -131,7 +140,7 @@ export const ROLES: Role[] = [
     label: 'Finance',
     blurb: 'Money, budgets and over-budget approvals.',
     landing: '/finance',
-    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit', '/desk/companies', '/admin/approvals', '/admin/revenue'],
+    allow: ['/dashboard', '/hr', '/finance', '/procurement/audit', '/desk/companies', '/admin/approvals', '/admin/revenue', '/reports', '/admin/security/audit', '/admin/security/payments', '/admin/security/fiscal', '/procurement/invoices', '/procurement/contracts', '/inventory/analytics', '/events/quotes', '/events/billing', '/accounting', '/automation/insights', '/automation/workflows'],
     actions: ['raiseRequest', 'approveOverBudget', 'requestCorporate', 'manageCorporate', 'approveCorporateFinance'],
   },
   {
@@ -139,7 +148,8 @@ export const ROLES: Role[] = [
     label: 'Front desk',
     blurb: 'Arrivals, departures, rooms and folios.',
     landing: '/desk',
-    allow: ['/desk'],
+    // J. Workforce: the desk logs guest cases and works its tasks
+    allow: ['/desk', '/hr/cases', '/hr/tasks', '/automation/concierge'],
     actions: ['requestCorporate'],
   },
   {
@@ -155,7 +165,8 @@ export const ROLES: Role[] = [
     label: 'Housekeeping head',
     blurb: 'Runs housekeeping, inspects rooms, endorses supply requests, sends unused stock back.',
     landing: '/housekeeping',
-    allow: ['/housekeeping', '/maintenance'],
+    // J. Workforce: the head runs the team's roster, attendance, tasks and guest cases. K: Ask.
+    allow: ['/housekeeping', '/maintenance', '/hr/rosters', '/hr/attendance', '/hr/tasks', '/hr/cases', '/reports/ask', '/automation/operations'],
     actions: ['raiseRequest', 'endorseRequest', 'returnStock'],
   },
   {
@@ -171,7 +182,8 @@ export const ROLES: Role[] = [
     label: 'Maintenance',
     blurb: 'Fixes reported problems, endorses its own supply requests and sends unused stock back.',
     landing: '/maintenance',
-    allow: ['/maintenance', '/housekeeping/issues'],
+    // J. Workforce: maintenance works its tasks. K: Ask.
+    allow: ['/maintenance', '/housekeeping/issues', '/hr/tasks', '/reports/ask'],
     actions: ['raiseRequest', 'endorseRequest', 'returnStock'],
   },
   {
@@ -187,7 +199,8 @@ export const ROLES: Role[] = [
     label: 'Procurement officer',
     blurb: 'Raises purchase orders and buys what management approves.',
     landing: '/procurement/requests',
-    allow: ['/procurement'],
+    // Area I: procurement also reads cost control (spend, reorder alerts).
+    allow: ['/procurement', '/inventory/analytics'],
     actions: ['raiseRequest', 'markBought', 'purchase'],
   },
   {
@@ -195,15 +208,17 @@ export const ROLES: Role[] = [
     label: 'POS / F&B staff',
     blurb: 'Restaurant, bar, and kitchen order operations.',
     landing: '/pos',
-    allow: ['/pos', '/kitchen'],
+    // Area G: F&B reads the diary and BEOs.
+    allow: ['/pos', '/kitchen', '/events/diary', '/events/bookings'],
     actions: [],
   },
   {
     id: 'sales',
     label: 'Sales / events',
-    blurb: 'Banqueting. Module not built yet.',
-    landing: '/dashboard',
-    allow: ['/dashboard', '/desk/companies'],
+    blurb: 'Events, banqueting and sales: leads, the diary, BEOs, quotes and event bills.',
+    // Area G
+    landing: '/events',
+    allow: ['/dashboard', '/desk/companies', '/reports/ask', '/events', '/automation/guests'],
     actions: ['requestCorporate', 'manageCorporate'],
   },
   {

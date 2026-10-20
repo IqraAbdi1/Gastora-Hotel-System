@@ -18,7 +18,7 @@ export default function ServicesCard({ services, set }: { services: BookableServ
       icon="calendar"
       count={services.filter((s) => s.on).length}
       padded
-      description="What guests can book from their own page, when it runs and how many it takes at a time."
+      description="What guests can book from their own page."
     >
       <ul className="space-y-2">
         {services.map((s) => {
@@ -123,8 +123,7 @@ export default function ServicesCard({ services, set }: { services: BookableServ
         </Button>
       </div>
       <p className="mt-2 text-xs text-ink/55">
-        Places are counted per starting time. A booking holds its places while the desk decides, and a confirmed booking
-        with a price can be charged to the room bill under the category shown.
+        Places are counted per starting time.
       </p>
     </Card>
   )

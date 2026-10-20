@@ -52,6 +52,49 @@ export type FeatureKey =
   | 'roomAutoAssign'
   | 'multiRoom'
   | 'travelAgents'
+  // J. Workforce and service management
+  | 'staffRoster'
+  | 'attendance'
+  | 'taskSla'
+  | 'payrollHandoff'
+  // Area K: management reports
+  | 'reportsBasic'
+  | 'departmentDashboards'
+  | 'scheduledReports'
+  | 'portfolio'
+  | 'analyticsAssistant'
+  // Area M: compliance, security and controls
+  | 'securityBasic'
+  | 'fieldPermissions'
+  | 'sodRules'
+  | 'ssoMfa'
+  | 'fiscalConnectors'
+  // Area I: procurement, inventory and cost control
+  | 'rfq'
+  | 'invoiceMatching'
+  | 'supplierContracts'
+  | 'storeTransfers'
+  | 'costAnalytics'
+  // Area G: events, banqueting and sales
+  | 'eventsBasic'
+  | 'eventsSales'
+  // Area H: Finance and hotel accounting
+  | 'accountingLink'
+  | 'multiCurrency'
+  | 'budgetsCentres'
+  | 'groupConsolidation'
+  // Area L: AI and automation layer.
+  | 'aiConcierge'
+  | 'anomalyDetection'
+  | 'guestSegments'
+  | 'opsPrioritization'
+  | 'workflowAutomation'
+  // Area F: POS, F&B and kitchen
+  | 'posMultiOutlet'
+  | 'posFloorPlan'
+  | 'posSplitBills'
+  | 'kdsCourses'
+  | 'foodCost'
 
 export type PlanId = 'starter' | 'standard' | 'large'
 export type TenantStatus = 'active' | 'overdue' | 'suspended'
@@ -60,6 +103,12 @@ export type NewTenant = Pick<Tenant, 'name' | 'rooms' | 'plan' | 'companySize'> 
 export type InspectionMode = 'off' | 'spot' | 'every'
 
 export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
+  // Area F: POS, F&B and kitchen
+  { key: 'posMultiOutlet', label: 'Several outlets', blurb: 'Bar, room service, minibar, pool and shop, each with its own menu and hours.' },
+  { key: 'posFloorPlan', label: 'Floor plan', blurb: 'Tables on a plan with live status, table bookings, moving and joining tables.' },
+  { key: 'posSplitBills', label: 'Split bills', blurb: 'Split a bill by item, by seat or equally, each part paid its own way.' },
+  { key: 'kdsCourses', label: 'Kitchen courses', blurb: 'Hold and fire courses, kitchen stations, prep timers and all-day counts.' },
+  { key: 'foodCost', label: 'Food cost', blurb: 'Recipe costing, usage against sales, wastage, transfers and cost % by outlet.' },
   {
     key: 'inspections',
     label: 'Room inspections',
@@ -273,12 +322,52 @@ export const FEATURES: { key: FeatureKey; label: string; blurb: string }[] = [
     blurb:
       'The tour operators and agents who book through the desk: who they are, their commission, and whether they collect from the guest. Each booking records its agent, and the hotel sees what it owes each one, earned on the room only and only once the stay is completed.',
   },
+  // J. Workforce and service management
+  { key: 'staffRoster', label: 'Staff, rosters and guest cases', blurb: 'Staff list linked to Trademate HR, weekly rosters and guest service cases.' },
+  { key: 'attendance', label: 'Attendance', blurb: 'Clock in and out, late and absent, corrections and timesheets.' },
+  { key: 'taskSla', label: 'Tasks with SLA', blurb: 'Tasks across departments with due times, escalation and workload.' },
+  { key: 'payrollHandoff', label: 'Payroll handoff', blurb: 'Send each pay period\'s hours and overtime to Trademate payroll.' },
+  // Area G: events, banqueting and sales
+  { key: 'eventsBasic', label: 'Events and banqueting', blurb: 'Function diary, event bookings, BEOs, equipment and a master bill per event.' },
+  { key: 'eventsSales', label: 'Events sales', blurb: 'Lead pipeline, quotes with amendments, contracts, deposits and event profitability.' },
+  // Area H: Finance and hotel accounting
+  { key: 'accountingLink', label: 'Trademate accounting', blurb: 'Posting rules, daily journals sent to Trademate, and the city ledger.' },
+  { key: 'multiCurrency', label: 'Currencies', blurb: 'Foreign currencies, daily exchange rates and tax-inclusive pricing.' },
+  { key: 'budgetsCentres', label: 'Budgets and centres', blurb: 'Profit and cost centres with monthly budgets against actuals.' },
+  { key: 'groupConsolidation', label: 'Group reporting', blurb: 'One consolidated view across the properties of a group.' },
+  // Area L: AI and automation layer.
+  { key: 'aiConcierge', label: 'AI concierge', blurb: 'Answers guest questions on their stay page and hands the rest to staff.' },
+  { key: 'anomalyDetection', label: 'Forecast and anomalies', blurb: 'Demand forecast, rate suggestions and odd discounts, refunds and voids.' },
+  { key: 'guestSegments', label: 'Guest segments', blurb: 'Automatic guest segments and next-best-action suggestions for the desk.' },
+  { key: 'opsPrioritization', label: 'Operations priorities', blurb: 'Cleaning order, repair priority and a staffing forecast per department.' },
+  { key: 'workflowAutomation', label: 'Workflow automation', blurb: 'Trigger, conditions, approvals, actions and notifications, with a run log.' },
   {
     key: 'taxLines',
     label: 'Tax lines',
     blurb: 'VAT, Local Hotel Tax, service charge and the hotel\'s own taxes are itemised at check-in and on the folio. The hotel admin or owner sets the rates and the EFRIS choice.',
   },
+  // Area K: management reports
+  { key: 'reportsBasic', label: 'Reports', blurb: 'Executive KPIs with drill-down, the report library and Excel or PDF export.' },
+  { key: 'departmentDashboards', label: 'Department dashboards', blurb: 'Front office, F&B, housekeeping, maintenance, sales, purchasing and finance KPIs.' },
+  { key: 'scheduledReports', label: 'Scheduled reports', blurb: 'Reports sent by email every day, week or month.' },
+  { key: 'portfolio', label: 'Portfolio reporting', blurb: 'Consolidated figures, benchmarks and budget vs actual across sister hotels.' },
+  { key: 'analyticsAssistant', label: 'Analytics assistant', blurb: 'Ask questions in plain words and see the records behind each answer.' },
+  // Area M: compliance, security and controls
+  { key: 'securityBasic', label: 'Security basics', blurb: 'Roles, sessions, devices, audit trail, card tokens, privacy requests and EFRIS.' },
+  { key: 'fieldPermissions', label: 'Field and property permissions', blurb: 'Edit rights per role, mask sensitive fields and limit people to some properties.' },
+  { key: 'sodRules', label: 'Segregation of duties', blurb: 'Rules for duties one person must not hold together, with a live conflict check.' },
+  { key: 'ssoMfa', label: 'SSO and MFA', blurb: 'Two-step sign-in per role and single sign-on through SAML or OIDC.' },
+  { key: 'fiscalConnectors', label: 'Fiscal connectors', blurb: 'E-invoicing connectors beyond EFRIS, branch mapping and the submission log.' },
 ]
+
+// Area I: procurement, inventory and cost control
+FEATURES.push(
+  { key: 'rfq', label: 'Quotations (RFQ)', blurb: 'Ask approved suppliers to quote, compare side by side and award the order.' },
+  { key: 'invoiceMatching', label: 'Invoice matching', blurb: 'Match each supplier invoice to its order and delivery before it is paid.' },
+  { key: 'supplierContracts', label: 'Supplier contracts', blurb: 'Contracts, price lists, price history, approved suppliers and scorecards.' },
+  { key: 'storeTransfers', label: 'Store transfers', blurb: 'Central, property and outlet stores, transfers between them and pack sizes.' },
+  { key: 'costAnalytics', label: 'Cost control', blurb: 'Reorder, slow-moving, expiry, wastage, spend and consumption at a glance.' },
+)
 
 export const PLANS: {
   id: PlanId
@@ -290,7 +379,17 @@ export const PLANS: {
     id: 'starter',
     label: 'Starter',
     blurb: 'Small hotels. Core, simple supply requests and basic stock control.',
-    features: ['requests', 'stockControl', 'lossReports', 'guestMessages', 'multiRoom'],
+    features: [
+      'requests',
+      'stockControl',
+      'lossReports',
+      'guestMessages',
+      'multiRoom',
+      'staffRoster',
+      'reportsBasic',
+      'securityBasic',
+      'accountingLink',
+    ],
   },
   {
     id: 'standard',
@@ -328,6 +427,41 @@ export const PLANS: {
       'roomAutoAssign',
       'multiRoom',
       'travelAgents',
+      // J. Workforce and service management
+      'staffRoster',
+      'attendance',
+      'taskSla',
+      'payrollHandoff',
+      // Area K: management reports
+      'reportsBasic',
+      'departmentDashboards',
+      'scheduledReports',
+      'analyticsAssistant',
+      // Area M
+      'securityBasic',
+      'fieldPermissions',
+      'sodRules',
+      'fiscalConnectors',
+      // Area I
+      'invoiceMatching',
+      'supplierContracts',
+      'storeTransfers',
+      'costAnalytics',
+      // Area G
+      'eventsBasic',
+      // Area H
+      'accountingLink',
+      'multiCurrency',
+      'budgetsCentres',
+      // Area L
+      'aiConcierge',
+      'anomalyDetection',
+      'guestSegments',
+      // Area F: POS, F&B and kitchen
+      'posMultiOutlet',
+      'posFloorPlan',
+      'posSplitBills',
+      'kdsCourses',
     ],
   },
   {
@@ -375,6 +509,49 @@ export const PLANS: {
       'roomAutoAssign',
       'multiRoom',
       'travelAgents',
+      // J. Workforce and service management
+      'staffRoster',
+      'attendance',
+      'taskSla',
+      'payrollHandoff',
+      // Area K: management reports
+      'reportsBasic',
+      'departmentDashboards',
+      'scheduledReports',
+      'portfolio',
+      'analyticsAssistant',
+      // Area M
+      'securityBasic',
+      'fieldPermissions',
+      'sodRules',
+      'ssoMfa',
+      'fiscalConnectors',
+      // Area I
+      'rfq',
+      'invoiceMatching',
+      'supplierContracts',
+      'storeTransfers',
+      'costAnalytics',
+      // Area G
+      'eventsBasic',
+      'eventsSales',
+      // Area H
+      'accountingLink',
+      'multiCurrency',
+      'budgetsCentres',
+      'groupConsolidation',
+      // Area L
+      'aiConcierge',
+      'anomalyDetection',
+      'guestSegments',
+      'opsPrioritization',
+      'workflowAutomation',
+      // Area F: POS, F&B and kitchen
+      'posMultiOutlet',
+      'posFloorPlan',
+      'posSplitBills',
+      'kdsCourses',
+      'foodCost',
     ],
   },
 ]
@@ -444,8 +621,25 @@ export function featuresOf(t: Tenant): FeatureMap {
     out.batchExpiry = false
   }
   if (!out.lossReports) out.lossReversal = false
+  // Area I: quotations, invoices and contracts sit on the supply chain; transfers need stores.
+  if (!out.supplyChain) {
+    out.rfq = false
+    out.invoiceMatching = false
+    out.supplierContracts = false
+  }
+  if (!out.stores) out.storeTransfers = false
+  if (!out.stockControl) out.costAnalytics = false
   // Services are booked from the guest's own page, so without the page there is nowhere to book them.
   if (!out.guestPortal) out.serviceBookings = false
+  // Area K: every reports feature sits on top of the basic reports.
+  if (!out.reportsBasic) {
+    out.departmentDashboards = false
+    out.scheduledReports = false
+    out.portfolio = false
+    out.analyticsAssistant = false
+  }
+  // Area G: selling events needs the diary and BEOs underneath.
+  if (!out.eventsBasic) out.eventsSales = false
   if (t.status === 'suspended') {
     for (const f of FEATURES) out[f.key] = false
   }

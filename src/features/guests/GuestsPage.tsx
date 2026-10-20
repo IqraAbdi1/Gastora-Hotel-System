@@ -151,7 +151,7 @@ export default function GuestsPage() {
           icon="alert"
           count={dupes.length}
           padded
-          description="One guest recorded twice splits their history and their tier, and counts them twice in every figure."
+          description="Duplicates split history and tier."
         >
           <ul className="space-y-2">
             {dupes.map((d) => (

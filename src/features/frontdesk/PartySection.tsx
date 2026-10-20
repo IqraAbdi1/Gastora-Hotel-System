@@ -122,7 +122,7 @@ export default function PartySection({
             </div>
           ) : (
             <p className="mt-1">
-              {bill.all > 0 ? `${ugx(bill.all)} is still owed on rooms not yet in the house; it can be settled once they arrive.` : 'Nothing is owed on any room.'}
+              {bill.all > 0 ? `${ugx(bill.all)} owed on rooms not yet checked in.` : 'Nothing is owed on any room.'}
             </p>
           )}
         </div>

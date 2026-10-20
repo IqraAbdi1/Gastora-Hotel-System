@@ -19,6 +19,7 @@ import CheckoutOnline from './CheckoutOnline'
 import PayNow, { Receipt } from './PayNow'
 import { usePortalPayments } from './usePortalPayments'
 import { newRequestId, useGuestRequests } from './useGuestRequests'
+import ConciergeWidget from '../automation/ConciergeWidget'
 
 /**
  * The guest's own page for their stay.
@@ -304,6 +305,8 @@ export default function StayPage() {
           <Receipt p={showing} />
         </Modal>
       )}
+
+      <ConciergeWidget stay={stay} />
 
       <p className="mt-5 text-xs text-ink/50">
         This page is yours alone and shows nothing about any other guest. Shown as at {TODAY}.

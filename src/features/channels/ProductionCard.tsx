@@ -128,9 +128,7 @@ export default function ProductionCard() {
             </span>
           </div>
           <p className="px-4 pb-4 text-xs text-ink/55">
-            Commission took {totals.costPercent}% of what guests paid in this period. A channel is worth its
-            commission when it fills nights the hotel could not fill itself; it is not when it sells rooms the hotel's
-            own site would have sold for nothing.
+            Commission took {totals.costPercent}% of what guests paid in this period.
           </p>
         </>
       )}

@@ -100,7 +100,7 @@ export default function RosterPage() {
       <PageHeader
         eyebrow="Housekeeping"
         title="Attendant roster"
-        description="Who is on which room today, and who cleaned what. Useful when a guest asks about their room."
+        description="Who is on which room, and who cleaned what."
         meta={<Badge tone="neutral">{TODAY}</Badge>}
         actions={
           <Segmented<View>
@@ -179,7 +179,7 @@ export default function RosterPage() {
               title="Zones and shifts today"
               icon="calendar"
               padded
-              description="Where each person works and when. Sharing out by zone keeps each one on her own floor or area. It carries over to tomorrow until it is changed."
+              description="Where each person works. Carries over until changed."
             >
               <ul className="space-y-2">
                 {shifts.map((r) => (
@@ -327,8 +327,7 @@ export default function RosterPage() {
           <div className="rounded-xl border border-info/25 bg-info/[0.07] p-3 text-sm text-ink/80">
             <p className="font-semibold text-ink">A guest comes back asking about something they left</p>
             <p className="mt-0.5 text-xs">
-              Ask which room and roughly which day. Pick the room below and the day above, and the record names
-              whoever was in that room, with what they did and how long it took.
+              Pick the room and day to see who was in it.
             </p>
           </div>
 
@@ -345,7 +344,7 @@ export default function RosterPage() {
             icon="clean"
             count={record.length}
             padded
-            description="Kept so that if a guest reports something missing, the hotel knows who was in the room."
+            description="Who was in each room."
           >
             {record.length === 0 ? (
               <p className="text-sm text-ink/55">
@@ -375,8 +374,7 @@ export default function RosterPage() {
           </Card>
 
           <p className="text-xs text-ink/50">
-            {rooms.length} rooms. The record is written by the system as work happens; it is not typed in by hand, so it
-            cannot be tidied up afterwards.
+            {rooms.length} rooms. Recorded automatically.
           </p>
         </>
       )}

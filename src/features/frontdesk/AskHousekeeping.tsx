@@ -114,8 +114,8 @@ export default function AskHousekeeping({ roomType, room }: { roomType: string; 
     return (
       <p className="rounded-lg border border-ink/10 bg-canvas p-3 text-sm text-ink/70">
         {room
-          ? `Room ${room} is not waiting to be cleaned. It may be occupied or out of service. Choose another room at check-in.`
-          : `No ${roomType} room is waiting to be cleaned. The others may be occupied or out of service, so there is nothing to rush.`}
+          ? `Room ${room} is not waiting to be cleaned. Choose another room.`
+          : `No ${roomType} room is waiting to be cleaned.`}
       </p>
     )
   }
@@ -136,7 +136,7 @@ export default function AskHousekeeping({ roomType, room }: { roomType: string; 
       <div>
         <p className="text-sm font-semibold">Ask housekeeping</p>
         <p className="text-xs text-ink/60">
-          A rushed room goes to the top of housekeeping's list. Once it is rushed you can message them about it here.
+          A rushed room goes to the top of their list.
         </p>
       </div>
 

@@ -49,8 +49,8 @@ export default function CheckoutOnline({ stay, token, onPay }: { stay: Reservati
         </p>
         <p className="mt-1 text-sm text-ink/75">
           {stay.departure > TODAY
-            ? `They will check you out on the morning of ${dayMonth(stay.departure)}. You do not need to stop at the desk.`
-            : 'They will finish it in a moment. You do not need to stop at the desk.'}{' '}
+            ? `They will check you out on the morning of ${dayMonth(stay.departure)}.`
+            : 'They will finish it in a moment.'}{' '}
           {KEY_RETURN_LABEL[mine.keys]}.
         </p>
         {mine.note && <p className="mt-2 rounded-lg bg-bad/10 p-2.5 text-sm text-bad">{mine.note}</p>}
@@ -182,7 +182,7 @@ export default function CheckoutOnline({ stay, token, onPay }: { stay: Reservati
           ? 'You will be checked out straight away and your final bill sent to you.'
           : tomorrow
             ? `The desk checks you out on the morning of ${dayMonth(stay.departure)}. You keep the room until then.`
-            : 'The desk finishes it with one click and your final bill is sent to you.'}
+            : 'The desk will finish it and send your final bill.'}
       </p>
     </section>
   )

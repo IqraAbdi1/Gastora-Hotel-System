@@ -75,7 +75,7 @@ export default function AgreementEditor({ a, onDone }: { a: CorporateAccount; on
         />
         <span>
           The agreement allows a discount on top of a negotiated rate
-          <span className="block text-xs text-ink/60">Leave unticked unless the signed agreement says so. Two discounts are never added together.</span>
+          <span className="block text-xs text-ink/60">Only if the signed agreement says so.</span>
         </span>
       </label>
 

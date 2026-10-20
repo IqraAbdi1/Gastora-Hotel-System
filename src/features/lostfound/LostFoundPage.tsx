@@ -159,7 +159,7 @@ export default function LostFoundPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Lost and found"
-        description="Things guests leave behind. Housekeeping logs them; the front desk gives them back."
+        description="Items guests leave behind."
         actions={<Button onClick={() => setLogging(true)}>Log a found item</Button>}
       />
 
@@ -188,7 +188,7 @@ export default function LostFoundPage() {
         title="A guest is asking for something"
         icon="sparkles"
         padded
-        description="Ask the guest which room they were in, what the item is and roughly when. Then search here."
+        description="Ask for the room, the item and roughly when."
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Room they stayed in" hint="Or where they lost it, such as Restaurant.">
@@ -228,7 +228,7 @@ export default function LostFoundPage() {
           </div>
         )}
         <p className="mt-2 text-xs text-ink/55">
-          Rule: never read out what was found. Let the guest describe it first, then check it against the list.
+          Let the guest describe it first. Never read out the list.
         </p>
       </Card>
 
@@ -243,7 +243,7 @@ export default function LostFoundPage() {
       <Card title={chips.find((c) => c.key === view)?.label ?? 'Items'} icon="list" count={list.length} padded>
         {list.length === 0 ? (
           <p className="text-sm text-ink/55">
-            Nothing matches. Try fewer words, or check whether the guest was in another room.
+            Nothing matches. Try fewer words.
           </p>
         ) : (
           <div className="space-y-2">

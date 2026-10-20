@@ -161,10 +161,6 @@ export default function WaitingPage() {
         )}
       </Card>
 
-      <p className="text-xs text-ink/50">
-        Gathered from supplies, stock, companies, the front desk and lost property. Each line opens the page that can finish
-        it. Approvals already given are listed separately, for the owner and finance.
-      </p>
     </div>
   )
 }

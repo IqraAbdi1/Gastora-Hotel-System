@@ -77,8 +77,8 @@ export default function DisplacementCard({ ask, arrival, departure }: { ask: Gro
         <>
           <p className="mt-1 text-xs text-ink/55">
             {tightNights === 0
-              ? 'Every night has room to spare for this block, so it turns nobody away.'
-              : `On ${tightNights} of ${nights.length} night${nights.length === 1 ? '' : 's'} the block wants more rooms than the hotel expects to have spare.`}
+              ? 'Every night has room to spare for this block.'
+              : `On ${tightNights} of ${nights.length} night${nights.length === 1 ? '' : 's'} the block needs more rooms than are spare.`}
           </p>
           <button
             type="button"
@@ -124,8 +124,7 @@ export default function DisplacementCard({ ask, arrival, departure }: { ask: Gro
             </tbody>
           </table>
           <p className="mt-1.5 text-[11px] text-ink/50">
-            A room pushed out is valued at what that night's own rate would have fetched, season, day and occupancy
-            included. Amber rows are the nights where the block takes rooms somebody else would have paid for.
+            Amber rows: nights the block displaces paying guests.
           </p>
         </div>
       )}

@@ -129,7 +129,7 @@ export default function IssueDialog({ roomNumber, onClose }: { roomNumber: strin
               {features.assetRegister && roomAssets.length > 0 && (
                 <Field
                   label="Which piece of equipment"
-                  hint="Naming it puts this repair on that machine's record, so a thing that keeps failing can be seen."
+                  hint="Adds the repair to its record."
                 >
                   {(id) => (
                     <Select id={id} value={assetId} onChange={(e) => setAssetId(e.target.value)}>
@@ -187,8 +187,7 @@ export default function IssueDialog({ roomNumber, onClose }: { roomNumber: strin
 
               {occupied ? (
                 <p className="rounded-lg bg-canvas p-3 text-sm text-ink/70">
-                  A guest is in this room, so it cannot be taken out of sale from here. Moving the guest is a front desk
-                  action.
+                  Occupied rooms cannot be taken out of sale here.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -219,7 +218,7 @@ export default function IssueDialog({ roomNumber, onClose }: { roomNumber: strin
               )}
             </>
           ) : (
-            <Field label="Reason" required hint="The front desk and housekeeping must agree before this room can be sold.">
+            <Field label="Reason" required hint="Desk and housekeeping must agree.">
               {(id) => (
                 <Textarea
                   id={id}

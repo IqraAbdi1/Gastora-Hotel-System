@@ -71,10 +71,6 @@ export default function SplitStayDialog({
           )}
         </Field>
       </div>
-      <p className="mt-3 text-xs text-ink/55">
-        The stay becomes two bookings end to end, which is what it is: each room is counted only on the nights it is actually used, and the
-        guest's bill for each part stands on its own.
-      </p>
     </Modal>
   )
 }

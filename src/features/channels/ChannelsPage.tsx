@@ -110,7 +110,7 @@ export default function ChannelsPage() {
       <PageHeader
         eyebrow="Admin"
         title="Channel manager"
-        description={`${tenant.name}. Where this hotel is sold other than its own desk and its own site.`}
+        description={`${tenant.name}. Where the hotel is sold online.`}
         actions={
           <Button
             variant="secondary"
@@ -136,11 +136,6 @@ export default function ChannelsPage() {
 
       <div className="rounded-xl border border-warn/30 bg-warn/[0.08] p-3 text-sm text-ink/80">
         <p className="font-semibold text-ink">No travel agent is contacted from here.</p>
-        <p className="mt-0.5 text-xs">
-          Everything on this page is the hotel's own side: what each channel may sell, at what price, what it costs
-          and what it brought. Sending it is a commercial agreement with a channel manager, and a push below is a
-          simulation that says so in the log.
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -245,10 +240,6 @@ export default function ChannelsPage() {
 
                     <div>
                       <p className="text-sm font-medium text-ink/80">What this channel calls each room</p>
-                      <p className="mt-0.5 text-xs text-ink/55">
-                        Nothing can be sent for a room type until this is filled in. A wrong name here sells the wrong
-                        room, which is the most expensive mistake in distribution.
-                      </p>
                       <ul className="mt-2 space-y-2">
                         {c.mappings.map((m) => (
                           <li key={m.type} className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_5rem]">
@@ -322,7 +313,7 @@ export default function ChannelsPage() {
           })}
           {channels.length === 0 && (
             <li className="p-4 text-sm text-ink/55">
-              This hotel sells only at its own desk and on its own site, which costs no commission at all.
+              No channels. Sold only at the desk and own site.
             </li>
           )}
         </ul>
@@ -403,8 +394,7 @@ function Ari({ channel }: { channel: Channel }) {
         </div>
       </div>
       <p className="mt-0.5 text-xs text-ink/55">
-        Sold as “{shown[0]?.theirName}”. The count is the hotel's real free rooms, never more, and the price is the
-        hotel's own for that night.
+        Sold as “{shown[0]?.theirName}”.
       </p>
       <ul className="mt-2 space-y-0.5 text-xs">
         {shown.map((l) => (

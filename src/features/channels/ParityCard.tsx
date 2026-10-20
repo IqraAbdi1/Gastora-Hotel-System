@@ -49,14 +49,10 @@ export default function ParityCard({ channels }: { channels: Channel[] }) {
       icon="alert"
       count={bad.length}
       padded
-      description="Where a channel is showing a different price from the hotel, over the next fortnight."
+      description="Channel prices that differ from the hotel, next 14 days."
     >
       <div className="rounded-xl border border-warn/30 bg-warn/[0.08] p-3 text-xs text-ink/75">
-        <p className="font-semibold text-ink">These are sample figures, not what the channels are really showing.</p>
-        <p className="mt-0.5">
-          Nothing here looks at another company's website. Real monitoring buys a rate-shopping feed, and that feed
-          replaces one function. What is real is the shape: which channel, which night, how far out, and what to do.
-        </p>
+        <p className="font-semibold text-ink">Sample figures, not live channel prices.</p>
       </div>
 
       {bad.length === 0 ? (
@@ -69,11 +65,10 @@ export default function ParityCard({ channels }: { channels: Channel[] }) {
             {under.length > 0 ? (
               <>
                 <strong className="text-bad">{under.length}</strong> night
-                {under.length === 1 ? ' is' : 's are'} cheaper on a channel than on the hotel's own site. That is the
-                one to fix first: it teaches guests to book where the hotel pays commission.
+                {under.length === 1 ? ' is' : 's are'} cheaper on a channel than on the hotel's own site. Fix these first.
               </>
             ) : (
-              'No channel is undercutting the hotel. The differences below cost bookings rather than margin.'
+              'No channel is undercutting the hotel.'
             )}
           </p>
 

@@ -116,7 +116,7 @@ export default function MergeDialog({
               ))}
             </ul>
             <p className="mt-1 text-xs text-ink/55">
-              If the other one is right, close this, correct the record you are keeping, and join them again.
+              To keep the other value, fix this record first.
             </p>
           </div>
         )}
@@ -125,16 +125,13 @@ export default function MergeDialog({
           <div className="rounded-lg bg-bad/[0.08] p-3">
             <p className="font-semibold text-bad">This would let the hotel market to them.</p>
             <p className="mt-0.5 text-ink/75">
-              The record you are keeping refused offers and news; the other, answered more recently, agreed. The newer
-              answer stands, so joining these makes them contactable. Only do it if they are certainly the same
-              person.
+              The newer record agreed to offers. Only join if certainly the same person.
             </p>
           </div>
         )}
 
         <p className="text-xs text-ink/55">
-          Nothing is thrown away except the duplicate itself: preferences join, notes join, and what happened is
-          written on the record that survives. The name on an old booking is left as it was written that night.
+          Preferences and notes are combined. Old bookings keep their name.
         </p>
       </div>
     </Modal>

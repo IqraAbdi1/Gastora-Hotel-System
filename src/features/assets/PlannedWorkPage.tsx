@@ -234,7 +234,7 @@ export default function PlannedWorkPage() {
       <PageHeader
         eyebrow="Maintenance"
         title="Planned work"
-        description="Servicing a machine before it fails. A repair is work that chose you; this is work you chose."
+        description="Servicing machines before they fail."
         actions={
           <Button onClick={() => setEditing({ plan: emptyPlan(assets[0]?.id ?? ''), isNew: true })} disabled={assets.length === 0}>
             New service plan
@@ -307,7 +307,7 @@ export default function PlannedWorkPage() {
           title="Service plans"
           icon="calendar"
           count={plans.length}
-          description="Each plan raises its own job when it comes round. A meter plan's date is worked out from how hard the machine works, so it is an estimate."
+          description="Each plan raises a job when due. Meter dates are estimates."
           padded={false}
         >
           <DataTable
@@ -420,7 +420,7 @@ function SignOff({
         {meterPlan && (
           <Field
             label={`Reading when it was done${asset?.meterUnit ? ` (${asset.meterUnit})` : ''}`}
-            hint="The next service is counted from this number, so the interval does not drift."
+            hint="The next service counts from this."
           >
             {(id) => <Input id={id} type="number" min={0} value={reading} onChange={(e) => setReading(e.target.value)} />}
           </Field>
@@ -440,8 +440,7 @@ function SignOff({
         </Field>
 
         <p className="rounded-lg bg-canvas p-3 text-xs text-ink/60">
-          The plan moves on from the day above, not from the day it fell due. A service done a week late does
-          not push every future one a week late.
+          The next date counts from the day it was done.
         </p>
       </div>
     </Modal>

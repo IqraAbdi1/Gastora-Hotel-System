@@ -226,15 +226,12 @@ export default function NewHotelDialog({
 
           {branchOf && (
             <p className="rounded-xl bg-good/10 p-3 text-xs text-ink/70">
-              Joined to <strong>{groupName}</strong>. The two see each other&apos;s free rooms, so a full night at one
-              can be sent to the other. Room policies, house rules, cleaning areas, message wording, tax rules and
-              stay times are copied from {branchOf.name} and can be changed afterwards.
+              Joined to <strong>{groupName}</strong>. Settings are copied from {branchOf.name} and can be changed later.
             </p>
           )}
 
           <p className="rounded-xl bg-brand/6 p-3 text-xs text-ink/65">
-            Prototype: this keeps the hotel in this browser only. In the real system it creates the hotel's own space, its
-            first admin account and its subscription. <Badge tone="neutral">Nothing is billed here</Badge>
+            Saved in this browser only. <Badge tone="neutral">Nothing is billed here</Badge>
           </p>
         </div>
 

@@ -185,14 +185,13 @@ export default function CompanyCheckIn({ reservation: r }: { reservation: Reserv
       </div>
 
       <p className="rounded-lg bg-canvas px-3 py-2 text-sm text-ink/75">
-        This stay is on the company's account. Confirm the company side with the guest here, then continue to ID. A check made at
-        booking does not count.
+        Company stay. Confirm the company side here, then continue to ID.
       </p>
 
       <section className="space-y-3">
         <p className={heading}>1. Is the guest from {account.name}?</p>
         {policy.callbackRequired && (
-          <p className="text-xs text-warn">Large hotel rule: call the company on the number in our records, not one the guest gives.</p>
+          <p className="text-xs text-warn">Call the company on the number in our records.</p>
         )}
         <Field label="How did you confirm it?" required>
           {(id) => (
@@ -244,9 +243,8 @@ export default function CompanyCheckIn({ reservation: r }: { reservation: Reserv
         {lpoRequired && (
           <p className="text-xs text-ink/60">
             {c.billing.claimedLpo
-              ? `The booking has LPO ${c.billing.claimedLpo}. Check it matches the document in front of you.`
-              : 'No LPO number was given at booking. Take it from the document in front of you.'}{' '}
-            The LPO is the company's commitment; the name is who to call about it.
+              ? `Booking has LPO ${c.billing.claimedLpo}. Check it against the document.`
+              : 'No LPO given at booking. Take it from the document.'}
           </p>
         )}
         <div className={lpoRequired ? 'space-y-3 rounded-lg border border-ink/10 bg-canvas/60 p-3' : 'space-y-3'}>
@@ -267,7 +265,7 @@ export default function CompanyCheckIn({ reservation: r }: { reservation: Reserv
             <Field
               label={lpoRequired ? 'Who signed it for the company' : 'Approved by'}
               required
-              hint="A company contact who can approve charges. Not the person who booked, and not the guest."
+              hint="Not the booker or the guest."
             >
               {(id) => (
                 <Select id={id} value={approverId} onChange={(e) => setApproverId(e.target.value)}>

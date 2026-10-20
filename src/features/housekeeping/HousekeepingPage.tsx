@@ -192,7 +192,7 @@ export default function HousekeepingPage() {
       <PageHeader
         eyebrow="Housekeeping"
         title="Rooms"
-        description="Room readiness, from check-out to inspected. Changes show on the front desk board straight away."
+        description="Room readiness, from check-out to inspected."
         actions={<Button onClick={() => newTask()}>New task</Button>}
       />
 
@@ -314,7 +314,7 @@ export default function HousekeepingPage() {
         title="Room readiness"
         icon="clean"
         count={list.length}
-        description="Dirty → Being cleaned → Clean → Inspected. A clean or inspected room can be checked into."
+        description="Dirty → Being cleaned → Clean → Inspected."
         padded={false}
       >
         <DataTable

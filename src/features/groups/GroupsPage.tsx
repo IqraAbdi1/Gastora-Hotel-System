@@ -49,7 +49,7 @@ export default function GroupsPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Groups"
-        description="Blocks of rooms held under one name: workshops, weddings, and rooms sold through an agent."
+        description="Room blocks for workshops, weddings and agents."
         actions={<Button onClick={() => setAdding(true)}>Hold rooms for a group</Button>}
       />
 
@@ -62,7 +62,7 @@ export default function GroupsPage() {
       <Card title="Blocks" icon="bed" count={blocks.length} padded>
         {blocks.length === 0 ? (
           <p className="text-sm text-ink/60">
-            No group is holding rooms. A ministry workshop, a wedding party or a tour operator's block all start here.
+            No group is holding rooms.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -158,7 +158,7 @@ function NewGroupDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="Hold rooms for a group"
-      description="The rooms come out of inventory straight away. Names can be added now or on the day."
+      description="Rooms are held at once. Add names now or later."
       onClose={onClose}
       wide
       footer={
@@ -282,7 +282,7 @@ function NewGroupDialog({ onClose }: { onClose: () => void }) {
         </div>
         {billing === 'agent-net' && (
           <p className="mt-1 text-xs text-ink/55">
-            The net rate is what the hotel receives. It is staff-only and never appears on anything the guest is given.
+            Net rate: what the hotel receives. Staff only.
           </p>
         )}
       </div>
@@ -305,7 +305,7 @@ function NewGroupDialog({ onClose }: { onClose: () => void }) {
               )
             })}
           </div>
-          <p className="mt-1 text-xs text-ink/55">Everything not ticked follows the guest and is settled at the desk when they leave.</p>
+          <p className="mt-1 text-xs text-ink/55">Unticked items are paid by the guest.</p>
         </div>
       )}
 

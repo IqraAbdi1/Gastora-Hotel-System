@@ -160,7 +160,7 @@ export default function LogItemDialog({ room: fixedRoom, onClose }: { room?: str
                 <p className="mb-1.5 text-sm font-medium text-ink/80">Photo</p>
                 <IdPhotoInput value={photo} onChange={setPhoto} />
                 <p className="mt-1 text-xs text-ink/55">
-                  A photo helps the front desk know it is the right item when a guest describes it.
+                  Helps the desk match the item.
                 </p>
               </div>
 

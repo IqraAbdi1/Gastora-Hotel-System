@@ -87,7 +87,7 @@ export default function BookServices({ stay }: { stay: Reservation }) {
     <section className="mt-5">
       <h2 className="text-base font-semibold text-ink">Book a table, a treatment or a trip</h2>
       <p className="mt-0.5 text-xs text-ink/60">
-        Your place is held while the hotel confirms. Nothing is charged until they do.
+        Nothing is charged until the hotel confirms.
       </p>
 
       {days.length > 0 && services.length > 0 && (

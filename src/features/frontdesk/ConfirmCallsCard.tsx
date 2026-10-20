@@ -49,7 +49,7 @@ export default function ConfirmCallsCard() {
       icon="alert"
       title="Call to confirm"
       count={left}
-      description={`Nothing is holding these bookings. Rooms not confirmed by ${releaseTime} can go back on sale.`}
+      description={`Unconfirmed rooms go back on sale at ${releaseTime}.`}
       padded
     >
       <ul className="space-y-2">
@@ -77,8 +77,7 @@ export default function ConfirmCallsCard() {
                 )}
                 {lateConfirmed.some((x) => x.id === r.id) && (
                   <p className="mt-1 text-xs text-ink/70">
-                    They said they were coming, so the clock leaves this one alone. Release it only if you have decided
-                    they are not arriving.
+                    Confirmed, so it is not released automatically.
                   </p>
                 )}
               </div>
@@ -137,10 +136,6 @@ export default function ConfirmCallsCard() {
           </ul>
         </div>
       )}
-      <p className="mt-3 text-xs text-ink/55">
-        The release time is set in Rates and policies. Recording the call is what lets the desk know, at{' '}
-        {releaseTime}, which rooms it can honestly resell.
-      </p>
     </Card>
   )
 }

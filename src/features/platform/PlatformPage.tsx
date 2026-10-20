@@ -32,6 +32,8 @@ const AREAS: { label: string; keys: string[] }[] = [
     label: 'Stock and purchasing',
     keys: ['requests', 'stockControl', 'lossReports', 'stores', 'deptReturns', 'batchExpiry', 'lossReversal', 'supplyChain', 'budgetApproval'],
   },
+  // Area M
+  { label: 'Security and compliance', keys: ['securityBasic', 'fieldPermissions', 'sodRules', 'ssoMfa', 'fiscalConnectors'] },
 ]
 
 export default function PlatformPage() {
@@ -114,7 +116,7 @@ export default function PlatformPage() {
     <div className="space-y-5">
       <PageHeader
         title="Platform admin"
-        description="Every hotel on Gastora: what plan it is on, whether it has paid, and which features it has."
+        description="Every hotel, its plan, payment and features."
         actions={<Button onClick={() => setAdding({})}>+ Add a hotel</Button>}
       />
 
@@ -196,7 +198,7 @@ export default function PlatformPage() {
               ))}
             </div>
             <p className="mt-2 text-xs text-ink/55">
-              Overdue keeps features on and warns the hotel admin. Suspended turns them off; data is kept.
+              Overdue warns the admin. Suspended turns features off.
             </p>
           </div>
         </div>
@@ -240,10 +242,6 @@ export default function PlatformPage() {
         )}
       </Card>
 
-      <p className="text-xs text-ink/50">
-        Prototype: this only hides screens. In the real system the backend stores each hotel&apos;s features and rejects calls for
-        anything that is off.
-      </p>
 
       {adding && (
         <NewHotelDialog

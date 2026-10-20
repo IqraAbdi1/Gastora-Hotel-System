@@ -207,8 +207,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                   ))}
                 </div>
                 <p className="mt-3 text-xs text-ink/60">
-                  The guest can check out once their own side is settled. What the company carries is never in
-                  their way at the desk.
+                  The guest can leave once their own side is settled.
                 </p>
               </div>
             )}
@@ -277,10 +276,6 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                     </Button>
                   </div>
                 )}
-                <p className="mt-1.5 text-xs text-ink/55">
-                  A charge is sent to the other bill as it is posted, carrying this guest's name, so nobody has to work out at checkout why
-                  somebody else's dinner is on it. A rule naming one kind beats a rule for everything.
-                </p>
               </div>
 
               <p className={heading}>Charges</p>
@@ -347,8 +342,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                               </div>
                             )}
                             <p className="text-xs text-ink/60">
-                              The charge stays on the folio with a matching line that cancels it, so the guest can see what
-                              happened. The amount decides who must approve.
+                              A cancelling line is added. The amount sets who approves.
                             </p>
                           </div>
                           {asking && (
@@ -513,7 +507,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                   </p>
                 )}
                 <p className="mt-2 text-xs text-ink/60">
-                  This is a simulated invoice. In the real system the URA EFRIS system returns the fiscal code. Room {r.room} is now dirty and waiting for housekeeping.
+                  Simulated invoice. Room {r.room} is now dirty.
                 </p>
               </div>
             )}
@@ -590,7 +584,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
             </div>
             {payAmount > owed && <p className="text-xs text-bad">That is more than the guest owes.</p>}
             <p className="text-xs text-ink/60">
-              Payments are simulated here. In the real system a mobile money payment is recorded only after the provider confirms it.
+              Payments are simulated in this demo.
             </p>
           </div>
         )}
@@ -619,13 +613,13 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
             {lateCharged && <p className="rounded-lg bg-good/10 p-2.5 text-xs font-semibold text-good">Late check-out charge is on the folio.</p>}
             {r.departure !== TODAY && (
               <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">
-                Departure is booked for {dayMonth(r.departure)}. If the guest is leaving on a different day, use Change stay first so the room charges are right.
+                Departure is booked for {dayMonth(r.departure)}. Leaving another day? Use Change stay first.
               </p>
             )}
             {owed > 0 ? (
               <>
                 <p className="rounded-lg bg-bad/10 p-3 text-sm text-bad">
-                  The guest still owes {ugx(owed)}. Take the payment, or a manager can authorise check-out with a reason.
+                  The guest still owes {ugx(owed)}. Take payment or get manager approval.
                 </p>
                 <label className="flex items-start gap-2 text-sm">
                   <input type="checkbox" checked={authorise} onChange={(e) => setAuthorise(e.target.checked)} className="mt-1" />
@@ -641,7 +635,7 @@ export default function FolioPanel({ reservation: r, onClose, startOn = 'folio' 
                       className={`${field} mt-1`}
                     />
                     <span className="mt-1 block text-xs font-normal text-ink/60">
-                      Manager approval is simulated here. The real system asks a manager to approve and logs who did.
+                      Approval is simulated in this demo.
                     </span>
                   </label>
                 )}

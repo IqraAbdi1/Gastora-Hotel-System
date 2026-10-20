@@ -45,13 +45,9 @@ export default function StayRatesCard({
       icon="calendar"
       count={list.length}
       padded
-      description="Less per night for a guest who stays longer. Applied last, after the season, the day and how full the house is."
+      description="Less per night for longer stays. Applied last."
     >
-      <p className="text-xs text-ink/60">
-        The rule with the most nights the stay reaches is the one that applies: a ten-night guest gets the seven-night
-        price, not both. The guest and the desk see it as its own line, such as “Stay 3 nights or more: 5% off”.
-      </p>
-      <ul className="mt-3 space-y-2">
+      <ul className="space-y-2">
         {list.map((r) => (
           <li key={r.id} className="rounded-lg border border-ink/10 p-2.5">
             <div className="grid gap-2 sm:grid-cols-[6rem_6rem_8rem_8.5rem_8.5rem]">
@@ -168,8 +164,7 @@ export default function StayRatesCard({
         {list.length === 0 && <li className="text-xs text-ink/55">No long-stay prices. Every night costs the same however long the stay.</li>}
       </ul>
       <p className="mt-1 text-xs text-ink/55">
-        No meal plan chosen means every plan. Dates are judged night by night, so a long stay that runs into a period
-        left out pays the full price for those nights.
+        No meal plan chosen means every plan.
       </p>
       <div className="mt-2">
         <Button
@@ -233,8 +228,7 @@ export default function StayRatesCard({
           </p>
         </div>
         <p className="mt-1 text-xs text-ink/55">
-          Room only, through the whole rate calendar. The meal plan is added on top of each night. A booking already taken
-          keeps the price it was sold at.
+          Room only. Existing bookings keep their price.
         </p>
       </section>
     </Card>

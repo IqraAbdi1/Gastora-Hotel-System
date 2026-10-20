@@ -200,16 +200,15 @@ export default function PromoCard({ rates, set }: { rates: RatesPolicy; set: (pa
 
       {open && (
         <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-ink/65">
-          <li>One code at a time. Two discounts on one booking is how a room is sold below cost.</li>
+          <li>One code per booking.</li>
           <li>A code never applies on top of a company's agreed price.</li>
-          <li>It is counted when the booking is made, so a refused payment does not spend it.</li>
-          <li>The guest is told why a code was refused, not merely that it was.</li>
-          <li>A code already used on a booking does not change that booking when it is edited here.</li>
+          <li>Counted when the booking is made.</li>
+          <li>The guest is told why a code was refused.</li>
+          <li>Editing a code does not change past bookings.</li>
         </ul>
       )}
       <p className="mt-2 text-xs text-ink/55">
-        Codes work on the hotel's own booking page. The desk quotes the published price and applies company
-        agreements instead.
+        Codes work on the hotel's own booking page only.
       </p>
       {promos.some((p) => p.used > 0) && (
         <p className="mt-1 text-xs text-ink/70">

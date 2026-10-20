@@ -134,7 +134,7 @@ export default function IdScanSheet({ photo, onUse, onClose }: Props) {
   return (
     <Modal
       title="Read the ID"
-      description="The strip on the back of a national ID, or the two lines at the foot of a passport."
+      description="The strip on the back of an ID or foot of a passport."
       onClose={onClose}
       wide
       header={
@@ -201,8 +201,7 @@ export default function IdScanSheet({ photo, onUse, onClose }: Props) {
                 )}
               </div>
               <p className="mt-2 text-xs text-ink/55">
-                A phone or tablet camera held flat over the card reads this best. A laptop camera often cannot, because of glare and too few pixels
-                across thirty characters.
+                A phone camera held flat works best.
               </p>
             </div>
           )}
@@ -259,7 +258,7 @@ export default function IdScanSheet({ photo, onUse, onClose }: Props) {
                 className="mt-1 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 font-mono text-sm tracking-wider text-ink focus:border-brand focus:outline-none"
               />
               <p className="mt-1 text-xs text-ink/55">
-                Three lines on an identity card, two on a passport. A hand scanner types them in here by itself.
+                Three lines on an ID card, two on a passport.
               </p>
               {typedResult && !typedResult.ok && <p className="mt-2 text-sm text-bad">{typedResult.reason}</p>}
               {typedResult?.ok && (
@@ -318,8 +317,8 @@ function Review({ read, source, photo }: { read: MrzRead; source: ScanSource; ph
           {read.doubtful.length > 0
             ? `The card's own check digits disagree with ${read.doubtful.join(' and ')}. Compare ${
                 read.doubtful.length > 1 ? 'those fields' : 'that field'
-              } with the printed side of the ID before using this.`
-            : 'The final check over the whole strip disagrees. Compare the fields with the printed side of the ID before using this.'}
+              } with the printed side of the ID.`
+            : 'The strip check failed. Compare with the printed side of the ID.'}
         </p>
       )}
 
@@ -341,9 +340,6 @@ function Review({ read, source, photo }: { read: MrzRead; source: ScanSource; ph
         <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs text-ink/60">{read.lines.join('\n')}</pre>
       </details>
 
-      <p className="text-xs text-ink/55">
-        Using these details fills the ID step. Every field stays editable, and nothing is kept on the guest until the check-in is confirmed.
-      </p>
     </div>
   )
 }

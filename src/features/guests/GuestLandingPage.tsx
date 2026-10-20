@@ -141,8 +141,8 @@ export default function GuestLandingPage() {
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8">
-              Discover a more thoughtful hotel experience. Find your room,
-              plan your stay, and let Gastora take care of the details.
+              Find your room, plan your stay, and let Gastora take care of the
+              details.
             </p>
 
             <a
@@ -296,9 +296,7 @@ export default function GuestLandingPage() {
           </div>
 
           <p className="leading-7 text-gray-600 md:col-span-2 md:pt-5">
-            Your journey should be effortless from the first search to the
-            moment you leave. Explore your options, manage your reservation,
-            and access guest services in one convenient place.
+            Book, manage your stay and reach guest services in one place.
           </p>
         </div>
 
@@ -386,9 +384,7 @@ export default function GuestLandingPage() {
           </div>
 
           <p className="mt-6 text-xs leading-5 text-gray-500">
-            Room categories and photographs are illustrative. Actual room
-            descriptions, rates, and availability must come from Gastora's
-            property and reservation data.
+            Photos are illustrative.
           </p>
         </div>
       </section>
@@ -406,8 +402,7 @@ export default function GuestLandingPage() {
             </h2>
 
             <p className="mt-4 max-w-xl leading-7 text-white/75">
-              Access your reservation details, review your folio, and request
-              services during your stay through the Gastora guest portal.
+              See your booking and bill, and request services.
             </p>
           </div>
 

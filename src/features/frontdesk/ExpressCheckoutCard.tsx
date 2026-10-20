@@ -42,7 +42,7 @@ export default function ExpressCheckoutCard() {
   return (
     <Card
       title="Leaving without stopping at the desk"
-      description="Checked again now. What the hotel can charge may have changed since they agreed."
+      description="Rechecked now. Charges may have changed."
       icon="money"
       count={agreed.length}
       padded
@@ -118,7 +118,7 @@ export default function ExpressCheckoutCard() {
       )}
 
       <p className="mt-3 text-xs text-ink/55">
-        The money is taken first and the guest is checked out second, so a card that fails never lets anybody leave unpaid.
+        Payment is taken before check-out.
       </p>
       <div className="mt-2">
         <Badge tone="neutral">

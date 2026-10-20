@@ -84,7 +84,7 @@ export default function NightAuditPage() {
       <PageHeader
         eyebrow="Front desk"
         title="Night audit"
-        description={`${tenant.name}. The end-of-day check for ${TODAY}. Clear everything below, then close the day.`}
+        description={`${tenant.name}. End-of-day check for ${TODAY}.`}
         meta={<Badge tone={ready ? 'good' : 'warn'}>{ready ? 'Ready to run' : `${blockers.length} to clear`}</Badge>}
       />
 
@@ -100,7 +100,7 @@ export default function NightAuditPage() {
         icon="alert"
         count={report.items.length}
         padded={false}
-        description="Rules, not AI. Every red item has to be cleared; the others are a check."
+        description="Red items must be cleared first."
       >
         <DataTable
           columns={columns}
@@ -132,10 +132,6 @@ export default function NightAuditPage() {
                 <dd className="font-bold tabular-nums">{ugx(report.postTotal)}</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs text-ink/55">
-              In this prototype each stay's total already covers every night, so running the audit records the check rather
-              than adding the charge again. In the real system the audit posts this to the ledger and rolls the business date.
-            </p>
           </>
         )}
       </Card>
@@ -169,19 +165,18 @@ export default function NightAuditPage() {
           <>
             <p className="text-sm text-ink/70">
               {options.nightAudit
-                ? `The day closes itself at ${options.nightAuditAt}. Running it now does the same thing earlier.`
-                : 'Closing the day by itself is switched off for this hotel, so somebody runs it.'}
+                ? `The day closes itself at ${options.nightAuditAt}.`
+                : 'Automatic closing is off. Run it by hand.'}
             </p>
             {!ready && (
               <p className="mt-1 text-xs text-bad">
-                {blockers.length} item{blockers.length === 1 ? '' : 's'} above must be cleared first. A guest still in house past their departure
-                has either extended or left without saying, and only a person can tell which.
+                {blockers.length} item{blockers.length === 1 ? '' : 's'} above must be cleared first.
               </p>
             )}
             {closeSettles.length > 0 && (
               <p className="mt-1 text-xs text-ink/60">
                 {closeSettles.length} arrival{closeSettles.length === 1 ? '' : 's'} that never came will be recorded as no-show
-                {closeSettles.length === 1 ? '' : 's'} by closing the day. Those do not need clearing by hand.
+                {closeSettles.length === 1 ? '' : 's'} by closing the day.
               </p>
             )}
             <div className="mt-3">

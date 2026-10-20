@@ -58,7 +58,7 @@ export default function CompanyBookingSection({
         <div className="space-y-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search company name, TIN or account number" className={field} autoFocus />
           {results.length === 0 ? (
-            <p className="text-sm text-ink/60">No company found. A new company account must be requested on the Companies page and approved first.</p>
+            <p className="text-sm text-ink/60">No company found. Request one on the Companies page.</p>
           ) : (
             <ul className="divide-y divide-ink/8 rounded-lg border border-ink/10">
               {results.map((a) => {
@@ -143,7 +143,7 @@ export default function CompanyBookingSection({
                 </span>
               ) : (
                 <span className="mt-1 block text-xs font-normal text-warn">
-                  Not on the list. Their name and phone are needed, and they are checked at check-in.
+                  Not on the list. Name and phone needed.
                 </span>
               )}
             </label>
@@ -261,7 +261,7 @@ export default function CompanyBookingSection({
             </ul>
           )}
           <p className="text-xs text-ink/55">
-            The guest's ID is checked at check-in. Claiming to work for the company does not, by itself, allow charges to its account.
+            Charges to the company need more than the guest's word.
           </p>
         </div>
       )}

@@ -136,7 +136,7 @@ export default function EngineeringPage() {
       <PageHeader
         eyebrow="Maintenance"
         title="Engineering"
-        description="What keeps breaking, what each machine costs to keep, and everything that has been done to it."
+        description="Repeat faults, running costs and machine history."
         actions={
           <Segmented
             label="Period"
@@ -176,13 +176,13 @@ export default function EngineeringPage() {
         title="The same fault again"
         icon="alert"
         count={repeats.length}
-        description="Three of the same fault in the same place is a pattern, not bad luck. Fixing the tap a fourth time will not solve it."
+        description="Three of the same fault in one place."
         padded={false}
       >
         {repeats.length === 0 ? (
           <EmptyState
             title="Nothing is repeating"
-            hint={`No place has had the same kind of fault three times in the ${PERIOD_LABEL[period].toLowerCase()}.`}
+            hint={`No repeat faults in the ${PERIOD_LABEL[period].toLowerCase()}.`}
           />
         ) : (
           <DataTable columns={repeatColumns} rows={repeats} rowKey={(r) => `${r.where}-${r.category}`} />
@@ -210,7 +210,7 @@ export default function EngineeringPage() {
           title="Cost to keep"
           icon="list"
           count={costs.length}
-          description="Only parts the store issued are counted. Labour is not: the hotel pays its technicians whether or not they are at this machine today."
+          description="Parts from the store only. Labour is not counted."
           padded={false}
         >
           <DataTable
@@ -221,9 +221,7 @@ export default function EngineeringPage() {
           />
           {loose > 0 && (
             <p className="border-t border-ink/10 px-4 py-3 text-sm text-ink/70">
-              <span className="font-semibold text-ink">{ugx(loose)}</span> went on work that named no machine. Most
-              faults are reported against a room, not an asset number; naming the machine when it is reported is what
-              puts the money here.
+              <span className="font-semibold text-ink">{ugx(loose)}</span> went on work that named no machine.
             </p>
           )}
         </Card>

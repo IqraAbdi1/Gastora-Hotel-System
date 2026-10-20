@@ -56,7 +56,7 @@ export default function PointsCard({ guest }: { guest: Guest }) {
     >
       {guest.loyaltyConsent !== true ? (
         <p className="text-sm text-ink/70">
-          This guest has not agreed to be remembered between stays, so nothing is earned and nothing is kept.
+          Not opted in, so nothing is earned.
         </p>
       ) : (
         <>
@@ -77,8 +77,8 @@ export default function PointsCard({ guest }: { guest: Guest }) {
           {account.expiring && (
             <p className={`mt-2 text-sm ${gone ? 'text-bad' : 'text-ink/65'}`}>
               {gone
-                ? `These fell away on ${dayMonthYear(account.expiring.on)}. The guest earns again on their next stay.`
-                : `They fall away on ${dayMonthYear(account.expiring.on)} unless the guest comes back.`}
+                ? `These expired on ${dayMonthYear(account.expiring.on)}.`
+                : `They expire on ${dayMonthYear(account.expiring.on)} unless the guest returns.`}
             </p>
           )}
 
@@ -129,9 +129,7 @@ export default function PointsCard({ guest }: { guest: Guest }) {
           )}
 
           <p className="mt-3 text-xs text-ink/55">
-            Points are earned on the room only, on stays that finished, and only for a guest who agreed to be
-            remembered. A voucher takes them off the balance the moment it is made, so the same point is never
-            counted twice. Taking the voucher off a bill is done on the folio.
+            Earned on the room for finished stays. Use vouchers on the folio.
           </p>
         </>
       )}

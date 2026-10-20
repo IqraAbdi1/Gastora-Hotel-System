@@ -138,7 +138,7 @@ export default function TasksPage() {
       <PageHeader
         eyebrow="Housekeeping"
         title="Tasks"
-        description="Assign and track cleaning work by room, attendant, priority and due time."
+        description="Assign and track cleaning work."
         actions={<Button onClick={() => newTask()}>New task</Button>}
       />
 

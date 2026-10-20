@@ -135,8 +135,7 @@ export function HousekeepingRequests() {
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {requests.length === 0 ? (
               <p className="text-sm text-ink/60">
-                Nothing right now. When a guest is waiting for a room, the front desk can rush one from the check-in screen
-                and it shows up here.
+                No rush requests right now.
               </p>
             ) : (
               requests.map((r) => <RequestCard key={r.room} room={r} />)
