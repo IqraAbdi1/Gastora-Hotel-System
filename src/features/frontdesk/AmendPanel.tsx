@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { TODAY } from '../../data/sample'
 import { addDays } from '../../lib/availability'
-import { checkAmend, FEE_WINDOW_DAYS, reasons } from '../../lib/amend'
+import { checkAmend, reasons } from '../../lib/amend'
+import { useFeatures } from '../platform/featuresContext'
 import { nightsOf } from '../../lib/booking'
 import { dayMonth, ugx } from '../../lib/format'
 import { useHotel } from '../../lib/hotelContext'
 import type { Reservation } from '../../types'
+import { extrasOf } from '../../lib/folio'
+
 
 type Props = { reservation: Reservation; onClose: () => void; onDone: () => void }
 
@@ -14,6 +17,8 @@ const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
 
 export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   const { rooms, reservations, amendReservation } = useHotel()
+  const { options } = useFeatures()
+  const rates = options.rates
   const inHouse = r.status === 'in-house'
 
   const [arrival, setArrival] = useState(r.arrival)
@@ -25,12 +30,12 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   const [done, setDone] = useState(false)
 
   const check = useMemo(
-    () => checkAmend(r, arrival, departure, rooms, reservations),
-    [r, arrival, departure, rooms, reservations],
+    () => checkAmend(r, arrival, departure, rooms, reservations, rates),
+    [r, arrival, departure, rooms, reservations, rates],
   )
 
   const feeCharged = check.feeApplies && !waive ? check.fee : 0
-  const newTotal = check.newTotal + feeCharged
+  const newTotal = check.newTotal + feeCharged + extrasOf(r)
   const needsManager = (check.feeApplies && waive) || (check.needsOverride && override)
   const managerOk = !needsManager || managerReason.trim().length >= 5
   const valid =
@@ -64,9 +69,13 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
   }
 
   const balanceAfter = newTotal - r.paid
-
+  // In house: the guest can leave today, but never before the night after arrival
+  const dayAfterArrival = addDays(arrival, 1)
+  const earliestDeparture = inHouse && TODAY > dayAfterArrival ? TODAY : dayAfterArrival
+  
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true">
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">Change stay</h2>
@@ -131,13 +140,13 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
                 <input
                   type="date"
                   value={departure}
-                  min={addDays(inHouse ? TODAY : arrival, 1)}
+                  min={earliestDeparture}
                   onChange={(e) => setDeparture(e.target.value)}
                   className={`${field} mt-1`}
                 />
               </label>
             </div>
-            {inHouse && <p className="text-xs text-ink/60">The guest is in the house, so only the departure can change (extend or shorten).</p>}
+            {inHouse && <p className="text-xs text-ink/60">Guest is in house: only the departure can change.</p>}
 
             <label className="block text-sm font-medium">
               Reason
@@ -175,7 +184,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
 
                 {check.blockedByRoom && (
                   <p className="rounded-lg bg-bad/10 p-3 text-sm text-bad">
-                    Room {r.room} is booked by another guest on those nights, so the stay cannot be extended in this room.
+                    Room {r.room} is booked by another guest on those nights.
                   </p>
                 )}
                 {check.roomLost && (
@@ -213,7 +222,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
                       className={`${field} mt-1`}
                     />
                     <span className="mt-1 block text-xs font-normal text-ink/60">
-                      Manager approval is simulated here. The real system asks a manager to approve and logs who did.
+                      Approval is simulated in this demo.
                     </span>
                   </label>
                 )}
@@ -221,7 +230,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
             )}
 
             <p className="text-xs text-ink/60">
-              Sample policy: free to change {FEE_WINDOW_DAYS} or more days before arrival. Closer than that, moving or shortening a booking costs one night. Extending is always free. The nightly rate and the deposit stay with the booking.
+              Free to change {rates.changeFreeDays}+ days before arrival, then {rates.changeFeeNights} night{rates.changeFeeNights === 1 ? '' : 's'}. Extending is always free.
             </p>
           </div>
 
@@ -237,6 +246,7 @@ export default function AmendPanel({ reservation: r, onClose, onDone }: Props) {
           </div>
         </>
       )}
+    </div>
     </div>
   )
 }

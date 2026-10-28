@@ -1,10 +1,12 @@
 import { TODAY } from '../data/sample'
 import { clashingStay } from './availability'
 import { freeByType, nightsOf } from './booking'
+import type { RatesPolicy } from './rates'
 import type { Reservation, Room } from '../types'
+import { extrasOf } from './folio'
 
-// Sample policy, not from the SRS. The hotel will set these in its own settings later.
-export const FEE_WINDOW_DAYS = 2 // changes closer than this to arrival cost one night
+// The starting policy. Each hotel sets its own under Admin, Rates and policies.
+export const FEE_WINDOW_DAYS = 2 // changes closer than this to arrival cost a night
 
 export const reasons = ['Guest request', 'Flight or travel change', 'Business change', 'Hotel request', 'Other']
 
@@ -27,10 +29,13 @@ export function checkAmend(
   departure: string,
   rooms: Room[],
   reservations: Reservation[],
+  rates?: RatesPolicy,
 ): AmendCheck {
+  const freeDays = rates?.changeFreeDays ?? FEE_WINDOW_DAYS
+  const feeNights = rates?.changeFeeNights ?? 1
   const inHouse = r.status === 'in-house'
   const oldNights = Math.max(1, nightsOf(r.arrival, r.departure))
-  const perNight = Math.round(r.total / oldNights) // keeps the original rate
+  const perNight = Math.round((r.total - extrasOf(r)) / oldNights) // room charges only, extras are not repriced
   const nights = nightsOf(arrival, departure)
   const base: AmendCheck = {
     error: null,
@@ -45,15 +50,15 @@ export function checkAmend(
     blockedByRoom: false,
   }
 
-  if (r.status === 'checked-out') return { ...base, error: 'This stay is already checked out.' }
+  if (r.status !== 'booked' && r.status !== 'in-house') return { ...base, error: 'Only booked or in-house stays can change.' }
   if (nights < 1) return { ...base, error: 'Departure must be after arrival.' }
   if (!inHouse && arrival < TODAY) return { ...base, error: 'Arrival cannot be in the past.' }
-  if (inHouse && departure <= TODAY) return { ...base, error: 'Departure must be after today.' }
+  if (inHouse && departure < TODAY) return { ...base, error: 'Departure cannot be in the past.' }
   if (arrival === r.arrival && departure === r.departure) return { ...base, error: 'Change a date to continue.' }
 
   const shortened = departure < r.departure
   const feeApplies =
-    !inHouse && nightsOf(TODAY, r.arrival) < FEE_WINDOW_DAYS && (arrival !== r.arrival || shortened)
+    !inHouse && nightsOf(TODAY, r.arrival) < freeDays && (arrival !== r.arrival || shortened)
 
   const others = reservations.filter((x) => x.id !== r.id)
   const typeFree = freeByType(rooms, others, arrival, departure)[r.roomType]
@@ -61,7 +66,7 @@ export function checkAmend(
 
   return {
     ...base,
-    fee: feeApplies ? perNight : 0,
+    fee: feeApplies ? perNight * feeNights : 0,
     feeApplies,
     typeFree,
     needsOverride: !inHouse && typeFree < 1,

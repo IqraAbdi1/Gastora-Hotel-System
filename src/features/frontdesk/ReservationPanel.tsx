@@ -1,43 +1,128 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import StatusPill from '../../components/StatusPill'
+import { TODAY } from '../../data/sample'
+import { guarantees } from '../../data/rates'
 import { dayMonth, nightsBetween, ugx } from '../../lib/format'
+import { planFor } from '../../lib/booking'
+import type { CancelMode } from '../../lib/cancel'
 import type { Reservation } from '../../types'
 import AmendPanel from './AmendPanel'
+import CancelPanel from './CancelPanel'
+import ArrivalRoomHelp from './ArrivalRoomHelp'
+import CompanyChecks from './CompanyChecks'
+import MoveRoomPanel from './MoveRoomPanel'
+import { checkInBlock } from '../../lib/corporate'
+import { useCorporate } from '../corporate/corporateContext'
+import { useMessages } from '../messages/messagesContext'
+import { useHotel } from '../../lib/hotelContext'
+import { useFeatures } from '../platform/featuresContext'
+import { PRE_REG_LABEL, PRE_REG_TONE, portalLink, preRegLink, preRegProgress, preRegState } from '../../lib/preRegistration'
+import { SHARE_NOTE, legsOf } from '../../lib/sharing'
+import { KEY_STATE_LABEL, KEY_STATE_TONE } from '../../lib/keys'
+import { useAuth } from '../auth/authContext'
+import ShareDialog from './ShareDialog'
+import PartySection from './PartySection'
+import { commissionOf } from '../../lib/agents'
+import CheckInPanel from './CheckInPanel'
+import SplitStayDialog from './SplitStayDialog'
+import { Badge } from '../../components/ui'
+import { CHANNEL_LABEL, KIND_LABEL } from '../../lib/messages'
 
 type Props = { reservation: Reservation; onClose: () => void; onCheckIn?: () => void }
 
+const sourceLabel = {
+  'walk-in': 'Walk-in',
+  'front desk': 'Front desk',
+  phone: 'Phone',
+  email: 'Email',
+  online: 'Online',
+  ota: 'OTA',
+  agent: 'Travel agent',
+}
+
+const heading = 'text-xs font-semibold uppercase tracking-wide text-ink/50'
+
 export default function ReservationPanel({ reservation: r, onClose, onCheckIn }: Props) {
   const [amending, setAmending] = useState(false)
+  const [moving, setMoving] = useState(false)
+  const [cancelMode, setCancelMode] = useState<CancelMode | null>(null)
+  const [showPhoto, setShowPhoto] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [splitting, setSplitting] = useState(false)
+  // Another room of the same party, opened on top of this one, and rooms being checked in one after another.
+  const [siblingId, setSiblingId] = useState<string | null>(null)
+  const [checkQueue, setCheckQueue] = useState<string[]>([])
+  // Which message is open. The panel answers "did it go?" at a glance; the wording is there on a click.
+  const [openMessage, setOpenMessage] = useState<string | null>(null)
   const balance = r.total - r.paid
-  const rows = [
-    ['Booking', r.id],
+  const { byId } = useCorporate()
+  const { forStay, queue } = useMessages()
+  const stayMessages = forStay(r.id)
+  const { sendPreReg, reservations, addShare, splitStay, keys, issueKey, returnKey, cancelKey } = useHotel()
+  const { features } = useFeatures()
+  const { user } = useAuth()
+  const me = user?.name ?? 'Front desk'
+  const preState = preRegState(r.preReg)
+  const canArrange = r.status === 'booked' || r.status === 'in-house'
+  const stayKeys = keys.filter((k) => k.reservationId === r.id)
+  const preProgress = preRegProgress(r.preReg?.details)
+  const blocked = r.corporate && r.status === 'booked' ? checkInBlock(r, byId(r.corporate.accountId)) : null
+
+  const rows: string[][] = [
+    ['Booked via', r.source ? sourceLabel[r.source] : 'Not recorded'],
+    ...(r.agent ? [['Travel agent', `${r.agent.name}, ${r.agent.commissionPercent}%`]] : []),
+    ...(r.upgrade ? [['Upgrade', `Free, from ${r.upgrade.from}`]] : []),
     ['Room', r.room ? `${r.room} (${r.roomType})` : `${r.roomType}, not assigned yet`],
+    ...(r.roomBy && r.room && r.status === 'booked'
+      ? [['Room chosen by', r.roomBy.auto ? `The morning run, ${r.roomBy.at.slice(11)}` : `The rules, for ${r.roomBy.by}`]]
+      : []),
     ['Arrival', dayMonth(r.arrival)],
     ['Departure', dayMonth(r.departure)],
     ['Nights', String(nightsBetween(r.arrival, r.departure))],
-    ['Total', ugx(r.total)],
-    ['Paid', ugx(r.paid)],
   ]
+  if (r.plan) rows.push(['Rate plan', planFor(r.plan).name])
+  if (r.guarantee) rows.push(['Guarantee', guarantees.find((g) => g.key === r.guarantee)?.label ?? r.guarantee])
+  if (r.adults !== undefined) rows.push(['Guests', `${r.adults} adult${r.adults === 1 ? '' : 's'}${r.children ? `, ${r.children} child${r.children === 1 ? '' : 'ren'}` : ''}`])
 
-  if (r.details) {
-    rows.push(
-      ['ID', `${r.details.idType} ending ${r.details.idNumber.slice(-4)}`],
-      ['Nationality', r.details.nationality],
-      ['Phone', r.details.phone],
-      ['Requests', r.details.specialRequests || 'None'],
+  const d = r.details
+  const guestRows: string[][] = []
+  if (d) {
+    guestRows.push(
+      ['ID', `${d.idType} ending ${d.idNumber.slice(-4)}${d.idReadFrom ? d.idReadFrom === 'typed' ? ', typed from the strip' : ', read from the card' : ''}`],
+      ['Nationality', d.nationality],
+      ['Phone', d.phone],
     )
+    if (d.idName) guestRows.push(['Name on the ID', d.idName])
+    if (d.idExpiry) guestRows.push(['ID expiry', d.idExpiry])
+    if (d.dateOfBirth) guestRows.push(['Date of birth', d.dateOfBirth])
+    if (d.purpose) guestRows.push(['Purpose', d.purpose])
+    if (d.vehiclePlate) guestRows.push(['Vehicle', d.vehiclePlate])
+    if (d.emergencyName) guestRows.push(['Emergency contact', `${d.emergencyName} ${d.emergencyPhone ?? ''}`.trim()])
+    guestRows.push(['Requests', d.specialRequests || 'None'])
   }
 
-  const canChange = r.status === 'booked' || r.status === 'in-house'
+  const isBooked = r.status === 'booked'
+  const canChange = isBooked || r.status === 'in-house'
+  const c = r.cancellation
 
   return (
-    <div className="fixed inset-y-0 right-0 z-30 flex w-full max-w-md flex-col border-l border-ink/10 bg-surface shadow-xl">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Booking for ${r.guest}`}
+    >
+    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl">
       <div className="flex items-start justify-between gap-4 border-b border-ink/10 p-4">
         <div>
           <h2 className="text-lg font-semibold">{r.guest}</h2>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <StatusPill status={r.status} />
+            <span className="text-xs text-ink/55">{r.id}</span>
           </div>
         </div>
         <button type="button" onClick={onClose} className="text-sm font-semibold text-brand">
@@ -45,33 +130,342 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <dl className="space-y-3 text-sm">
-          {rows.map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-4">
-              <dt className="text-ink/60">{label}</dt>
-              <dd className="text-right font-medium">{value}</dd>
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ['Total', ugx(r.total), 'text-ink'],
+            ['Paid', ugx(r.paid), 'text-good'],
+            ['Balance', ugx(balance), balance > 0 ? 'text-bad' : 'text-good'],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="rounded-lg border border-ink/10 bg-linear-to-br from-brand/[0.06] to-surface px-2 py-2">
+              <p className="text-xs text-ink/55">{label}</p>
+              <p className={`text-sm font-bold tabular-nums ${tone}`}>{value}</p>
             </div>
           ))}
-          <div className="flex justify-between gap-4 border-t border-ink/10 pt-3">
-            <dt className="font-semibold">Balance</dt>
-            <dd className={`font-bold ${balance > 0 ? 'text-bad' : 'text-good'}`}>{ugx(balance)}</dd>
-          </div>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs text-ink/55">{label}</dt>
+              <dd className="truncate font-medium" title={value}>
+                {value}
+              </dd>
+            </div>
+          ))}
         </dl>
 
+        {r.agent && (
+          <p className="rounded-lg bg-canvas px-3 py-2 text-xs text-ink/70">
+            {(() => {
+              const c = commissionOf(r)
+              const how = r.agent.collectsPayment ? 'The agent collected from the guest and pays the hotel the net.' : 'The hotel pays the agent.'
+              if (c.state === 'earned') return `Commission earned: ${ugx(c.amount)} on the room money. ${how}`
+              if (c.state === 'expected') return `Commission ${ugx(c.amount)} on the room money, earned once the stay is completed. ${how}`
+              return 'No commission: the booking was cancelled or the guest never arrived.'
+            })()}
+          </p>
+        )}
+
+        {r.roomBy && r.room && r.status === 'booked' && (
+          <p className="rounded-lg bg-canvas px-3 py-2 text-xs text-ink/70">
+            Room {r.roomBy.reason}. Can be changed at check-in.
+          </p>
+        )}
+
+        {r.corporate && (
+          <div>
+            <p className={`${heading} mb-2`}>Company booking</p>
+            <CompanyChecks r={r} />
+          </div>
+        )}
+
+        {c && (
+          <div>
+            <p className={heading}>{c.kind === 'no-show' ? 'No-show' : 'Cancellation'}</p>
+            <dl className="mt-2 space-y-2 text-sm">
+              {[
+                ['When', c.at],
+                ['Reason', c.reason],
+                ['Charge', c.waived ? 'Waived' : ugx(c.charge)],
+                ['Refund (simulated)', ugx(c.refund)],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4">
+                  <dt className="text-ink/60">{k}</dt>
+                  <dd className="text-right font-medium">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
+        {d && (
+          <div>
+            <p className={heading}>Guest details</p>
+            <dl className="mt-2 space-y-2 text-sm">
+              {guestRows.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-4">
+                  <dt className="text-ink/60">{k}</dt>
+                  <dd className="text-right font-medium">{v}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {(d.idPhoto || d.signature) && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPhoto((s) => !s)}
+                  className="text-sm font-semibold text-brand"
+                >
+                  {showPhoto ? 'Hide ID photo and signature' : 'Show ID photo and signature'}
+                </button>
+                {showPhoto && (
+                  <div className="mt-2 space-y-3">
+                    {d.idPhoto && <img src={d.idPhoto} alt="Guest ID" className="max-h-56 rounded-lg border border-ink/10" />}
+                    {d.signature && (
+                      <img src={d.signature} alt="Guest signature" className="max-h-24 rounded-lg border border-ink/10 bg-white" />
+                    )}
+                    <p className="text-xs text-ink/60">Personal data. Authorised staff only.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/*
+          One section, two named rows. Before this the two links sat in separate blocks, each with a
+          button reading "Copy the link": the same words inches apart for two different pages, and no
+          way to tell which was which.
+        */}
+        {(features.guestPortal || (features.preRegistration && r.status === 'booked')) && (
+          <div>
+            <p className={heading}>Links for the guest</p>
+            <div className="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/10">
+              {features.guestPortal && (
+                <div className="p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">Guest page</span>
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-brand"
+                        onClick={() => void navigator.clipboard?.writeText(portalLink(window.location.origin, r.id, r.arrival))}
+                      >
+                        Copy
+                      </button>
+                      <a
+                        href={portalLink(window.location.origin, r.id, r.arrival)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-semibold text-ink/60"
+                      >
+                        Open
+                      </a>
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-ink/55">Their stay, their bill and the form before arrival.</p>
+                </div>
+              )}
+
+              {features.preRegistration && r.status === 'booked' && (
+                <div className="p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">Registration form</span>
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-brand"
+                        onClick={() => {
+                          sendPreReg(r.id)
+                          queue({ kind: 'before arrival', reservationId: r.id })
+                        }}
+                      >
+                        {preState === 'not sent' ? 'Send' : 'Send again'}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-sm font-semibold text-ink/60"
+                        onClick={() => void navigator.clipboard?.writeText(preRegLink(window.location.origin, r.id, r.arrival))}
+                      >
+                        Copy
+                      </button>
+                    </span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge tone={PRE_REG_TONE[preState]} dot>
+                      {PRE_REG_LABEL[preState]}
+                    </Badge>
+                    {preState === 'filled in' && (
+                      <span className="text-xs text-ink/60">
+                        {preProgress.answered} of {preProgress.total} answered · sent {r.preReg?.submittedAt}
+                      </span>
+                    )}
+                    {preState === 'opened' && (
+                      <span className="text-xs text-ink/60">Opened {r.preReg?.openedAt}, not finished yet.</span>
+                    )}
+                    {preState === 'sent' && <span className="text-xs text-ink/60">Sent {r.preReg?.sentAt}, not opened yet.</span>}
+                  </div>
+                  {preState === 'filled in' && (
+                    <p className="mt-1 text-xs text-ink/60">
+                      Answers are in the check-in form. Check against the ID.
+                    </p>
+                  )}
+                  {preState !== 'filled in' && (
+                    <p className="mt-1 text-xs text-ink/55">Sent by itself the day before arrival.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {r.party && (
+          <PartySection r={r} onOpen={setSiblingId} onCheckIn={setCheckQueue} />
+        )}
+
+        {(r.share || r.legs) && (
+          <div>
+            <p className={heading}>{r.share ? 'Sharing this room' : 'This stay is in more than one room'}</p>
+            {r.share && (
+              <p className="mt-1 text-sm text-ink/75">
+                With <strong>{r.share.withGuest}</strong>.{' '}
+                {r.share.splitRoom ? SHARE_NOTE.split : SHARE_NOTE.primary}{' '}
+                {r.share.primary ? 'This booking holds the room.' : 'The room is held by the other booking, so it is only counted once.'}
+              </p>
+            )}
+            {r.legs && (
+              <ul className="mt-1 space-y-1 text-sm text-ink/75">
+                {legsOf(reservations, r.id).map((leg) => (
+                  <li key={leg.id} className={leg.id === r.id ? 'font-medium text-ink' : ''}>
+                    {dayMonth(leg.arrival)} to {dayMonth(leg.departure)} · {leg.roomType}
+                    {leg.room ? ` · Room ${leg.room}` : ' · room not assigned'}
+                    {leg.id === r.id ? ' · this part' : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {features.roomKeys && r.room && (r.status === 'in-house' || r.status === 'checked-out') && (
+          <div>
+            <p className={heading}>Keys</p>
+            {stayKeys.length === 0 ? (
+              <p className="mt-1 text-sm text-ink/60">No key has been cut for this stay.</p>
+            ) : (
+              <ul className="mt-1 space-y-1 text-sm">
+                {stayKeys.map((k) => (
+                  <li key={k.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-ink/75">
+                      {k.copy ? 'Copy' : 'Key'} · {k.id} · works until {k.worksUntil}
+                      <span className="block text-xs text-ink/55">
+                        {k.issuedBy}, {k.issuedAt}
+                        {k.returnedAt ? ` · handed back ${k.returnedAt}` : ''}
+                        {k.cancelledReason ? ` · ${k.cancelledReason}` : ''}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Badge tone={KEY_STATE_TONE[k.state]} dot>
+                        {KEY_STATE_LABEL[k.state]}
+                      </Badge>
+                      {k.state === 'active' && (
+                        <>
+                          <button type="button" className="text-xs font-semibold text-brand" onClick={() => returnKey(k.id)}>
+                            Handed back
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-bad"
+                            onClick={() => cancelKey(k.id, 'Reported lost')}
+                          >
+                            Lost
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {r.status === 'in-house' && (
+              <div className="mt-2 flex flex-wrap gap-3">
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => issueKey(r.id, me, stayKeys.length > 0)}>
+                  {stayKeys.length > 0 ? 'Cut another copy' : 'Cut a key'}
+                </button>
+              </div>
+            )}
+            <p className="mt-1 text-xs text-ink/55">
+              Record of who can open this room, and until when.
+            </p>
+          </div>
+        )}
+
+        {canArrange && (
+          <div>
+            <p className={heading}>Arrangements</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {!r.share && r.room && r.status === 'in-house' && (
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => setSharing(true)}>
+                  Add somebody sharing this room
+                </button>
+              )}
+              {!r.legs && nightsBetween(r.arrival, r.departure) > 1 && (
+                <button type="button" className="text-sm font-semibold text-brand" onClick={() => setSplitting(true)}>
+                  Move rooms part-way through
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {stayMessages.length > 0 && (
+          <div>
+            <p className={heading}>Messages to the guest</p>
+            <ul className="mt-2 divide-y divide-ink/10 rounded-xl border border-ink/10 text-sm">
+              {stayMessages.map((m) => {
+                const open = openMessage === m.id
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenMessage(open ? null : m.id)}
+                      aria-expanded={open}
+                      className="flex w-full flex-wrap items-baseline justify-between gap-2 px-3 py-2 text-left hover:bg-canvas"
+                    >
+                      <span className="font-medium text-ink">{KIND_LABEL[m.kind]}</span>
+                      <span className="text-xs text-ink/55">
+                        {m.status === 'sent'
+                          ? `Sent ${m.sentAt} by ${CHANNEL_LABEL[m.channel]}${m.by ? ` (${m.by})` : ''}`
+                          : m.status === 'queued'
+                            ? 'Written, waiting to be sent'
+                            : m.status === 'failed'
+                              ? `Could not go: ${m.problem}`
+                              : 'Not sent'}
+                      </span>
+                    </button>
+                    {open && <p className="px-3 pb-3 text-ink/70">{m.body}</p>}
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="mt-1 text-xs text-ink/50">Open one to read the wording that went.</p>
+          </div>
+        )}
+
         {r.changes && r.changes.length > 0 && (
-          <div className="mt-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">Changes</p>
+          <div>
+            <p className={heading}>Changes</p>
             <ul className="mt-2 space-y-2 text-sm">
-              {r.changes.map((c, i) => (
+              {r.changes.map((ch, i) => (
                 <li key={i} className="rounded-lg bg-canvas p-2">
                   <p className="font-medium">
-                    {dayMonth(c.fromArrival)} to {dayMonth(c.fromDeparture)} → {dayMonth(c.toArrival)} to {dayMonth(c.toDeparture)}
+                    {dayMonth(ch.fromArrival)} to {dayMonth(ch.fromDeparture)} → {dayMonth(ch.toArrival)} to {dayMonth(ch.toDeparture)}
                   </p>
                   <p className="text-xs text-ink/60">
-                    {c.at} · {c.reason}
-                    {c.fee > 0 && ` · fee ${ugx(c.fee)}`}
-                    {c.waived && ' · fee waived'}
+                    {ch.at} · {ch.reason}
+                    {ch.fee > 0 && ` · fee ${ugx(ch.fee)}`}
+                    {ch.waived && ' · fee waived'}
                   </p>
                 </li>
               ))}
@@ -80,8 +474,27 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
         )}
       </div>
 
-      {(canChange || (r.status === 'booked' && onCheckIn)) && (
-        <div className="flex gap-3 border-t border-ink/10 p-4">
+      {isBooked && r.arrival <= TODAY && (
+        <div className="border-t border-warn/30 bg-warn/[0.07] p-4 empty:hidden">
+          <ArrivalRoomHelp reservation={r} />
+        </div>
+      )}
+      {blocked && isBooked && onCheckIn && (
+        <p className="border-t border-bad/20 bg-bad/10 px-4 py-2 text-xs font-medium text-bad">Check-in blocked: {blocked}</p>
+      )}
+      {(canChange || (isBooked && onCheckIn)) && (
+        <div className="flex flex-wrap gap-3 border-t border-ink/10 p-4">
+          {isBooked && onCheckIn && (
+            <button
+              type="button"
+              onClick={onCheckIn}
+              disabled={!!blocked}
+              title={blocked ?? undefined}
+              className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Check in
+            </button>
+          )}
           {canChange && (
             <button
               type="button"
@@ -91,31 +504,86 @@ export default function ReservationPanel({ reservation: r, onClose, onCheckIn }:
               Change stay
             </button>
           )}
-          {r.status === 'booked' && onCheckIn && (
+          {r.status === 'in-house' && r.room && (
             <button
               type="button"
-              onClick={onCheckIn}
-              className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white"
+              onClick={() => setMoving(true)}
+              className="rounded-lg border border-ink/15 px-4 py-2 text-sm font-semibold"
             >
-              Check in
+              Move room
+            </button>
+          )}
+          {isBooked && (
+            <button
+              type="button"
+              onClick={() => setCancelMode('cancel')}
+              className="rounded-lg border border-bad/40 px-4 py-2 text-sm font-semibold text-bad"
+            >
+              Cancel
+            </button>
+          )}
+          {isBooked && r.arrival <= TODAY && (
+            <button
+              type="button"
+              onClick={() => setCancelMode('no-show')}
+              className="rounded-lg border border-bad/40 px-4 py-2 text-sm font-semibold text-bad"
+            >
+              No-show
             </button>
           )}
         </div>
       )}
 
-      {r.status === 'in-house' && (
+            {(r.status === 'in-house' || r.status === 'checked-out') && (
         <div className="border-t border-ink/10 p-4">
           <Link
-            to="/desk/folios"
+            to={`/desk/folios?view=${r.status === 'in-house' ? 'inhouse' : 'out'}&r=${r.id}`}
             className="block rounded-lg bg-brand px-4 py-2 text-center text-sm font-semibold text-white"
           >
-            Open folio
+            {r.status === 'in-house' ? 'Open folio' : 'View folio and invoice'}
           </Link>
         </div>
       )}
 
-      {amending && (
-        <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />
+    </div>
+
+      {sharing && (
+        <ShareDialog
+          reservation={r}
+          onClose={() => setSharing(false)}
+          onAdd={(g, p, split) => {
+            addShare(r.id, g, p, split)
+            setSharing(false)
+          }}
+        />
+      )}
+      {splitting && (
+        <SplitStayDialog
+          reservation={r}
+          onClose={() => setSplitting(false)}
+          onSplit={(date, type, room) => {
+            splitStay(r.id, date, type, room)
+            setSplitting(false)
+          }}
+        />
+      )}
+      {siblingId && reservations.find((x) => x.id === siblingId) && (
+        <ReservationPanel reservation={reservations.find((x) => x.id === siblingId) as Reservation} onClose={() => setSiblingId(null)} />
+      )}
+      {checkQueue.length > 0 && reservations.find((x) => x.id === checkQueue[0]) && (
+        <CheckInPanel
+          key={checkQueue[0]}
+          reservation={reservations.find((x) => x.id === checkQueue[0]) as Reservation}
+          onClose={() =>
+            // The next room only once this one is really in; closing without finishing stops the run.
+            setCheckQueue((q) => (reservations.find((x) => x.id === q[0])?.status === 'in-house' ? q.slice(1) : []))
+          }
+        />
+      )}
+      {amending && <AmendPanel reservation={r} onClose={() => setAmending(false)} onDone={onClose} />}
+      {moving && <MoveRoomPanel reservation={r} onClose={() => setMoving(false)} onDone={() => setMoving(false)} />}
+      {cancelMode && (
+        <CancelPanel reservation={r} mode={cancelMode} onClose={() => setCancelMode(null)} onDone={onClose} />
       )}
     </div>
   )

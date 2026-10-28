@@ -1,17 +1,23 @@
 import type { ReservationStatus } from '../types'
+import Badge from './ui/Badge'
+import type { Tone } from './ui/Badge'
 
-const styles: Record<ReservationStatus, string> = {
-  booked: 'bg-accent/15 text-warn',
-  'in-house': 'bg-brand/10 text-brand',
-  'checked-out': 'bg-ink/10 text-ink/70',
+const tone: Record<ReservationStatus, Tone> = {
+  booked: 'accent',
+  'in-house': 'brand',
+  'checked-out': 'neutral',
+  cancelled: 'bad',
+  'no-show': 'bad',
 }
 
-const labels: Record<ReservationStatus, string> = {
+const label: Record<ReservationStatus, string> = {
   booked: 'Booked',
   'in-house': 'In house',
   'checked-out': 'Checked out',
+  cancelled: 'Cancelled',
+  'no-show': 'No-show',
 }
 
 export default function StatusPill({ status }: { status: ReservationStatus }) {
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{labels[status]}</span>
+  return <Badge tone={tone[status]}>{label[status]}</Badge>
 }

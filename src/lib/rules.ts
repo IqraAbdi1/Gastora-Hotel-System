@@ -3,9 +3,10 @@ import { TODAY } from '../data/sample'
 import { dayMonth, ugx } from './format'
 
 const goArrivals: GoAction = { kind: 'go', label: 'Open arrivals', to: '/desk/reservations?view=arrivals' }
-const goHousekeeping: GoAction = { kind: 'go', label: 'Open housekeeping', to: '/housekeeping' }
+// The front desk cannot open housekeeping's pages, so room questions go to the desk's own rooms board.
+const goHousekeeping: GoAction = { kind: 'go', label: 'Open rooms board', to: '/desk/rooms' }
 const goFolios: GoAction = { kind: 'go', label: 'Open folios', to: '/desk/folios' }
-
+const goDepartures: GoAction = { kind: 'go', label: 'Open departures', to: '/desk/folios?view=leaving' }
 const firstName = (guest: string) => guest.split(' ')[0]
 
 function depositDraft(r: Reservation): DraftAction {
@@ -70,6 +71,21 @@ export function buildRuleSuggestions(reservations: Reservation[], rooms: Room[])
 export function answerQuestion(question: string, reservations: Reservation[], rooms: Room[]): Answer {
   const q = question.toLowerCase()
   const arrivals = reservations.filter((r) => r.status === 'booked' && r.arrival === TODAY)
+    if (q.includes('leav') || q.includes('depart') || q.includes('check out') || q.includes('checkout')) {
+    const leaving = reservations
+      .filter((r) => r.status === 'in-house' && r.departure <= TODAY)
+      .sort((a, b) => Number(a.room) - Number(b.room))
+    if (leaving.length === 0) return { text: 'No one is due to leave today.', actions: [] }
+    const owing = leaving.filter((r) => r.total > r.paid)
+    return {
+      text:
+        `${leaving.length} leaving today: ${leaving.map((r) => `${r.guest} (room ${r.room})`).join(', ')}. ` +
+        (owing.length
+          ? `Still owing: ${owing.map((r) => `${r.guest} ${ugx(r.total - r.paid)}`).join(', ')}.`
+          : 'All balances are settled.'),
+      actions: [goDepartures],
+    }
+  }
 
   if (q.includes('deposit')) {
     const missing = arrivals.filter((r) => r.paid === 0)

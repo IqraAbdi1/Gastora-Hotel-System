@@ -49,7 +49,7 @@ export default function RoomPicker({ options, value, onChange, notReady, type }:
     return (
       <div className="rounded-lg bg-warn/10 p-3 text-sm text-warn">
         No clean {type} room is free for this stay.
-        {notReady > 0 && ` ${notReady} ${type} room${notReady === 1 ? ' is' : 's are'} dirty. Ask housekeeping to clean one first.`}
+        {notReady > 0 && ` ${notReady} ${type} room${notReady === 1 ? ' is' : 's are'} dirty. Ask housekeeping.`}
       </div>
     )
   }
@@ -129,9 +129,9 @@ export default function RoomPicker({ options, value, onChange, notReady, type }:
 
           <p className="text-xs text-ink/60">
             {filtered.length > SHOW
-              ? `Showing ${SHOW} of ${filtered.length} ready rooms. Search or pick a floor to narrow it. `
+              ? `Showing ${SHOW} of ${filtered.length} ready rooms. `
               : `${filtered.length} ready room${filtered.length === 1 ? '' : 's'}. `}
-            Only clean rooms that are free for the whole stay are listed.
+            Clean and free for the whole stay.
             {notReady > 0 && ` ${notReady} more ${type} room${notReady === 1 ? ' is' : 's are'} not ready (dirty).`}
           </p>
         </div>

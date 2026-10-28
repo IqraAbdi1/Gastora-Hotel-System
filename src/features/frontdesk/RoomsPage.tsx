@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import FilterBar from '../../components/FilterBar'
+import { Chip, PageHeader, Segmented, StatCard } from '../../components/ui'
 import { useHotel } from '../../lib/hotelContext'
 import { TODAY } from '../../data/sample'
 import { addDays, isRoomFree } from '../../lib/availability'
@@ -20,10 +22,10 @@ const quickList: { key: Quick; label: string; dot?: string }[] = [
 ]
 
 const cardStyle: Record<RoomStatus, string> = {
-  clean: 'border-good/40 bg-good/10',
-  dirty: 'border-warn/50 bg-warn/15',
-  occupied: 'border-brand/40 bg-brand/15',
-  blocked: 'border-bad/40 bg-bad/10',
+  clean: 'border-good/30 bg-linear-to-br from-good/15 via-surface to-surface',
+  dirty: 'border-warn/40 bg-linear-to-br from-warn/15 via-surface to-surface',
+  occupied: 'border-brand/30 bg-linear-to-br from-brand/15 via-surface to-surface',
+  blocked: 'border-bad/30 bg-linear-to-br from-bad/10 via-surface to-surface',
 }
 
 const pillStyle: Record<RoomStatus, string> = {
@@ -40,7 +42,7 @@ const dotStyle: Record<RoomStatus, string> = {
   blocked: 'bg-bad',
 }
 
-const input = 'rounded-lg border border-ink/15 bg-canvas px-3 py-1.5 text-sm outline-none focus:border-brand'
+const input = 'rounded-lg border border-ink/15 bg-surface px-3 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15'
 
 export default function RoomsPage() {
   const { rooms, reservations } = useHotel()
@@ -112,8 +114,12 @@ export default function RoomsPage() {
 
   const toggle = (f: number) => setCollapsed((c) => (c.includes(f) ? c.filter((x) => x !== f) : [...c, f]))
 
-  const tab = (v: 'board' | 'calendar') =>
-    `rounded-lg px-4 py-1.5 text-sm font-semibold ${view === v ? 'bg-brand text-white' : 'bg-surface text-ink/70'}`
+  const counts = {
+    ready: rooms.filter((r) => r.status === 'clean').length,
+    occupied: rooms.filter((r) => r.status === 'occupied').length,
+    dirty: rooms.filter((r) => r.status === 'dirty').length,
+    blocked: rooms.filter((r) => r.status === 'blocked').length,
+  }
 
   const card = (room: Room) => {
     const stay = inHouse.get(room.number)
@@ -131,7 +137,7 @@ export default function RoomsPage() {
           type="button"
           onClick={() => setSelected(room)}
           title={`${room.number} · ${room.type} · ${room.status}`}
-          className={`rounded-lg border-2 p-2 text-left hover:shadow ${cardStyle[room.status]} ${ring}`}
+          className={`rounded-lg border p-2 text-left shadow-sm hover:shadow-md ${cardStyle[room.status]} ${ring}`}
         >
           <div className="flex items-center justify-between">
             <span className="font-semibold">{room.number}</span>
@@ -147,7 +153,7 @@ export default function RoomsPage() {
         key={room.number}
         type="button"
         onClick={() => setSelected(room)}
-        className={`rounded-xl border-2 p-3 text-left transition hover:shadow ${cardStyle[room.status]} ${ring}`}
+        className={`rounded-xl border p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${cardStyle[room.status]} ${ring}`}
       >
         <div className="flex items-center justify-between">
           <span className="text-lg font-semibold">{room.number}</span>
@@ -176,21 +182,27 @@ export default function RoomsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Rooms</h1>
-          <p className="text-sm text-ink/60">
-            {view === 'board' ? 'Every room at a glance. Click a room for details.' : 'Stays by room and date.'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setView('board')} className={tab('board')}>
-            Board
-          </button>
-          <button type="button" onClick={() => setView('calendar')} className={tab('calendar')}>
-            Calendar
-          </button>
-        </div>
+      <PageHeader
+        title="Rooms"
+        description={view === 'board' ? 'Every room at a glance. Click a room for details.' : 'Stays by room and date.'}
+        actions={
+          <Segmented
+            label="Rooms view"
+            value={view}
+            onChange={setView}
+            options={[
+              { key: 'board', label: 'Board' },
+              { key: 'calendar', label: 'Calendar' },
+            ]}
+          />
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Ready to assign" icon="check" value={counts.ready} hint="Clean and inspected" tone="good" active={view === 'board' && quick === 'ready'} onClick={() => { setView('board'); setQuick('ready') }} />
+        <StatCard label="Occupied" icon="guests" value={counts.occupied} hint={`of ${rooms.length} rooms`} active={view === 'board' && quick === 'occupied'} onClick={() => { setView('board'); setQuick('occupied') }} />
+        <StatCard label="Dirty" icon="clean" value={counts.dirty} hint="Waiting for housekeeping" tone={counts.dirty ? 'warn' : 'default'} active={view === 'board' && quick === 'dirty'} onClick={() => { setView('board'); setQuick('dirty') }} />
+        <StatCard label="Blocked" icon="alert" value={counts.blocked} hint="Out of sale" tone={counts.blocked ? 'bad' : 'default'} active={view === 'board' && quick === 'blocked'} onClick={() => { setView('board'); setQuick('blocked') }} />
       </div>
 
       {view === 'calendar' ? (
@@ -199,31 +211,18 @@ export default function RoomsPage() {
         <>
           <div className="flex flex-wrap items-center gap-2">
             {quickList.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => setQuick(c.key)}
-                className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${
-                  quick === c.key ? 'bg-brand text-white' : 'bg-surface text-ink/70'
-                }`}
-              >
-                {c.dot && <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />}
-                {c.label} {rooms.filter((r) => test(c.key, r)).length}
-              </button>
+              <Chip key={c.key} active={quick === c.key} dot={c.dot} count={rooms.filter((r) => test(c.key, r)).length} onClick={() => setQuick(c.key)}>
+                {c.label}
+              </Chip>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface p-3">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Find room or guest"
-              className={input}
-            />
+          <FilterBar query={search} onQuery={setSearch} placeholder="Find room or guest" active={(floor !== 'all' ? 1 : 0) + (checking ? 1 : 0)}>
             <select
               value={floor}
               onChange={(e) => setFloor(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               className={input}
+              aria-label="Floor"
             >
               <option value="all">All floors</option>
               {floors.map((f) => (
@@ -237,11 +236,11 @@ export default function RoomsPage() {
               Free from
             </label>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input} />
-            <span className="text-sm">to</span>
+            <span className="self-center text-sm">to</span>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={input} />
-            {checking && rangeValid && <span className="text-sm font-semibold text-good">{freeCount} rooms free</span>}
-            {checking && !rangeValid && <span className="text-sm text-bad">The end date must be after the start date.</span>}
-          </div>
+            {checking && rangeValid && <span className="self-center text-sm font-semibold text-good">{freeCount} rooms free</span>}
+            {checking && !rangeValid && <span className="self-center text-sm text-bad">The end date must be after the start date.</span>}
+          </FilterBar>
 
           <p className="text-xs text-ink/60">
             Showing {filtered.length} of {rooms.length} rooms
@@ -331,7 +330,7 @@ export default function RoomsPage() {
 
             {selected.status === 'dirty' && (
               <p className="rounded-lg bg-warn/10 p-3 text-warn">
-                This room needs cleaning before it can be used for a check-in. Housekeeping marks it clean.
+                Needs cleaning before check-in.
               </p>
             )}
             {selected.status === 'blocked' && (

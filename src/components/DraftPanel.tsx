@@ -26,12 +26,12 @@ export default function DraftPanel({ draft, onClose }: Props) {
           rows={10}
           className="w-full rounded-lg border border-ink/15 bg-canvas p-3 text-sm outline-none focus:border-brand"
         />
-        <p className="text-xs text-ink/60">Review and edit before sending. Nothing is sent until you press the button.</p>
+        <p className="text-xs text-ink/60">Nothing is sent until you press Send.</p>
       </div>
       <div className="border-t border-ink/10 p-4">
         {sent ? (
           <p className="rounded-lg bg-good/10 p-3 text-sm font-semibold text-good">
-            Sent (simulated). In the real system this goes out by SMS or WhatsApp and is recorded on the booking.
+            Sent (simulated).
           </p>
         ) : (
           <button
