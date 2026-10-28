@@ -1,4 +1,5 @@
-import { useState } from 'react'
+
+import { useEffect, useState } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import CommandBar from './CommandBar'
 import DraftPanel from './DraftPanel'
@@ -31,18 +32,25 @@ function ModulePages({ m, pathname, onPick }: { m: NavModule; pathname: string; 
   const main = m.pages.filter((p) => !p.more)
   const extra = m.pages.filter((p) => p.more)
   const onExtra = extra.some((p) => pathname === p.to || pathname.startsWith(`${p.to}/`))
-  // Folding only helps when there is enough to fold.
   const fold = extra.length > 1 && main.length > 0
   const shown = !fold || showMore || onExtra ? m.pages : main
+
   return (
     <>
       {shown.map((p) => (
-        <NavLink key={p.to} to={p.to} end={p.end} onClick={onPick} className={({ isActive }) => childClass(isActive)}>
+        <NavLink
+          key={p.to}
+          to={p.to}
+          end={p.end}
+          onClick={onPick}
+          className={({ isActive }) => childClass(isActive)}
+        >
           <PageIcon m={m} p={p} />
           <span className="flex-1">{p.label}</span>
           {p.badge && <NavBadge kind={p.badge} />}
         </NavLink>
       ))}
+
       {fold && !onExtra && (
         <button
           type="button"
@@ -56,10 +64,10 @@ function ModulePages({ m, pathname, onPick }: { m: NavModule; pathname: string; 
   )
 }
 
-// The small icon in front of a page name. If any page in the group has one, the others get an
-// empty space of the same size so the names stay lined up.
+// The small icon in front of a page name.
 function PageIcon({ m, p }: { m: NavModule; p: NavPage }) {
   if (!m.pages.some((x) => x.icon)) return null
+
   return p.icon ? (
     <NavIcon name={p.icon} className="mr-2 h-4 w-4 shrink-0" />
   ) : (
@@ -70,7 +78,9 @@ function PageIcon({ m, p }: { m: NavModule; p: NavPage }) {
 // Nobody gets in without signing in.
 export default function AppShell() {
   const { user } = useAuth()
+
   if (!user) return <Navigate to="/login" replace />
+
   return <Shell />
 }
 
@@ -79,42 +89,55 @@ function Shell() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [draft, setDraft] = useState<DraftAction | null>(null)
   const [booking, setBooking] = useState<BookingPreset | null>(null)
+
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { tenant, features, options } = useFeatures()
   const { user, role, actualRole, viewAs, isViewingAs, canOpen, setViewAs, logout } = useAuth()
+
   const inHousekeeping = pathname.startsWith('/housekeeping')
   const allowedModules = visibleModules(features, canOpen, options)
-  // The same order for everyone, so the menu does not move about from role to role.
-  // Settings sit at the bottom, where settings belong.
   const modules = allowedModules
   const totalPages = modules.reduce((n, m) => n + m.pages.length, 0)
-  // Rule: few pages stand on their own, a few modules stay open, many modules fold.
+
   const layout: 'flat' | 'open' | 'accordion' =
     totalPages <= 8 ? 'flat' : modules.length <= 3 ? 'open' : 'accordion'
+
   const [folded, setFolded] = useState<string[]>([])
   const apps = otherApps.filter((a) => canOpen(a.to))
 
-  // One module open at a time. The module you are in opens by itself. A choice you make by hand
-  // only lasts while you stay in that module, so moving elsewhere opens the right group again.
   const current = moduleOf(pathname)?.id
-  // The search and booking buttons belong to the front desk. Nobody else is taking a booking,
-  // so no other module carries them.
   const showDeskBar = current === 'frontdesk'
   const currentModule = modules.find((m) => m.id === current)
   const currentPage = pageOf(pathname)
   const [manual, setManual] = useState<{ at?: string; id: string | null } | null>(null)
   const openId = manual && manual.at === current ? manual.id : current
 
-  // A page the role cannot open shows a message. Unknown paths are left to the router's "not found".
   const known = !!moduleOf(pathname) || pathname.startsWith('/guest') || pathname.startsWith('/platform')
   const allowed = !known || canOpen(pathname)
+
+  const otherAppLabel = otherApps.find((a) => pathname.startsWith(a.to))?.label
+  const pageTitle = currentPage?.label ?? currentModule?.label ?? otherAppLabel ?? tenant.name
+  const hotelName = tenant.name?.trim() || 'Hotel'
+  const initials = (user?.name ?? '')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+
+  // Keep the browser tab aligned with the active tenant and current page.
+  useEffect(() => {
+    document.title = pageTitle && pageTitle !== hotelName
+      ? `${pageTitle} | ${hotelName} | Gastora`
+      : `${hotelName} | Gastora`
+  }, [hotelName, pageTitle])
 
   function select(m: NavModule) {
     if (layout === 'open') {
       setFolded((f) => (f.includes(m.id) ? f.filter((x) => x !== m.id) : [...f, m.id]))
       return
     }
+
     if (m.id !== current) {
       navigate(m.to)
       setManual({ at: m.id, id: m.id })
@@ -141,9 +164,9 @@ function Shell() {
     const single = m.pages.length === 1
     const open = layout === 'flat' ? true : layout === 'open' ? !folded.includes(m.id) : openId === m.id
 
-    // A module with one page is just a link, never a folder.
     if (single) {
       const p = m.pages[0]
+
       return (
         <NavLink
           key={m.id}
@@ -164,7 +187,6 @@ function Shell() {
       )
     }
 
-    // Few pages: a small heading, pages always visible, nothing to click open.
     if (layout === 'flat') {
       return (
         <div key={m.id} className="pt-2 first:pt-0">
@@ -179,6 +201,7 @@ function Shell() {
             <NavIcon name={m.icon} className="h-4 w-4" />
             <span className={collapsed ? 'md:hidden' : ''}>{m.label}</span>
           </button>
+
           <div className={`ml-5 space-y-0.5 border-l border-white/10 pl-2 ${collapsed ? 'md:hidden' : ''}`}>
             <ModulePages m={m} pathname={pathname} onPick={closeMenu} />
           </div>
@@ -186,7 +209,6 @@ function Shell() {
       )
     }
 
-    // 'open' and 'accordion': a folder that can fold.
     return (
       <div key={m.id}>
         <button
@@ -199,7 +221,9 @@ function Shell() {
           } ${isCurrent ? 'text-white' : 'text-white/70 hover:bg-white/8 hover:text-white'}`}
         >
           <NavIcon name={m.icon} className={`h-[18px] w-[18px] shrink-0 ${isCurrent ? 'text-accent' : ''}`} />
-          <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''} ${isCurrent ? 'font-semibold' : ''}`}>{m.label}</span>
+          <span className={`flex-1 text-left ${collapsed ? 'md:hidden' : ''} ${isCurrent ? 'font-semibold' : ''}`}>
+            {m.label}
+          </span>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -207,12 +231,15 @@ function Shell() {
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`h-3.5 w-3.5 shrink-0 opacity-60 transition-transform ${open ? 'rotate-90' : ''} ${collapsed ? 'md:hidden' : ''}`}
+            className={`h-3.5 w-3.5 shrink-0 opacity-60 transition-transform ${
+              open ? 'rotate-90' : ''
+            } ${collapsed ? 'md:hidden' : ''}`}
             aria-hidden="true"
           >
             <path d="M9 6l6 6-6 6" />
           </svg>
         </button>
+
         {open && (
           <div className={`mb-1 ml-[21px] mt-0.5 space-y-0.5 border-l border-white/10 pl-2 ${collapsed ? 'md:hidden' : ''}`}>
             <ModulePages m={m} pathname={pathname} onPick={closeMenu} />
@@ -222,18 +249,13 @@ function Shell() {
     )
   }
 
-  // Modules grouped under their section headings. A module the plan does not include is simply absent.
   const grouped = SECTIONS.map((sec) => ({
     label: sec.label,
     modules: modules.filter((m) => sec.modules.includes(m.id)),
   }))
+
   const ungrouped = modules.filter((m) => !SECTIONS.some((sec) => sec.modules.includes(m.id)))
   if (ungrouped.length) grouped.push({ label: null, modules: ungrouped })
-  const initials = (user?.name ?? '')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
 
   return (
     <DraftContext.Provider value={{ openDraft: setDraft }}>
@@ -248,10 +270,15 @@ function Shell() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-extrabold text-sidebar">
                 G
               </span>
+
               <div className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}>
                 <p className="text-[15px] font-bold leading-tight">Gastora</p>
-                <p className="truncate text-[11px] text-white/55">{tenant.name}</p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-white/85" title={hotelName}>
+                  {hotelName}
+                </p>
+                <p className="text-[10px] text-white/45">Hotel workspace</p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setMobileOpen(!mobileOpen)}
@@ -261,6 +288,7 @@ function Shell() {
               >
                 {mobileOpen ? '×' : '☰'}
               </button>
+
               <button
                 type="button"
                 onClick={() => setCollapsed(!collapsed)}
@@ -287,7 +315,9 @@ function Shell() {
                           {g.label}
                         </p>
                       )}
-                      {collapsed && gi > 0 && <div className="mx-3 mb-2 hidden border-t border-white/10 md:block" />}
+                      {collapsed && gi > 0 && (
+                        <div className="mx-3 mb-2 hidden border-t border-white/10 md:block" />
+                      )}
                       <div className="space-y-0.5">{g.modules.map(renderModule)}</div>
                     </div>
                   ),
@@ -301,7 +331,12 @@ function Shell() {
                     Other apps
                   </p>
                   {apps.map((a) => (
-                    <NavLink key={a.to} to={a.to} onClick={closeMenu} className={({ isActive }) => childClass(isActive)}>
+                    <NavLink
+                      key={a.to}
+                      to={a.to}
+                      onClick={closeMenu}
+                      className={({ isActive }) => childClass(isActive)}
+                    >
                       {a.label}
                     </NavLink>
                   ))}
@@ -321,11 +356,13 @@ function Shell() {
                 >
                   {initials}
                 </span>
+
                 <div className={`min-w-0 flex-1 ${collapsed ? 'md:hidden' : ''}`}>
                   <p className="truncate text-sm font-semibold">{user?.name}</p>
                   <p className="truncate text-[11px] text-white/55">{actualRole?.label}</p>
                 </div>
               </div>
+
               <div className={collapsed ? 'md:hidden' : ''}>
                 {actualRole?.canViewAs && (
                   <label className="mt-3 block text-[11px] text-white/55">
@@ -344,6 +381,7 @@ function Shell() {
                     </select>
                   </label>
                 )}
+
                 <button
                   type="button"
                   onClick={signOut}
@@ -361,28 +399,37 @@ function Shell() {
                 <span>
                   Viewing as <strong>{role.label}</strong>. This is a preview. Nothing changes for that person.
                 </span>
-                <button type="button" onClick={() => changeView(null)} className="font-semibold text-brand hover:underline">
+                <button
+                  type="button"
+                  onClick={() => changeView(null)}
+                  className="font-semibold text-brand hover:underline"
+                >
                   Back to my view
                 </button>
               </div>
             )}
-            {/* One top bar on every page: where you are on the left, what this module needs on the right. */}
+
             <header className="sticky top-0 z-30 flex min-h-[60px] flex-wrap items-center gap-3 border-b border-ink/10 bg-surface/95 px-4 py-2.5 backdrop-blur md:px-7">
-              <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
-                {currentModule && currentPage && currentModule.pages.length > 1 ? (
-                  <>
-                    <NavLink to={currentModule.to} className="truncate text-ink/55 hover:text-ink">
-                      {currentModule.label}
-                    </NavLink>
-                    <span className="text-ink/30">/</span>
-                    <span className="truncate font-semibold text-ink">{currentPage.label}</span>
-                  </>
-                ) : (
-                  <span className="truncate font-semibold text-ink">
-                    {currentPage?.label ?? currentModule?.label ?? otherApps.find((a) => pathname.startsWith(a.to))?.label ?? tenant.name}
-                  </span>
-                )}
-              </nav>
+              <div className="flex min-w-0 flex-col">
+                <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+                  {currentModule && currentPage && currentModule.pages.length > 1 ? (
+                    <>
+                      <NavLink to={currentModule.to} className="truncate text-ink/55 hover:text-ink">
+                        {currentModule.label}
+                      </NavLink>
+                      <span className="text-ink/30">/</span>
+                      <span className="truncate font-semibold text-ink">{currentPage.label}</span>
+                    </>
+                  ) : (
+                    <span className="truncate font-semibold text-ink">{pageTitle}</span>
+                  )}
+                </nav>
+
+                <p className="mt-0.5 truncate text-[11px] text-ink/50" title={hotelName}>
+                  {hotelName}
+                </p>
+              </div>
+
               {showDeskBar ? (
                 <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
                   <div className="order-last min-w-0 basis-full sm:order-none sm:basis-auto sm:w-80 lg:w-96">
@@ -410,6 +457,7 @@ function Shell() {
                 </div>
               ) : null}
             </header>
+
             <main className="mx-auto w-full max-w-[1480px] flex-1 p-4 pb-24 md:px-7 md:py-6">
               {allowed ? (
                 <Outlet />
@@ -431,7 +479,6 @@ function Shell() {
             </main>
           </div>
 
-          {/* On a phone, the pages of the module you are in sit under your thumb, like any phone app. */}
           {currentModule && currentModule.pages.length > 1 && (
             <nav
               aria-label={currentModule.label}
@@ -459,6 +506,7 @@ function Shell() {
                     )}
                   </NavLink>
                 ))}
+
               <button
                 type="button"
                 onClick={() => {

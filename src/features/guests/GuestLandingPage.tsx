@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, SyntheticEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ConciergeChatWidget from './ConciergeChatWidget'
 import GuestFooter from './GuestFooter'
 import HotelLocationSection from './HotelLocationSection'
+import { useFeatures } from '../platform/featuresContext'
 
 const heroImages = [
   '/images/hero.jpg',
@@ -23,6 +25,17 @@ function localDate(date: Date): string {
 
 function getTomorrow(): string {
   const date = new Date()
+  date.setDate(date.getDate() + 1)
+  return localDate(date)
+}
+
+function getDateAfter(dateString: string): string {
+  const date = new Date(`${dateString}T12:00:00`)
+
+  if (Number.isNaN(date.getTime())) {
+    return getTomorrow()
+  }
+
   date.setDate(date.getDate() + 1)
   return localDate(date)
 }
@@ -201,8 +214,7 @@ const eventSpaces = [
   },
   {
     title: 'Flexible event space',
-    description:
-      'A versatile setting for gatherings with different needs.',
+    description: 'A versatile setting for gatherings with different needs.',
     image: '/images/confress_room.jpg',
   },
   {
@@ -215,6 +227,11 @@ const eventSpaces = [
 
 export default function GuestLandingPage() {
   const navigate = useNavigate()
+  const { tenant } = useFeatures()
+
+  // Always use the active tenant's name for the guest-facing hotel identity.
+  // Keep Gastora as the platform brand in platform-level UI, not as the hotel name.
+  const tenantBrandName = tenant.name?.trim() || 'Hotel'
 
   const [activeHeroImage, setActiveHeroImage] = useState(0)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -234,6 +251,10 @@ export default function GuestLandingPage() {
   const [error, setError] = useState('')
 
   const today = localDate(new Date())
+
+  useEffect(() => {
+    document.title = `${tenantBrandName} | Official Hotel Website`
+  }, [tenantBrandName])
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -340,7 +361,7 @@ export default function GuestLandingPage() {
     image.dataset.imageFailed = 'true'
 
     console.error(
-      `Gastora image failed to load: ${image.currentSrc || image.src}`,
+      `Hotel landing page image failed to load: ${image.currentSrc || image.src}`,
     )
   }
 
@@ -361,21 +382,21 @@ export default function GuestLandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Link
             to="/"
-            aria-label="Gastora home"
+            aria-label={`${tenantBrandName} home`}
             className="flex shrink-0 items-center gap-3"
             onClick={closeMobileMenu}
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#193b30] text-xl text-[#d8bd88]">
-              G
+              {tenantBrandName.charAt(0).toUpperCase() || 'H'}
             </span>
 
             <span>
               <span
-                className={`block text-lg font-bold tracking-[0.22em] ${
+                className={`block max-w-[180px] truncate text-lg font-bold tracking-[0.08em] sm:max-w-[260px] ${
                   isScrolled ? 'text-emerald-950' : 'text-white'
                 }`}
               >
-                GASTORA
+                {tenantBrandName.toUpperCase()}
               </span>
 
               <span
@@ -383,7 +404,7 @@ export default function GuestLandingPage() {
                   isScrolled ? 'text-stone-500' : 'text-white/75'
                 }`}
               >
-                HOSPITALITY REIMAGINED
+                YOUR HOTEL, YOUR STAY
               </span>
             </span>
           </Link>
@@ -441,7 +462,7 @@ export default function GuestLandingPage() {
                   : 'Open navigation menu'
               }
               aria-expanded={mobileMenuOpen}
-              aria-controls="gastora-mobile-navigation"
+              aria-controls="tenant-mobile-navigation"
               onClick={() => setMobileMenuOpen((open) => !open)}
               className={`inline-flex h-10 w-10 items-center justify-center rounded-full border md:hidden ${
                 isScrolled
@@ -458,7 +479,7 @@ export default function GuestLandingPage() {
 
         {mobileMenuOpen && (
           <nav
-            id="gastora-mobile-navigation"
+            id="tenant-mobile-navigation"
             aria-label="Mobile navigation"
             className="border-t border-stone-200 bg-white px-5 py-4 text-[#193b30] shadow-lg md:hidden"
           >
@@ -466,15 +487,12 @@ export default function GuestLandingPage() {
               <a href="#experience" onClick={closeMobileMenu}>
                 Experience
               </a>
-
               <a href="#rooms" onClick={closeMobileMenu}>
                 Our rooms
               </a>
-
               <a href="#facilities" onClick={closeMobileMenu}>
                 Facilities
               </a>
-
               <a href="#events" onClick={closeMobileMenu}>
                 Meetings and events
               </a>
@@ -511,7 +529,7 @@ export default function GuestLandingPage() {
           }
         }}
         className="relative isolate min-h-[610px] overflow-hidden bg-[#193b30] pt-20 lg:min-h-[670px]"
-        aria-label="Gastora hotel highlights"
+        aria-label={`${tenantBrandName} hotel highlights`}
       >
         <div className="absolute inset-0 z-0" aria-hidden="true">
           {heroImages.map((image, index) => (
@@ -559,8 +577,8 @@ export default function GuestLandingPage() {
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8">
-              Find your room, plan your stay, and let Gastora take care of the
-              details.
+              Find your room, plan your stay, and let {tenantBrandName} take
+              care of the details.
             </p>
 
             <a
@@ -613,7 +631,6 @@ export default function GuestLandingPage() {
               <p className="text-xs font-semibold tracking-[0.2em] text-[#a17d43]">
                 PLAN YOUR VISIT
               </p>
-
               <h2 className="mt-1 text-xl font-semibold sm:text-2xl">
                 Find your perfect stay
               </h2>
@@ -629,7 +646,6 @@ export default function GuestLandingPage() {
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Check-in
               </span>
-
               <input
                 type="date"
                 required
@@ -637,14 +653,11 @@ export default function GuestLandingPage() {
                 value={arrival}
                 onChange={(event) => {
                   const nextArrival = event.target.value
-
                   setArrival(nextArrival)
                   setError('')
 
                   if (nextArrival && departure <= nextArrival) {
-                    const nextDay = new Date(`${nextArrival}T12:00:00`)
-                    nextDay.setDate(nextDay.getDate() + 1)
-                    setDeparture(localDate(nextDay))
+                    setDeparture(getDateAfter(nextArrival))
                   }
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-[#faf9f6] px-3 py-3.5 text-sm outline-none focus:border-[#193b30] focus:ring-2 focus:ring-[#193b30]/10"
@@ -655,11 +668,10 @@ export default function GuestLandingPage() {
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Check-out
               </span>
-
               <input
                 type="date"
                 required
-                min={arrival ? getDateAfter(arrival) : getTomorrow()}
+                min={getDateAfter(arrival)}
                 value={departure}
                 onChange={(event) => {
                   setDeparture(event.target.value)
@@ -673,7 +685,6 @@ export default function GuestLandingPage() {
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Adults
               </span>
-
               <select
                 value={adults}
                 onChange={(event) => setAdults(Number(event.target.value))}
@@ -691,7 +702,6 @@ export default function GuestLandingPage() {
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Children
               </span>
-
               <select
                 value={children}
                 onChange={(event) => setChildren(Number(event.target.value))}
@@ -709,7 +719,6 @@ export default function GuestLandingPage() {
               <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Rooms
               </span>
-
               <select
                 value={rooms}
                 onChange={(event) => setRooms(Number(event.target.value))}
@@ -734,7 +743,6 @@ export default function GuestLandingPage() {
             <p className="text-sm text-gray-500">
               Rates and availability are confirmed during room search.
             </p>
-
             <button
               type="submit"
               className="rounded-xl bg-[#193b30] px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-[#285242] focus:outline-none focus:ring-2 focus:ring-[#193b30] focus:ring-offset-2"
@@ -745,7 +753,7 @@ export default function GuestLandingPage() {
         </form>
       </section>
 
-      {/* GASTORA EXPERIENCE */}
+      {/* TENANT HOTEL EXPERIENCE */}
       <section
         id="experience"
         className="mx-auto max-w-7xl scroll-mt-24 px-5 py-20 sm:px-8 lg:py-24"
@@ -753,9 +761,8 @@ export default function GuestLandingPage() {
         <div className="grid gap-8 md:grid-cols-3 md:gap-12">
           <div>
             <p className="text-xs font-semibold tracking-[0.2em] text-[#a17d43]">
-              THE GASTORA EXPERIENCE
+              THE {tenantBrandName.toUpperCase()} EXPERIENCE
             </p>
-
             <h2 className="mt-4 text-3xl font-light leading-snug sm:text-4xl">
               Hospitality that feels personal.
             </h2>
@@ -776,9 +783,7 @@ export default function GuestLandingPage() {
               <span className="text-sm font-semibold text-[#a17d43]">
                 {item.number}
               </span>
-
               <h3 className="mt-5 text-lg font-semibold">{item.title}</h3>
-
               <p className="mt-3 text-sm leading-6 text-gray-600">
                 {item.text}
               </p>
@@ -795,11 +800,9 @@ export default function GuestLandingPage() {
               <p className="text-xs font-semibold tracking-[0.2em] text-[#a17d43]">
                 FIND YOUR SPACE
               </p>
-
               <h2 className="mt-3 text-3xl font-light sm:text-4xl">
                 Rooms for every kind of stay.
               </h2>
-
               <p className="mt-4 max-w-xl leading-7 text-gray-600">
                 From practical comfort to spacious suites, explore the room
                 styles and find an option that suits your visit.
@@ -830,7 +833,6 @@ export default function GuestLandingPage() {
                         : 'transition duration-500 group-hover:scale-105'
                     }`}
                   />
-
                   <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-semibold tracking-[0.15em] text-[#193b30]">
                     {room.tag}
                   </span>
@@ -839,7 +841,6 @@ export default function GuestLandingPage() {
                 <div className="flex items-start justify-between gap-3 pt-5">
                   <div>
                     <h3 className="text-xl font-semibold">{room.name}</h3>
-
                     <p className="mt-2 text-sm leading-6 text-gray-600">
                       {room.description}
                     </p>
@@ -874,7 +875,6 @@ export default function GuestLandingPage() {
             <p className="text-xs font-semibold tracking-[0.2em] text-[#a17d43]">
               MORE TO EXPERIENCE
             </p>
-
             <h2 className="mt-4 text-3xl font-light leading-snug sm:text-4xl">
               Space to unwind, recharge and connect.
             </h2>
@@ -910,7 +910,6 @@ export default function GuestLandingPage() {
 
               <div className="p-5 sm:p-6">
                 <h3 className="font-semibold">{item.title}</h3>
-
                 <p className="mt-2 text-sm leading-6 text-gray-600">
                   {item.text}
                 </p>
@@ -929,9 +928,8 @@ export default function GuestLandingPage() {
           <div className="grid gap-6 lg:grid-cols-2 lg:items-end">
             <div className="max-w-2xl">
               <p className="text-xs font-semibold tracking-[0.2em] text-[#a17d43]">
-                GATHER AT GASTORA
+                GATHER AT {tenantBrandName.toUpperCase()}
               </p>
-
               <h2 className="mt-4 text-3xl font-light leading-snug sm:text-4xl">
                 Meetings, milestones and memorable moments.
               </h2>
@@ -967,7 +965,6 @@ export default function GuestLandingPage() {
 
                 <div className="p-5">
                   <h3 className="font-semibold">{item.title}</h3>
-
                   <p className="mt-2 text-sm leading-6 text-gray-600">
                     {item.description}
                   </p>
@@ -988,14 +985,13 @@ export default function GuestLandingPage() {
             <p className="text-xs font-semibold tracking-[0.2em] text-[#d9bd87]">
               YOUR STAY, IN YOUR HANDS
             </p>
-
             <h2 className="mt-4 text-3xl font-light leading-snug text-white sm:text-4xl">
               Your reservation, all in one place.
             </h2>
-
             <p className="mt-4 max-w-xl leading-7 text-white/75">
               Sign in to your guest account to access your stay information.
-              If you are new to Gastora, create an account to get started.
+              Use the guest options provided by {tenantBrandName} to manage
+              your stay.
             </p>
           </div>
 
@@ -1015,17 +1011,9 @@ export default function GuestLandingPage() {
 
       {/* SITE FOOTER */}
       <GuestFooter />
+
+      {/* RESTORED GUEST CONCIERGE CHATBOT */}
+      <ConciergeChatWidget />
     </main>
   )
-}
-
-function getDateAfter(dateString: string): string {
-  const date = new Date(`${dateString}T12:00:00`)
-
-  if (Number.isNaN(date.getTime())) {
-    return getTomorrow()
-  }
-
-  date.setDate(date.getDate() + 1)
-  return localDate(date)
 }
